@@ -6,7 +6,6 @@
 -- Hệ quản trị CSDL: MySQL 8.0+ / MariaDB
 -- 
 -- CHANGELOG v1.1:
---   [+] Thêm bảng password_reset_tokens (quên mật khẩu)
 --   [+] Thêm bảng car_documents (giấy tờ xe: đăng ký, bảo hiểm)
 --   [+] Thêm bảng complaint_evidence (tách file bằng chứng khiếu nại)
 --   [+] Thêm bảng audit_logs (ghi log hành động Admin/Staff)
@@ -50,17 +49,6 @@ CREATE TABLE IF NOT EXISTS `user_roles` (
     PRIMARY KEY (`user_id`, `role_id`),
     CONSTRAINT `fk_ur_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
     CONSTRAINT `fk_ur_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Bảng hỗ trợ chức năng Quên mật khẩu / Reset password
-CREATE TABLE IF NOT EXISTS `password_reset_tokens` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `user_id` BIGINT NOT NULL,
-    `token` VARCHAR(255) NOT NULL UNIQUE,
-    `expires_at` DATETIME NOT NULL,
-    `used` BOOLEAN NOT NULL DEFAULT FALSE,
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT `fk_prt_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================================================
