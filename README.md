@@ -22,7 +22,7 @@
 ```plaintext
 Spring_ThucTap_k4/
 ├── docs/                                    # Tài liệu kỹ thuật & kiến trúc
-│   ├── database_schema.sql                  # Script khởi tạo CSDL MySQL (v1.1 Revised)
+│   ├── database_schema.sql                  # Script khởi tạo CSDL MySQL (v2.0 - 3 Database tinh gọn)
 │   ├── flow_diagrams.md                     # Sơ đồ 10 luồng nghiệp vụ chính (Mermaid)
 │   └── glossary.md                          # Sổ tay 85+ thuật ngữ & câu trả lời bảo vệ
 ├── problem/                                 # Đề bài & yêu cầu thực tập
@@ -49,7 +49,7 @@ Spring_ThucTap_k4/
 ## 📑 Tài Liệu Tham Khảo Nhanh
 
 1. **[Thiết kế Cơ sở dữ liệu (database_schema.sql)](./docs/database_schema.sql)**:
-   - Bao gồm 19 bảng chuẩn hóa 3NF, hỗ trợ đầy đủ quản lý xe, giấy tờ, đặt xe, thanh toán, đánh giá 2 chiều và ghi log kiểm toán (`audit_logs`).
+   - Bản v2.0 tinh gọn gồm 10-11 bảng cốt lõi, loại bỏ bảng thừa, phân chia rõ ràng theo 3 CSDL: Khách thuê (`driveshare_renter_db`), Chủ xe (`driveshare_owner_db`), Quản trị (`driveshare_admin_db`). Kèm sẵn dữ liệu mẫu (`seed data`).
 2. **[Sơ đồ Luồng nghiệp vụ (flow_diagrams.md)](./docs/flow_diagrams.md)**:
    - 10 sơ đồ trực quan: Luồng đăng ký/đăng nhập, Đăng xe & Phê duyệt, Đặt xe & Đặt cọc, Bàn giao xe & Trả xe, Hủy cọc & Hoàn tiền, Đánh giá & Khiếu nại, State Machine đơn xe.
 3. **[Sổ tay Thuật ngữ & Trả lời câu hỏi (glossary.md)](./docs/glossary.md)**:

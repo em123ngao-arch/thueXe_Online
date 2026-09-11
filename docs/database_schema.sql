@@ -1,382 +1,223 @@
 -- =============================================================================
--- DỰ ÁN: DRIVESHARE - NỀN TẢNG CHO THUÊ XE CÁ NHÂN TRỰC TUYẾN
--- TÀI LIỆU THIẾT KẾ DATABASE CƠ SỞ (SPRINT 0) — v1.1 REVISED
--- Phụ trách thiết kế: Quân (Catalog/Resource) & Vĩ (Core/Transaction)
--- Thẩm định QA: Tín | Tham vấn luồng: Phát & Khiêm
--- Hệ quản trị CSDL: MySQL 8.0+ / MariaDB
--- 
--- CHANGELOG v1.1:
---   [+] Thêm bảng car_documents (giấy tờ xe: đăng ký, bảo hiểm)
---   [+] Thêm bảng complaint_evidence (tách file bằng chứng khiếu nại)
---   [+] Thêm bảng audit_logs (ghi log hành động Admin/Staff)
---   [~] Sửa reviews: UNIQUE(booking_id) → UNIQUE(booking_id, reviewer_id)
---   [~] Thêm CHECK constraint cho car_availabilities
---   [+] Thêm INDEXES cho các bảng truy vấn nhiều
+-- DRIVESHARE — CƠ SỞ DỮ LIỆU v2.2 (Sinh viên)
+-- 3 Database · 8 bảng · MySQL 8.0+
 -- =============================================================================
 
-CREATE DATABASE IF NOT EXISTS `driveshare_db` 
+
+-- #############################################################################
+-- PHẦN 1: DATABASE KHÁCH THUÊ
+-- #############################################################################
+
+CREATE DATABASE IF NOT EXISTS `driveshare_renter_db`
 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-USE `driveshare_db`;
+USE `driveshare_renter_db`;
 
--- =============================================================================
--- 1. PHÂN HỆ NGƯỜI DÙNG & PHÂN QUYỀN (USERS & ROLES) - [Vĩ]
--- =============================================================================
 
-CREATE TABLE IF NOT EXISTS `roles` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `name` VARCHAR(50) NOT NULL UNIQUE COMMENT 'ROLE_RENTER, ROLE_OWNER, ROLE_STAFF, ROLE_ADMIN',
-    `description` VARCHAR(255) NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `users` (
+-- 1. Khách thuê
+CREATE TABLE IF NOT EXISTS `renters` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `email` VARCHAR(150) NOT NULL UNIQUE,
     `password_hash` VARCHAR(255) NOT NULL,
     `full_name` VARCHAR(100) NOT NULL,
-    `phone` VARCHAR(20) NULL UNIQUE,
+    `phone` VARCHAR(20) NULL,
+    `avatar_url` VARCHAR(500) NULL,
+    `license_number` VARCHAR(50) NULL,
+    `license_image_url` VARCHAR(500) NULL,
+    `license_status` VARCHAR(30) NOT NULL DEFAULT 'UNVERIFIED'
+        COMMENT 'UNVERIFIED, PENDING, APPROVED, REJECTED',
+    `status` VARCHAR(30) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, BANNED',
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- 2. Đơn đặt thuê xe
+-- PENDING → CONFIRMED → DEPOSIT_PAID → IN_PROGRESS → COMPLETED
+-- PENDING → REJECTED | EXPIRED | CANCELLED
+CREATE TABLE IF NOT EXISTS `bookings` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `renter_id` BIGINT NOT NULL,
+    `car_id` BIGINT NOT NULL COMMENT 'Tham chiếu owner_db.cars.id',
+    `start_time` DATETIME NOT NULL,
+    `end_time` DATETIME NOT NULL,
+    `total_days` INT NOT NULL DEFAULT 1,
+    `price_per_day` DECIMAL(12,2) NOT NULL,
+    `deposit_amount` DECIMAL(12,2) NOT NULL,
+    `total_amount` DECIMAL(12,2) NOT NULL,
+    `status` VARCHAR(30) NOT NULL DEFAULT 'PENDING'
+        COMMENT 'PENDING, CONFIRMED, DEPOSIT_PAID, IN_PROGRESS, COMPLETED, CANCELLED, REJECTED, EXPIRED',
+    `cancel_reason` VARCHAR(255) NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT `fk_bk_renter` FOREIGN KEY (`renter_id`) REFERENCES `renters` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- 3. Thanh toán
+CREATE TABLE IF NOT EXISTS `payments` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `booking_id` BIGINT NOT NULL,
+    `renter_id` BIGINT NOT NULL,
+    `amount` DECIMAL(12,2) NOT NULL,
+    `payment_type` VARCHAR(30) NOT NULL COMMENT 'DEPOSIT, REFUND',
+    `status` VARCHAR(30) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, SUCCESS, FAILED',
+    `paid_at` DATETIME NULL,
+    `note` VARCHAR(255) NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT `fk_pm_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`),
+    CONSTRAINT `fk_pm_renter` FOREIGN KEY (`renter_id`) REFERENCES `renters` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+
+-- #############################################################################
+-- PHẦN 2: DATABASE CHỦ XE
+-- #############################################################################
+
+CREATE DATABASE IF NOT EXISTS `driveshare_owner_db`
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+USE `driveshare_owner_db`;
+
+
+-- 4. Chủ xe
+CREATE TABLE IF NOT EXISTS `owners` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `email` VARCHAR(150) NOT NULL UNIQUE,
+    `password_hash` VARCHAR(255) NOT NULL,
+    `full_name` VARCHAR(100) NOT NULL,
+    `phone` VARCHAR(20) NULL,
     `avatar_url` VARCHAR(500) NULL,
     `address` VARCHAR(255) NULL,
-    `status` VARCHAR(30) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, INACTIVE, BANNED',
+    `status` VARCHAR(30) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, BANNED',
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `user_roles` (
-    `user_id` BIGINT NOT NULL,
-    `role_id` BIGINT NOT NULL,
-    PRIMARY KEY (`user_id`, `role_id`),
-    CONSTRAINT `fk_ur_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-    CONSTRAINT `fk_ur_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- =============================================================================
--- 2. PHÂN HỆ HỒ SƠ KHÁCH THUÊ & GIẤY PHÉP LÁI XE (GPLX) - [Quân]
--- =============================================================================
-
-CREATE TABLE IF NOT EXISTS `renter_profiles` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `user_id` BIGINT NOT NULL UNIQUE COMMENT 'Quan hệ 1-1 với bảng users',
-    `license_number` VARCHAR(50) NOT NULL COMMENT 'Số GPLX',
-    `license_front_url` VARCHAR(500) NOT NULL COMMENT 'Ảnh mặt trước',
-    `license_back_url` VARCHAR(500) NOT NULL COMMENT 'Ảnh mặt sau',
-    `status` VARCHAR(30) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, APPROVED, REJECTED',
-    `rejection_reason` VARCHAR(255) NULL,
-    `verified_by` BIGINT NULL COMMENT 'Staff ID phê duyệt',
-    `verified_at` TIMESTAMP NULL,
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT `fk_rp_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
-    CONSTRAINT `fk_rp_staff` FOREIGN KEY (`verified_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- =============================================================================
--- 3. PHÂN HỆ QUẢN LÝ XE, TIỆN ÍCH & LỊCH XE (CARS) - [Quân]
--- =============================================================================
-
+-- 5. Xe cho thuê
+-- DRAFT → PENDING_APPROVAL → ACTIVE | REJECTED
 CREATE TABLE IF NOT EXISTS `cars` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `owner_id` BIGINT NOT NULL COMMENT 'Chủ xe (User có ROLE_OWNER)',
-    `brand` VARCHAR(50) NOT NULL COMMENT 'VD: Toyota, Honda, Hyundai',
-    `model` VARCHAR(100) NOT NULL COMMENT 'VD: Vios, City, Accent',
-    `year` INT NOT NULL COMMENT 'Năm sản xuất',
-    `license_plate` VARCHAR(20) NOT NULL UNIQUE COMMENT 'Biển số xe duy nhất',
+    `owner_id` BIGINT NOT NULL,
+    `brand` VARCHAR(50) NOT NULL,
+    `model` VARCHAR(100) NOT NULL,
+    `year` INT NOT NULL,
+    `license_plate` VARCHAR(20) NOT NULL UNIQUE,
     `seat_count` INT NOT NULL DEFAULT 4,
-    `transmission` VARCHAR(30) NOT NULL COMMENT 'MANUAL (Số sàn), AUTOMATIC (Số tự động)',
-    `fuel_type` VARCHAR(30) NOT NULL COMMENT 'GASOLINE (Xăng), DIESEL (Dầu), ELECTRIC (Điện)',
-    `fuel_consumption` DECIMAL(5,2) NULL COMMENT 'Lít/100km hoặc kWh/100km',
-    `price_per_day` DECIMAL(12,2) NOT NULL COMMENT 'Giá thuê 1 ngày',
-    `extra_km_fee` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT 'Phí vượt 1km (VD: 3.000đ/km)',
-    `overtime_fee` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT 'Phí trả trễ 1 giờ (VD: 100.000đ/h)',
-    `cleaning_fee` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT 'Phí vệ sinh nếu xe bẩn',
-    `address` VARCHAR(255) NOT NULL COMMENT 'Địa điểm giao nhận xe',
-    `latitude` DECIMAL(10,8) NULL,
-    `longitude` DECIMAL(11,8) NULL,
+    `transmission` VARCHAR(30) NOT NULL COMMENT 'MANUAL, AUTOMATIC',
+    `fuel_type` VARCHAR(30) NOT NULL COMMENT 'GASOLINE, DIESEL, ELECTRIC',
+    `price_per_day` DECIMAL(12,2) NOT NULL,
+    `pickup_address` VARCHAR(255) NOT NULL,
+    `amenities` TEXT NULL,
     `description` TEXT NULL,
-    `status` VARCHAR(30) NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT, PENDING_APPROVAL, ACTIVE, REJECTED, INACTIVE',
+    `status` VARCHAR(30) NOT NULL DEFAULT 'DRAFT'
+        COMMENT 'DRAFT, PENDING_APPROVAL, ACTIVE, REJECTED, INACTIVE',
     `rejection_reason` VARCHAR(255) NULL,
-    `approved_by` BIGINT NULL,
-    `approved_at` TIMESTAMP NULL,
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE,
-    CONSTRAINT `fk_car_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
-    CONSTRAINT `fk_car_staff` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+
+    CONSTRAINT `fk_car_owner` FOREIGN KEY (`owner_id`) REFERENCES `owners` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+-- 6. Hình ảnh xe
 CREATE TABLE IF NOT EXISTS `car_images` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `car_id` BIGINT NOT NULL,
     `image_url` VARCHAR(500) NOT NULL,
     `is_thumbnail` BOOLEAN NOT NULL DEFAULT FALSE,
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
     CONSTRAINT `fk_ci_car` FOREIGN KEY (`car_id`) REFERENCES `cars` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Giấy tờ xe: Đăng ký xe, Bảo hiểm, Đăng kiểm (yêu cầu từ US-03)
-CREATE TABLE IF NOT EXISTS `car_documents` (
+
+
+-- #############################################################################
+-- PHẦN 3: DATABASE QUẢN TRỊ
+-- #############################################################################
+
+CREATE DATABASE IF NOT EXISTS `driveshare_admin_db`
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+USE `driveshare_admin_db`;
+
+
+-- 7. Admin & Staff
+CREATE TABLE IF NOT EXISTS `admin_users` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `car_id` BIGINT NOT NULL,
-    `document_type` VARCHAR(50) NOT NULL COMMENT 'REGISTRATION (Đăng ký xe), INSURANCE (Bảo hiểm), INSPECTION (Đăng kiểm)',
-    `document_url` VARCHAR(500) NOT NULL,
-    `expiry_date` DATE NULL COMMENT 'Ngày hết hạn giấy tờ (nếu có)',
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT `fk_cd_car` FOREIGN KEY (`car_id`) REFERENCES `cars` (`id`) ON DELETE CASCADE
+    `username` VARCHAR(50) NOT NULL UNIQUE,
+    `password_hash` VARCHAR(255) NOT NULL,
+    `full_name` VARCHAR(100) NOT NULL,
+    `email` VARCHAR(150) NOT NULL UNIQUE,
+    `role` VARCHAR(30) NOT NULL DEFAULT 'ROLE_STAFF' COMMENT 'ROLE_ADMIN, ROLE_STAFF',
+    `status` VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `amenities` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `name` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Bản đồ, Camera hành trình, Cảm biến lốp, Bluetooth...',
-    `icon_url` VARCHAR(255) NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `car_amenities` (
-    `car_id` BIGINT NOT NULL,
-    `amenity_id` BIGINT NOT NULL,
-    PRIMARY KEY (`car_id`, `amenity_id`),
-    CONSTRAINT `fk_ca_car` FOREIGN KEY (`car_id`) REFERENCES `cars` (`id`) ON DELETE CASCADE,
-    CONSTRAINT `fk_ca_amenity` FOREIGN KEY (`amenity_id`) REFERENCES `amenities` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `car_availabilities` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `car_id` BIGINT NOT NULL,
-    `start_date` DATE NOT NULL,
-    `end_date` DATE NOT NULL,
-    `is_available` BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'TRUE: rảnh, FALSE: chủ xe tự bận',
-    CONSTRAINT `fk_cav_car` FOREIGN KEY (`car_id`) REFERENCES `cars` (`id`) ON DELETE CASCADE,
-    CONSTRAINT `chk_cav_dates` CHECK (`start_date` <= `end_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `favorites` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `user_id` BIGINT NOT NULL,
-    `car_id` BIGINT NOT NULL,
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY `uk_fav_user_car` (`user_id`, `car_id`),
-    CONSTRAINT `fk_fav_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-    CONSTRAINT `fk_fav_car` FOREIGN KEY (`car_id`) REFERENCES `cars` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- =============================================================================
--- 4. PHÂN HỆ ĐẶT XE & THANH TOÁN (BOOKINGS & PAYMENTS) - [Vĩ]
--- =============================================================================
-
-CREATE TABLE IF NOT EXISTS `bookings` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `booking_code` VARCHAR(20) NOT NULL UNIQUE COMMENT 'Mã đơn dạng: DS20260908001',
-    `renter_id` BIGINT NOT NULL,
-    `car_id` BIGINT NOT NULL,
-    `start_time` DATETIME NOT NULL COMMENT 'Thời điểm nhận xe',
-    `end_time` DATETIME NOT NULL COMMENT 'Thời điểm hẹn trả xe',
-    `total_days` INT NOT NULL DEFAULT 1,
-    
-    -- Lưu vết giá (Snapshot) tại thời điểm đặt, không bị ảnh hưởng khi chủ xe sửa giá xe
-    `price_per_day_snapshot` DECIMAL(12,2) NOT NULL,
-    `deposit_amount` DECIMAL(12,2) NOT NULL COMMENT 'Tiền cọc giữ chỗ (VD: 30%)',
-    `rental_total_amount` DECIMAL(12,2) NOT NULL COMMENT 'Tổng tiền thuê dự kiến',
-    `extra_fee_total` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT 'Tổng phụ phí thực tế sau chuyến',
-    `refund_amount` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT 'Tiền hoàn lại nếu hủy đơn',
-
-    `status` VARCHAR(30) NOT NULL DEFAULT 'PENDING' 
-        COMMENT 'PENDING, CONFIRMED, REJECTED, EXPIRED, DEPOSIT_PAID, IN_PROGRESS, COMPLETED, CANCELLED, DISPUTED',
-    
-    `cancelled_by` BIGINT NULL,
-    `cancel_reason` VARCHAR(255) NULL,
-    `cancelled_at` DATETIME NULL,
-    `deposit_deadline` DATETIME NULL COMMENT 'Hạn chót thanh toán cọc sau khi Owner duyệt',
-    
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    CONSTRAINT `fk_bk_renter` FOREIGN KEY (`renter_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
-    CONSTRAINT `fk_bk_car` FOREIGN KEY (`car_id`) REFERENCES `cars` (`id`) ON DELETE RESTRICT,
-    CONSTRAINT `fk_bk_cancel_user` FOREIGN KEY (`cancelled_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `payments` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `booking_id` BIGINT NOT NULL,
-    `user_id` BIGINT NOT NULL COMMENT 'Người thanh toán/nhận tiền',
-    `amount` DECIMAL(12,2) NOT NULL,
-    `type` VARCHAR(30) NOT NULL COMMENT 'DEPOSIT (Đặt cọc), EXTRA_FEE (Phụ phí), REFUND (Hoàn tiền)',
-    `method` VARCHAR(30) NOT NULL DEFAULT 'BANK_TRANSFER' COMMENT 'VNPAY, BANK_TRANSFER, WALLET',
-    `transaction_code` VARCHAR(100) NULL COMMENT 'Mã giao dịch ngân hàng / cổng thanh toán',
-    `status` VARCHAR(30) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, SUCCESS, FAILED',
-    `paid_at` DATETIME NULL,
-    `note` VARCHAR(255) NULL,
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT `fk_pm_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE RESTRICT,
-    CONSTRAINT `fk_pm_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- =============================================================================
--- 5. PHÂN HỆ BIÊN BẢN BÀN GIAO & TRẢ XE (HANDOVERS) - [Quân]
--- =============================================================================
-
-CREATE TABLE IF NOT EXISTS `handover_records` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `booking_id` BIGINT NOT NULL,
-    `record_type` VARCHAR(30) NOT NULL COMMENT 'PICKUP (Giao xe), RETURN (Trả xe)',
-    `odometer_km` INT NOT NULL COMMENT 'Số km trên đồng hồ lúc giao/nhận',
-    `fuel_percentage` INT NOT NULL COMMENT 'Tỷ lệ nhiên liệu còn lại (0 - 100%)',
-    `car_condition_notes` TEXT NULL COMMENT 'Ghi chú vết xước, tình trạng xe',
-    `owner_confirmed` BOOLEAN NOT NULL DEFAULT FALSE,
-    `renter_confirmed` BOOLEAN NOT NULL DEFAULT FALSE,
-    `confirmed_at` DATETIME NULL,
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT `fk_hr_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `handover_images` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `handover_record_id` BIGINT NOT NULL,
-    `image_url` VARCHAR(500) NOT NULL,
-    `photo_type` VARCHAR(50) NOT NULL COMMENT 'ODOMETER, FRONT, BACK, LEFT, RIGHT, INTERIOR, SCRATCH',
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT `fk_hi_record` FOREIGN KEY (`handover_record_id`) REFERENCES `handover_records` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- =============================================================================
--- 6. PHÂN HỆ ĐÁNH GIÁ, KHIẾU NẠI & THÔNG BÁO (REVIEWS, COMPLAINTS, NOTIS)
--- =============================================================================
-
+-- 8. Đánh giá sau chuyến
 CREATE TABLE IF NOT EXISTS `reviews` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `booking_id` BIGINT NOT NULL,
     `car_id` BIGINT NOT NULL,
-    `reviewer_id` BIGINT NOT NULL COMMENT 'Người đánh giá (Renter hoặc Owner)',
-    `reviewee_id` BIGINT NOT NULL COMMENT 'Người được đánh giá',
+    `reviewer_id` BIGINT NOT NULL,
+    `reviewer_role` VARCHAR(20) NOT NULL COMMENT 'RENTER, OWNER',
     `rating` INT NOT NULL CHECK (`rating` BETWEEN 1 AND 5),
     `comment` TEXT NULL,
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    -- Mỗi người chỉ review 1 lần/booking, nhưng cả Renter lẫn Owner đều được review
-    UNIQUE KEY `uk_review_booking_reviewer` (`booking_id`, `reviewer_id`),
-    CONSTRAINT `fk_rv_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE RESTRICT,
-    CONSTRAINT `fk_rv_car` FOREIGN KEY (`car_id`) REFERENCES `cars` (`id`) ON DELETE RESTRICT,
-    CONSTRAINT `fk_rv_reviewer` FOREIGN KEY (`reviewer_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
-    CONSTRAINT `fk_rv_reviewee` FOREIGN KEY (`reviewee_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+
+    UNIQUE KEY `uk_review_unique` (`booking_id`, `reviewer_id`, `reviewer_role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `complaints` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `booking_id` BIGINT NOT NULL,
-    `reporter_id` BIGINT NOT NULL COMMENT 'Người khiếu nại',
-    `title` VARCHAR(200) NOT NULL,
-    `content` TEXT NOT NULL,
-    `ai_summary` TEXT NULL COMMENT 'AI tóm tắt tự động nội dung tranh chấp',
-    `status` VARCHAR(30) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, INVESTIGATING, RESOLVED, DISMISSED',
-    `resolution_note` TEXT NULL,
-    `resolved_by` BIGINT NULL COMMENT 'Staff xử lý',
-    `resolved_at` DATETIME NULL,
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT `fk_cp_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE RESTRICT,
-    CONSTRAINT `fk_cp_reporter` FOREIGN KEY (`reporter_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
-    CONSTRAINT `fk_cp_staff` FOREIGN KEY (`resolved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Tách file bằng chứng khiếu nại thành bảng riêng (thay vì JSON trong TEXT)
-CREATE TABLE IF NOT EXISTS `complaint_evidence` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `complaint_id` BIGINT NOT NULL,
-    `file_url` VARCHAR(500) NOT NULL,
-    `file_type` VARCHAR(30) NOT NULL COMMENT 'IMAGE, VIDEO, DOCUMENT',
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT `fk_ce_complaint` FOREIGN KEY (`complaint_id`) REFERENCES `complaints` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `notifications` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `user_id` BIGINT NOT NULL,
-    `title` VARCHAR(200) NOT NULL,
-    `message` TEXT NOT NULL,
-    `type` VARCHAR(50) NOT NULL COMMENT 'BOOKING_REQUEST, BOOKING_CONFIRMED, PICKUP_REMINDER, RETURN_REMINDER, SYSTEM',
-    `target_url` VARCHAR(255) NULL,
-    `is_read` BOOLEAN NOT NULL DEFAULT FALSE,
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT `fk_noti_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- #############################################################################
+-- DỮ LIỆU MẪU
+-- Mật khẩu '123456' → BCrypt: $2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi
+-- #############################################################################
 
--- =============================================================================
--- 7. CẤU HÌNH HỆ THỐNG (SYSTEM CONFIGS) - [Vĩ]
--- =============================================================================
+USE `driveshare_admin_db`;
 
-CREATE TABLE IF NOT EXISTS `system_configs` (
-    `config_key` VARCHAR(100) PRIMARY KEY,
-    `config_value` VARCHAR(255) NOT NULL,
-    `description` VARCHAR(255) NULL,
-    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO `admin_users` (`id`, `username`, `password_hash`, `full_name`, `email`, `role`) VALUES
+(1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Admin Hệ Thống', 'admin@driveshare.vn', 'ROLE_ADMIN'),
+(2, 'staff_tin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Nhân Viên Tín', 'tin@driveshare.vn', 'ROLE_STAFF')
+ON DUPLICATE KEY UPDATE `username` = VALUES(`username`);
 
--- Dữ liệu mẫu cấu hình mặc định:
-INSERT INTO `system_configs` (`config_key`, `config_value`, `description`) VALUES
-('DEPOSIT_PERCENTAGE', '30', 'Phần trăm tiền đặt cọc giữ xe (30%)'),
-('OWNER_ACCEPT_TIMEOUT_HOURS', '24', 'Thời gian chủ xe phải xác nhận trước khi auto-expire (giờ)'),
-('DEPOSIT_PAYMENT_TIMEOUT_HOURS', '2', 'Thời hạn thanh toán cọc sau khi chủ xe duyệt (giờ)'),
-('CANCEL_REFUND_BEFORE_48H', '100', 'Tỷ lệ hoàn tiền khi hủy trước 48h (%)'),
-('CANCEL_REFUND_BEFORE_24H', '70', 'Tỷ lệ hoàn tiền khi hủy trước 24h (%)'),
-('CANCEL_REFUND_UNDER_24H', '0', 'Tỷ lệ hoàn tiền khi hủy sát giờ (%)');
 
--- =============================================================================
--- 8. BẢNG GHI LOG HÀNH ĐỘNG (AUDIT LOGS) - [Vĩ]
--- =============================================================================
+USE `driveshare_owner_db`;
 
-CREATE TABLE IF NOT EXISTS `audit_logs` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `actor_id` BIGINT NOT NULL COMMENT 'Admin/Staff thực hiện hành động',
-    `action` VARCHAR(100) NOT NULL COMMENT 'BAN_USER, UNBAN_USER, FORCE_CANCEL_BOOKING, APPROVE_CAR, REJECT_CAR, APPROVE_LICENSE, ...',
-    `target_type` VARCHAR(50) NOT NULL COMMENT 'USER, CAR, BOOKING, COMPLAINT',
-    `target_id` BIGINT NOT NULL COMMENT 'ID của đối tượng bị tác động',
-    `detail` TEXT NULL COMMENT 'Mô tả chi tiết hoặc dữ liệu trước/sau',
-    `ip_address` VARCHAR(45) NULL,
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT `fk_al_actor` FOREIGN KEY (`actor_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO `owners` (`id`, `email`, `password_hash`, `full_name`, `phone`, `address`) VALUES
+(1, 'owner.hung@gmail.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Nguyễn Văn Hùng', '0901234567', 'Quận 1, TP.HCM'),
+(2, 'owner.lan@gmail.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Trần Thị Lan', '0912345678', 'Quận 7, TP.HCM')
+ON DUPLICATE KEY UPDATE `email` = VALUES(`email`);
 
--- =============================================================================
--- 9. INDEXES — TỐI ƯU HIỆU NĂNG TRUY VẤN
--- =============================================================================
+INSERT INTO `cars` (`id`, `owner_id`, `brand`, `model`, `year`, `license_plate`, `seat_count`, `transmission`, `fuel_type`, `price_per_day`, `pickup_address`, `amenities`, `description`, `status`) VALUES
+(1, 1, 'Toyota', 'Vios 1.5 CVT', 2022, '51H-123.45', 5, 'AUTOMATIC', 'GASOLINE', 750000.00, '123 Nguyễn Thị Minh Khai, Q.1', 'GPS, Camera, Bluetooth', 'Xe gia đình tiết kiệm xăng.', 'ACTIVE'),
+(2, 1, 'Hyundai', 'Accent 1.4 AT', 2023, '51K-987.65', 5, 'AUTOMATIC', 'GASOLINE', 700000.00, '123 Nguyễn Thị Minh Khai, Q.1', 'Bản đồ, Camera lùi', 'Xe mới, máy êm.', 'ACTIVE'),
+(3, 2, 'VinFast', 'VF8 Plus', 2023, '51A-888.88', 5, 'AUTOMATIC', 'ELECTRIC', 1200000.00, 'Nguyễn Văn Linh, Q.7', 'ADAS, Cửa sổ trời', 'Xe điện cao cấp.', 'ACTIVE')
+ON DUPLICATE KEY UPDATE `license_plate` = VALUES(`license_plate`);
 
--- Users: tìm theo email, status
-ALTER TABLE `users` ADD INDEX `idx_users_status` (`status`);
-ALTER TABLE `users` ADD INDEX `idx_users_email_status` (`email`, `status`);
+INSERT INTO `car_images` (`car_id`, `image_url`, `is_thumbnail`) VALUES
+(1, 'https://images.unsplash.com/photo-1590362891991-f776e747a588?w=800', TRUE),
+(2, 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800', TRUE),
+(3, 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=800', TRUE);
 
--- Cars: tìm kiếm & lọc xe (trang search chính)
-ALTER TABLE `cars` ADD INDEX `idx_cars_status` (`status`);
-ALTER TABLE `cars` ADD INDEX `idx_cars_owner` (`owner_id`, `status`);
-ALTER TABLE `cars` ADD INDEX `idx_cars_search` (`status`, `seat_count`, `transmission`, `fuel_type`, `price_per_day`);
-ALTER TABLE `cars` ADD INDEX `idx_cars_location` (`latitude`, `longitude`);
 
--- Car documents: tìm theo xe
-ALTER TABLE `car_documents` ADD INDEX `idx_cd_car` (`car_id`, `document_type`);
+USE `driveshare_renter_db`;
 
--- Car availabilities: check xung đột lịch
-ALTER TABLE `car_availabilities` ADD INDEX `idx_cav_car_dates` (`car_id`, `start_date`, `end_date`, `is_available`);
+INSERT INTO `renters` (`id`, `email`, `password_hash`, `full_name`, `phone`, `license_number`, `license_status`) VALUES
+(1, 'renter.nam@gmail.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Lê Hoàng Nam', '0988776655', 'B2-790123456789', 'APPROVED'),
+(2, 'renter.mai@gmail.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Nguyễn Phương Mai', '0977665544', 'B1-790987654321', 'PENDING')
+ON DUPLICATE KEY UPDATE `email` = VALUES(`email`);
 
--- Bookings: truy vấn booking theo trạng thái, theo renter, check xung đột lịch xe
-ALTER TABLE `bookings` ADD INDEX `idx_bk_status` (`status`);
-ALTER TABLE `bookings` ADD INDEX `idx_bk_renter` (`renter_id`, `status`);
-ALTER TABLE `bookings` ADD INDEX `idx_bk_car_time` (`car_id`, `start_time`, `end_time`);
-ALTER TABLE `bookings` ADD INDEX `idx_bk_deposit_deadline` (`deposit_deadline`, `status`);
+INSERT INTO `bookings` (`id`, `renter_id`, `car_id`, `start_time`, `end_time`, `total_days`, `price_per_day`, `deposit_amount`, `total_amount`, `status`) VALUES
+(1, 1, 1, '2026-09-15 08:00:00', '2026-09-17 20:00:00', 3, 750000.00, 675000.00, 2250000.00, 'DEPOSIT_PAID')
+ON DUPLICATE KEY UPDATE `renter_id` = VALUES(`renter_id`);
 
--- Payments: lịch sử thanh toán
-ALTER TABLE `payments` ADD INDEX `idx_pm_booking` (`booking_id`, `type`);
-ALTER TABLE `payments` ADD INDEX `idx_pm_user` (`user_id`, `status`);
-
--- Handover records: tìm biên bản theo booking
-ALTER TABLE `handover_records` ADD INDEX `idx_hr_booking_type` (`booking_id`, `record_type`);
-
--- Reviews: tính trung bình sao cho xe & user
-ALTER TABLE `reviews` ADD INDEX `idx_rv_car` (`car_id`, `rating`);
-ALTER TABLE `reviews` ADD INDEX `idx_rv_reviewee` (`reviewee_id`, `rating`);
-
--- Complaints: danh sách khiếu nại cho Staff
-ALTER TABLE `complaints` ADD INDEX `idx_cp_status` (`status`, `created_at`);
-
--- Notifications: lấy thông báo chưa đọc
-ALTER TABLE `notifications` ADD INDEX `idx_noti_user_read` (`user_id`, `is_read`, `created_at`);
-
--- Audit logs: lọc theo hành động
-ALTER TABLE `audit_logs` ADD INDEX `idx_al_action` (`action`, `created_at`);
-ALTER TABLE `audit_logs` ADD INDEX `idx_al_target` (`target_type`, `target_id`);
+INSERT INTO `payments` (`booking_id`, `renter_id`, `amount`, `payment_type`, `status`, `paid_at`, `note`) VALUES
+(1, 1, 675000.00, 'DEPOSIT', 'SUCCESS', '2026-09-11 09:30:00', 'Cọc 30% xe Vios 51H-123.45');

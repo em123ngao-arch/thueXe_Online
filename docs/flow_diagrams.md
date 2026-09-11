@@ -41,35 +41,44 @@ flowchart LR
 
 ---
 
-## 2. QUAN HỆ CÁC BẢNG — Nhìn tổng quan
+## 2. QUAN HỆ CÁC BẢNG THEO 3 DATABASE — Nhìn tổng quan
 
 ```mermaid
 flowchart TB
-    USERS["👤 users"] --> ROLES["🔑 user_roles → roles"]
-    USERS --> RENTER["📋 renter_profiles<br/>GPLX"]
-    USERS --> RESET["🔒 password_reset_tokens"]
-    USERS --> CARS["🚗 cars"]
-    USERS --> BOOKING["📝 bookings"]
-    USERS --> NOTI["🔔 notifications"]
-    USERS --> FAV["❤️ favorites"]
-    USERS --> AUDIT["📜 audit_logs"]
+    subgraph RENTER_DB ["🧑 driveshare_renter_db (Khách thuê)"]
+        RENTERS["👤 renters<br/>(Tài khoản + GPLX)"]
+        BOOKINGS["📝 bookings<br/>(Đơn thuê xe)"]
+        PAYMENTS["💳 payments<br/>(Thanh toán cọc & hoàn)"]
+        RENTERS --> BOOKINGS
+        BOOKINGS --> PAYMENTS
+    end
 
-    CARS --> IMG["🖼️ car_images"]
-    CARS --> DOC["📄 car_documents"]
-    CARS --> AME["✨ car_amenities → amenities"]
-    CARS --> AVA["📅 car_availabilities"]
+    subgraph OWNER_DB ["🚗 driveshare_owner_db (Chủ xe)"]
+        OWNERS["👤 owners<br/>(Tài khoản chủ xe)"]
+        CARS["🚗 cars<br/>(Xe, tiện ích, cavet, bảo hiểm)"]
+        CAR_IMAGES["🖼️ car_images<br/>(Ảnh chi tiết xe)"]
+        HANDOVER["🤝 handover_records<br/>(Giao/trả xe + ảnh hiện trạng)"]
+        OWNERS --> CARS
+        CARS --> CAR_IMAGES
+        CARS --> HANDOVER
+    end
 
-    BOOKING --> PAY["💳 payments"]
-    BOOKING --> HAND["🤝 handover_records"]
-    BOOKING --> REV["⭐ reviews"]
-    BOOKING --> COMP["🚨 complaints"]
+    subgraph ADMIN_DB ["🛡️ driveshare_admin_db (Quản trị & Vận hành)"]
+        ADMINS["👨‍💼 admin_users<br/>(Admin & Staff)"]
+        COMPLAINTS["🚨 complaints<br/>(Khiếu nại + bằng chứng)"]
+        REVIEWS["⭐ reviews<br/>(Đánh giá 2 chiều)"]
+        CONFIGS["⚙️ system_configs<br/>(Cấu hình cọc, timeout)"]
+    end
 
-    HAND --> HIMG["📸 handover_images"]
-    COMP --> EVID["📎 complaint_evidence"]
+    BOOKINGS -.->|"Tham chiếu car_id"| CARS
+    HANDOVER -.->|"Tham chiếu booking_id"| BOOKINGS
+    COMPLAINTS -.->|"Tham chiếu booking_id"| BOOKINGS
+    REVIEWS -.->|"Tham chiếu booking_id, car_id"| BOOKINGS
 
-    style USERS fill:#4CAF50,color:white
+    style RENTERS fill:#4CAF50,color:white
     style CARS fill:#2196F3,color:white
-    style BOOKING fill:#FF9800,color:white
+    style BOOKINGS fill:#FF9800,color:white
+    style ADMINS fill:#9C27B0,color:white
 ```
 
 ---
