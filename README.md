@@ -9,8 +9,8 @@
 
 | STT | Thành Viên | Vai Trò (Role) | Trách Nhiệm Chính |
 |:---:|:---|:---|:---|
-| 1 | **Nguyễn Thế Vĩ** | **Scrum Master / Team Lead** | Quản lý dự án, Fullstack, điều phối chung |
-| 2 | **Lâm Tấn Phát** | **Backend Developer** | Thiết kế API, Auth, Quản lý xe, CSDL |
+| 1 | **Lâm Chí Vĩ** | **Scrum Master / Team Lead** | Quản lý dự án, Fullstack, điều phối chung |
+| 2 | **Đỗ Ngọc Phát** | **Backend Developer** | Thiết kế API, Auth, Quản lý xe, CSDL |
 | 3 | **Hồ Huỳnh Khiêm** | **Backend Developer** | Đặt xe, Thanh toán, Tự động hóa & Scheduler |
 | 4 | **Nguyễn Duy Quân** | **Frontend Developer** | Giao diện Web/UI-UX, Tích hợp API |
 | 5 | **Nguyễn Hữu Tín** | **QA / Tester** | Viết Test Cases, Kiểm thử API, Báo cáo lỗi |
