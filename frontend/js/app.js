@@ -430,6 +430,39 @@ const App = {
     this.openModal(`Đánh giá chuyến đi #${bookingId}`, html);
   },
 
+  // Copy mã ưu đãi Mioto
+  copyPromoCode(code) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code).then(() => {
+        this.showToast(`Đã sao chép mã ưu đãi "${code}" thành công!`, 'success');
+      }).catch(() => {
+        this.showToast(`Mã ưu đãi của bạn là: ${code}`, 'info');
+      });
+    } else {
+      this.showToast(`Mã ưu đãi của bạn là: ${code}`, 'info');
+    }
+  },
+
+  // Lọc nhanh theo tab Mioto
+  applyQuickTag(tag) {
+    document.querySelectorAll('.quick-pill').forEach(p => p.classList.remove('active'));
+    event?.target?.classList.add('active');
+
+    if (tag === 'ALL') {
+      this.resetFilters();
+    } else if (tag === 'EV') {
+      this.applyPromptSuggestion('XE_DIEN');
+    } else if (tag === 'SAVING') {
+      this.applyPromptSuggestion('TIET_KIEM');
+    } else if (tag === 'INSTANT') {
+      this.currentFilters.transmission = 'AUTOMATIC';
+      this.applyFilters();
+      this.showToast('Hiển thị xe hỗ trợ đặt xe nhanh duyệt ngay', 'info');
+    } else {
+      this.applyFilters();
+    }
+  },
+
   // Toast Notification
   showToast(message, type = 'info') {
     let container = document.getElementById('toastContainer');

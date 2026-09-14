@@ -4,7 +4,7 @@
  */
 
 const RenderService = {
-  // 1. Render danh sách xe trong Catalogue
+  // 1. Render danh sách xe trong Catalogue (Mioto Style)
   renderCarGrid(cars, containerId = 'carGridContainer') {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -28,23 +28,31 @@ const RenderService = {
 
     container.innerHTML = cars.map(car => {
       const depositAmount = Math.round(car.price_per_day * 0.3);
-      const fuelText = car.fuel_type === 'ELECTRIC' ? 'Xe điện (EV)' : (car.fuel_type === 'DIESEL' ? 'Dầu Diesel' : 'Xăng');
-      const transText = car.transmission === 'AUTOMATIC' ? 'Tự động' : 'Số sàn';
+      const fuelText = car.fuel_type === 'ELECTRIC' ? 'Điện' : (car.fuel_type === 'DIESEL' ? 'Dầu' : 'Xăng');
+      const transText = car.transmission === 'AUTOMATIC' ? 'Số tự động' : 'Số sàn';
 
       return `
         <div class="car-card animate-fade-in" data-id="${car.id}">
-          <div class="car-card-img-wrapper">
+          <div class="car-card-img-wrapper" onclick="App.openCarDetailModal(${car.id})" style="cursor: pointer;">
             <img class="car-card-img" src="${car.image_url}" alt="${car.brand} ${car.model}" loading="lazy" />
             <div class="car-top-badges">
-              <span class="car-tag-instant">Giao tận nơi</span>
-              <span class="car-tag-fuel">${fuelText}</span>
+              <span class="badge-instant-booking">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                Đặt xe nhanh
+              </span>
+              <span class="badge-deposit-free">Miễn thế chấp</span>
             </div>
           </div>
           
           <div class="car-card-body">
-            <div class="car-brand-model">
-              <h3 class="car-title">${car.brand} ${car.model}</h3>
-              <span class="car-year">${car.year}</span>
+            <div class="car-specs-tags">
+              <span class="spec-tag-item">${transText}</span>
+              <span class="spec-tag-item">${fuelText}</span>
+              <span class="spec-tag-item">${car.seat_count} chỗ</span>
+            </div>
+
+            <div class="car-title-row">
+              <h3 class="car-title" onclick="App.openCarDetailModal(${car.id})" style="cursor: pointer;">${car.brand} ${car.model} ${car.year}</h3>
             </div>
             
             <div class="car-location">
@@ -55,47 +63,25 @@ const RenderService = {
               <span>${car.district ? `${car.district}, ${car.city}` : car.pickup_address}</span>
             </div>
 
-            <div class="car-specs-row">
-              <span class="spec-item">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-                ${car.seat_count} chỗ
-              </span>
-              <span class="spec-item">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="9"></circle>
-                  <path d="M12 7v5l3 3"></path>
-                </svg>
-                ${transText}
-              </span>
-              <span class="spec-item">
-                ${car.fuel_consumption}
-              </span>
-            </div>
-
-            <div class="car-rating-trip">
-              <span class="rating-badge">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="#ea580c" stroke="none">
+            <div class="car-stats-row">
+              <span class="car-rating">
+                <svg width="14" height="14" viewBox="0 0 24 24">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                 </svg>
                 ${car.rating.toFixed(1)}
               </span>
-              <span class="trip-count">· ${car.trip_count} chuyến thành công</span>
+              <span class="car-trips">· ${car.trip_count} chuyến</span>
+              <span style="margin-left: auto; font-size: 0.76rem; color: var(--primary-deep); font-weight: 700;">Giao tận nơi</span>
             </div>
 
             <div class="car-card-footer">
-              <div class="car-price-box">
-                <span class="car-price-amount">${StorageService.formatCurrency(car.price_per_day)}</span>
-                <span class="car-price-unit">/ ngày</span>
-                <span class="car-price-deposit">Cọc 30%: ${StorageService.formatCurrency(depositAmount)}</span>
+              <div class="car-price-block">
+                <span class="car-price-value">${StorageService.formatCurrency(car.price_per_day)}</span>
+                <span class="car-price-unit">/ngày</span>
               </div>
               <div class="car-card-actions">
                 <button class="btn btn-outline btn-sm" onclick="App.openCarDetailModal(${car.id})">Chi tiết</button>
-                <button class="btn btn-primary btn-sm" onclick="BookingService.startBookingFlow(${car.id})">Đặt xe</button>
+                <button class="btn-rent-now" onclick="BookingService.startBookingFlow(${car.id})">Chọn thuê</button>
               </div>
             </div>
           </div>

@@ -3,60 +3,98 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="description" content="DriveShare - Nền tảng cho thuê xe ô tô tự lái trực tuyến tại Việt Nam. Đa dạng mẫu xe Sedan, SUV, MPV 7 chỗ, xe điện đời mới, đặt cọc 30% giữ chỗ nhanh chóng." />
-  <title>DriveShare — Nền Tảng Cho Thuê Xe Tự Lái Trực Tuyến</title>
+  <meta name="description" content="Mioto - Ứng dụng cho thuê xe tự lái & có tài xế 4-7 chỗ uy tín số 1 Việt Nam. Đa dạng mẫu xe đời mới, thủ tục đơn giản, bảo hiểm trọn vẹn chuyến đi." />
+  <title>Mioto - Ứng dụng cho thuê xe tự lái & có tài xế 4-7 chỗ</title>
   
-  <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/base.css" />
-  <link rel="stylesheet" href="css/components.css" />
-  <link rel="stylesheet" href="css/portals.css" />
+  <!-- CSS Stylesheets (With Cache Buster) -->
+  <link rel="stylesheet" href="css/base.css?v=2.5" />
+  <link rel="stylesheet" href="css/components.css?v=2.5" />
+  <link rel="stylesheet" href="css/portals.css?v=2.5" />
+
+  <!-- Critical Anti-FOUC Styles to prevent unstyled flash & giant SVGs -->
+  <style>
+    .site-header { background-color: #ffffff; border-bottom: 1px solid #e8eaed; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .nav-container { display: flex; align-items: center; justify-content: space-between; height: 72px; gap: 1.5rem; }
+    .nav-menu-links { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-actions { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+    .btn-become-owner { border: 1.5px solid #00a550; color: #00a550; background: transparent; padding: 0.45rem 1.15rem; border-radius: 9999px; font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; }
+    .btn-become-owner:hover { background: #eefbf3; }
+    .btn-auth-signup { color: #595959; font-weight: 600; font-size: 0.9rem; padding: 0.45rem 0.9rem; border: none; background: transparent; cursor: pointer; }
+    .btn-auth-login { border: 1.5px solid #141414; color: #141414; background: transparent; border-radius: 9999px; font-weight: 700; font-size: 0.9rem; padding: 0.45rem 1.25rem; cursor: pointer; transition: all 0.2s; }
+    .btn-auth-login:hover { background: #141414; color: #fff; }
+    .search-widget-container { max-width: 980px; margin: 0 auto; }
+    .search-widget-tabs { display: flex; gap: 0.5rem; margin-bottom: -1px; position: relative; z-index: 3; }
+    .search-tab-item { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.92rem; color: #3f3f3f; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px); padding: 0.65rem 1.35rem; border-radius: 12px 12px 0 0; cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.6); border-bottom: none; }
+    .search-tab-item.active { background: #5fcf86; color: #ffffff; box-shadow: 0 -4px 12px rgba(95, 207, 134, 0.25); }
+    .search-tab-item svg { width: 18px; height: 18px; max-width: 18px; max-height: 18px; flex-shrink: 0; }
+    .btn-mioto-search { background-color: #5fcf86; color: #ffffff; font-size: 1.05rem; font-weight: 700; padding: 0 2rem; height: 60px; border-radius: 12px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 6px 20px rgba(95, 207, 134, 0.4); }
+  </style>
 </head>
 <body>
 
-  <!-- ==================== 1. TOP NAVBAR ==================== -->
+  <!-- ==================== 1. TOP NAVBAR (CHUẨN MIOTO.VN) ==================== -->
   <header class="site-header">
     <div class="container nav-container">
       
-      <!-- Brand Logo -->
+      <!-- Brand Logo Mioto -->
       <a href="javascript:void(0)" class="brand-logo" onclick="App.showCatalogView()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path>
-          <circle cx="7" cy="17" r="2"></circle>
-          <path d="M9 17h6"></path>
-          <circle cx="17" cy="17" r="2"></circle>
-        </svg>
-        <span>DriveShare</span>
-        <span class="brand-badge">K4 Pro</span>
+        <!-- Mioto Infinity / Loop Emblem -->
+        <div class="brand-logo-symbol">
+          <svg viewBox="0 0 100 45" width="44" height="24" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M 28 8 C 15 8 8 16 8 23 C 8 30 15 37 28 37 C 42 37 49 14 56 14 C 63 14 70 37 84 37 C 97 37 104 30 104 23 C 104 16 97 8 84 8 C 70 8 63 31 56 31 C 49 31 42 8 28 8 Z" stroke="#5fcf86" />
+          </svg>
+        </div>
+        <span class="brand-logo-text">MIOTO</span>
       </a>
 
-      <!-- Center Role Switcher (Desktop) -->
+      <!-- Desktop Navigation Menu -->
+      <nav class="nav-menu-links">
+        <a href="#promosSection" class="nav-menu-item">Về Mioto</a>
+        <a href="#insuranceSection" class="nav-menu-item">Chính sách</a>
+        <a href="#blogSection" class="nav-menu-item">Blog</a>
+      </nav>
+
+      <!-- Center Role Switcher (Dành cho nghiệp vụ dự án) -->
       <div class="role-switcher-wrapper">
         <div class="role-pill active" id="pillRoleRenter" onclick="App.switchRole('RENTER')">
-          Khách thuê xe
+          Khách thuê
         </div>
         <div class="role-pill" id="pillRoleOwner" onclick="App.switchRole('OWNER')">
           Chủ xe
         </div>
         <div class="role-pill" id="pillRoleAdmin" onclick="App.switchRole('ADMIN')">
-          Nhân viên / Admin
+          Quản trị
         </div>
       </div>
 
       <!-- Right Nav Actions -->
       <div class="nav-actions">
-        <a href="javascript:void(0)" class="nav-link booking-badge-btn" id="navMyBookings" onclick="App.showMyBookingsView()" title="Chuyến của tôi">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <!-- Nút Trở thành chủ xe (Nổi bật chuẩn Mioto) -->
+        <button class="btn-become-owner" onclick="App.switchRole('OWNER'); OwnerService.showAddCarTab();">
+          Trở thành chủ xe
+        </button>
+
+        <!-- Chuyến đi badge -->
+        <a href="javascript:void(0)" class="booking-badge-btn" id="navMyBookings" onclick="App.showMyBookingsView()" title="Chuyến của tôi">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
             <line x1="16" y1="2" x2="16" y2="6"></line>
             <line x1="8" y1="2" x2="8" y2="6"></line>
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
-          <span class="nav-text-label">Chuyến đi</span>
+          <span style="font-size: 0.88rem;">Chuyến đi</span>
           <span class="badge-count" id="navBookingBadgeCount" style="display: none;">0</span>
         </a>
-        <button class="btn btn-primary btn-sm" onclick="App.switchRole('OWNER'); OwnerService.showAddCarTab();">
-          + Đăng xe
-        </button>
+
+        <!-- Auth Group -->
+        <div class="nav-auth-group">
+          <button class="btn-auth-signup" onclick="App.showToast('Tính năng đăng ký tài khoản khách hàng mới', 'info')">
+            Đăng ký
+          </button>
+          <button class="btn-auth-login" onclick="App.showToast('Chào mừng bạn đến với Mioto!', 'success')">
+            Đăng nhập
+          </button>
+        </div>
       </div>
 
     </div>
@@ -80,155 +118,227 @@
   <!-- ==================== 2. MAIN VIEW CONTAINERS ==================== -->
   <main id="mainAppContent">
 
-    <!-- ==================== PHÂN HỆ 1: KHÁCH THUÊ (RENTER) ==================== -->
+    <!-- ==================== PHÂN HỆ 1: TRANG CHỦ & KHÁCH THUÊ (RENTER) ==================== -->
     <div id="renterSection">
       
-      <!-- Hero Banner & Booking Search Widget -->
+      <!-- 2.1 HERO BANNER & SEARCH WIDGET CHUẨN MIOTO -->
       <section class="hero-section">
-        <div class="container">
+        <div class="hero-overlay"></div>
+        <div class="container hero-content">
+          
           <div class="hero-header">
-            <div class="hero-tagline">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>
-              <span>Nền tảng cho thuê xe tự lái trực tuyến</span>
-            </div>
-            <h1 class="hero-title">Thuê xe tự lái - Giao nhận tận nơi toàn quốc</h1>
-            <p class="hero-subtitle">Hơn 500+ dòng xe đời mới được bảo dưỡng chính hãng, thủ tục đơn giản với CCCD và GPLX B2, bảo hiểm 2 chiều MIC an tâm trọn vẹn.</p>
+            <h1 class="hero-title">MIOTO - CÙNG BẠN TRÊN MỌI HÀNH TRÌNH</h1>
+            <p class="hero-subtitle">Trải nghiệm dịch vụ thuê xe tự lái và có tài xế tiện lợi, minh bạch và an toàn hàng đầu Việt Nam.</p>
           </div>
 
-          <!-- Search Box -->
-          <div class="search-widget-card">
-            <div class="search-type-tabs">
-              <button class="search-type-btn active">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                Xe tự lái
+          <!-- Floating Search Widget (Mioto Style) -->
+          <div class="search-widget-container">
+            <!-- Tabs trên đầu thẻ tìm kiếm -->
+            <div class="search-widget-tabs">
+              <button class="search-tab-item active" id="tabSelfDrive">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path>
+                  <circle cx="7" cy="17" r="2"></circle>
+                  <path d="M9 17h6"></path>
+                  <circle cx="17" cy="17" r="2"></circle>
+                </svg>
+                <span>Xe tự lái</span>
               </button>
-              <button class="search-type-btn" onclick="App.showToast('Dịch vụ Xe có tài xế đang được chuẩn bị ở giai đoạn tiếp theo!', 'info')">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
-                Xe có tài xế
+              <button class="search-tab-item" onclick="App.showToast('Dịch vụ Xe có tài xế đang được hoàn thiện giai đoạn tiếp theo!', 'info')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <polyline points="16 11 18 13 22 9"></polyline>
+                </svg>
+                <span>Xe có tài xế</span>
               </button>
-            </div>
-
-            <div class="search-grid">
-              <!-- Location Field -->
-              <div class="search-field-group">
-                <label class="search-field-label">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                  Địa điểm nhận xe
-                </label>
-                <select class="search-field-select" id="searchLocationSelect">
-                  <option value="ALL">Toàn quốc (TP.HCM, Hà Nội, Đà Nẵng...)</option>
-                  <option value="TP. Hồ Chí Minh" selected>TP. Hồ Chí Minh (Q.1, Q.7, Tân Bình...)</option>
-                  <option value="Hà Nội">Hà Nội (Cầu Giấy, Nam Từ Liêm...)</option>
-                  <option value="Đà Nẵng">Đà Nẵng (Sân bay Đà Nẵng, Hải Châu...)</option>
-                </select>
-              </div>
-
-              <!-- Pick-up Date & Time -->
-              <div class="search-field-group">
-                <label class="search-field-label">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                  Nhận xe
-                </label>
-                <div class="search-field-dates">
-                  <input type="date" class="search-field-input" id="searchStartDate" value="2026-09-15" />
-                  <span class="date-divider">|</span>
-                  <input type="time" class="search-field-input" id="searchStartTime" value="08:00" style="max-width: 75px;" />
-                </div>
-              </div>
-
-              <!-- Return Date & Time -->
-              <div class="search-field-group">
-                <label class="search-field-label">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                  Trả xe
-                </label>
-                <div class="search-field-dates">
-                  <input type="date" class="search-field-input" id="searchEndDate" value="2026-09-17" />
-                  <span class="date-divider">|</span>
-                  <input type="time" class="search-field-input" id="searchEndTime" value="20:00" style="max-width: 75px;" />
-                </div>
-              </div>
-
-              <!-- Search Button -->
-              <button class="btn btn-primary btn-lg" id="btnHeroSearch" style="height: 100%; min-height: 52px;">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                Tìm xe ngay
+              <button class="search-tab-item" onclick="App.showToast('Thuê xe dài hạn theo tháng/năm vui lòng liên hệ 1900 9217', 'info')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <span>Thuê xe dài hạn</span>
               </button>
             </div>
 
-            <!-- Features Trust Bar -->
-            <div class="features-strip">
-              <div class="feature-item">
-                <div class="feature-icon-box">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <!-- Form Card -->
+            <div class="search-widget-card">
+              <div class="search-grid">
+                <!-- Địa điểm -->
+                <div class="search-field-box">
+                  <div class="search-field-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                  </div>
+                  <div class="search-field-inner">
+                    <span class="search-field-title">Địa điểm</span>
+                    <select class="search-field-select" id="searchLocationSelect">
+                      <option value="ALL">Toàn quốc (TP.HCM, Hà Nội, Đà Nẵng...)</option>
+                      <option value="TP. Hồ Chí Minh" selected>TP. Hồ Chí Minh (Quận 1, 7, Tân Bình...)</option>
+                      <option value="Hà Nội">Hà Nội (Cầu Giấy, Nam Từ Liêm...)</option>
+                      <option value="Đà Nẵng">Đà Nẵng (Sân bay Đà Nẵng, Hải Châu...)</option>
+                    </select>
+                  </div>
                 </div>
-                <div class="feature-text">
-                  <h4>Bảo hiểm chuyến đi</h4>
-                  <p>Bảo hiểm 2 chiều MIC cho toàn bộ chuyến</p>
-                </div>
-              </div>
 
-              <div class="feature-item">
-                <div class="feature-icon-box">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M16 8l-8 8"></path><path d="M8 8h8v8"></path></svg>
+                <!-- Thời gian thuê -->
+                <div class="search-field-box">
+                  <div class="search-field-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                  </div>
+                  <div class="search-field-inner">
+                    <span class="search-field-title">Thời gian thuê</span>
+                    <div class="search-field-dates">
+                      <div class="search-date-part">
+                        <input type="date" class="search-field-input" id="searchStartDate" value="2026-09-15" />
+                        <input type="time" class="search-field-input" id="searchStartTime" value="21:00" style="max-width: 65px;" />
+                      </div>
+                      <span class="date-arrow">→</span>
+                      <div class="search-date-part">
+                        <input type="date" class="search-field-input" id="searchEndDate" value="2026-09-16" />
+                        <input type="time" class="search-field-input" id="searchEndTime" value="20:00" style="max-width: 65px;" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="feature-text">
-                  <h4>Giữ chỗ với 30% cọc</h4>
-                  <p>Đặt cọc qua VietQR minh bạch an toàn</p>
-                </div>
-              </div>
 
-              <div class="feature-item">
-                <div class="feature-icon-box">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                </div>
-                <div class="feature-text">
-                  <h4>Giao xe tận nơi</h4>
-                  <p>Hỗ trợ bàn giao tại nhà hoặc sân bay</p>
-                </div>
+                <!-- Nút Tìm Xe Mioto Xanh -->
+                <button class="btn-mioto-search" id="btnHeroSearch">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <span>Tìm Xe</span>
+                </button>
               </div>
+            </div>
+          </div>
 
-              <div class="feature-item">
-                <div class="feature-icon-box">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                </div>
-                <div class="feature-text">
-                  <h4>Hỗ trợ 24/7</h4>
-                  <p>Đồng hành cùng bạn trên mọi cung đường</p>
+        </div>
+      </section>
+
+      <!-- 2.2 CHƯƠNG TRÌNH KHUYẾN MÃI (PROMOS SLIDER) -->
+      <section class="promos-section" id="promosSection">
+        <div class="container">
+          <div class="section-title-wrap">
+            <h2 class="section-title">Chương Trình Khuyến Mãi</h2>
+            <p class="section-subtitle">Nhận nhiều ưu đãi hấp dẫn từ Mioto</p>
+          </div>
+
+          <div class="promos-grid">
+            <!-- Voucher 1 -->
+            <div class="promo-card" onclick="App.copyPromoCode('TRANGTRON')">
+              <img class="promo-card-bg" src="https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=800&auto=format&fit=crop" alt="Trung Thu Vi Vu" />
+              <div class="promo-card-overlay"></div>
+              <div class="promo-card-content">
+                <span class="promo-tag">Giảm 120K</span>
+                <h3 class="promo-title">Vui Đón Trung Thu - Cùng Nhau Vi Vu</h3>
+                <div class="promo-code-box">
+                  <span class="promo-code-text">TRANGTRON</span>
+                  <button class="btn-copy-code">Sao chép</button>
                 </div>
               </div>
             </div>
 
+            <!-- Voucher 2 -->
+            <div class="promo-card" onclick="App.copyPromoCode('VAOTHU')">
+              <img class="promo-card-bg" src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=800&auto=format&fit=crop" alt="Vào Thu" />
+              <div class="promo-card-overlay"></div>
+              <div class="promo-card-content">
+                <span class="promo-tag">Giảm 8%</span>
+                <h3 class="promo-title">Xe Riêng Sẵn Sàng - Tự Do Khám Phá</h3>
+                <div class="promo-code-box">
+                  <span class="promo-code-text">VAOTHU</span>
+                  <button class="btn-copy-code">Sao chép</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Voucher 3 -->
+            <div class="promo-card" onclick="App.copyPromoCode('48H')">
+              <img class="promo-card-bg" src="https://images.unsplash.com/photo-1511919884226-fd3cad34687c?q=80&w=800&auto=format&fit=crop" alt="Linh Hoạt 48H" />
+              <div class="promo-card-overlay"></div>
+              <div class="promo-card-content">
+                <span class="promo-tag">Giảm 10%</span>
+                <h3 class="promo-title">Linh Hoạt Thời Gian - Chủ Động Hành Trình</h3>
+                <div class="promo-code-box">
+                  <span class="promo-code-text">48H</span>
+                  <button class="btn-copy-code">Sao chép</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- Catalog Section with Filters & Car Grid -->
-      <section class="catalog-section" id="catalogSection">
+      <!-- 2.3 HÀNH TRÌNH ĐƯỢC BẢO VỆ & ĐỐI TÁC BẢO HIỂM -->
+      <section class="insurance-section" id="insuranceSection">
         <div class="container">
-          
-          <!-- Smart Practical Route Suggestions (Không emoji) -->
-          <div class="smart-prompt-box">
-            <div class="smart-prompt-left">
-              <div class="smart-prompt-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-              </div>
-              <div class="smart-prompt-content">
-                <h4>Gợi ý theo nhu cầu thực tế:</h4>
-                <p>Chọn nhanh lộ trình chuyến đi để tìm kiếm dòng xe phù hợp và tiết kiệm chi phí</p>
-              </div>
+          <div class="insurance-banner">
+            <div class="insurance-text-group">
+              <h3>Hành Trình Của Bạn Luôn Được Bảo Vệ</h3>
+              <p>Mỗi chuyến xe thuê trên Mioto đều được bảo vệ toàn diện với gói bảo hiểm tự lái và bảo hiểm trách nhiệm dân sự tối ưu nhất.</p>
             </div>
-            <div class="smart-prompt-actions">
-              <button class="smart-chip-btn" onclick="App.applyPromptSuggestion('VUNG_TAU')">Đi Vũng Tàu (4-5 chỗ)</button>
-              <button class="smart-chip-btn" onclick="App.applyPromptSuggestion('DA_LAT_7CHO')">Gia đình đi Đà Lạt (7 chỗ)</button>
-              <button class="smart-chip-btn" onclick="App.applyPromptSuggestion('XE_DIEN')">Xe điện cao cấp (EV)</button>
-              <button class="smart-chip-btn" onclick="App.applyPromptSuggestion('TIET_KIEM')">Xe tiết kiệm (&lt; 800k)</button>
+            <div class="insurance-badge-shield">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="#00a550">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+              </svg>
+              <div>
+                <div style="font-weight: 800; font-size: 0.95rem; color: #008744;">Bảo Hiểm Toàn Diện</div>
+                <div style="font-size: 0.78rem; color: var(--slate-600);">Bồi thường tối đa 2.000.000đ khi có sự cố</div>
+              </div>
             </div>
           </div>
 
-          <!-- Comprehensive Filter Bar -->
+          <!-- Partner Insurance Logos -->
+          <div class="insurance-logos-strip">
+            <div class="partner-logo-card">
+              <span style="color: #ea580c;">GLOBAL CARE</span>
+            </div>
+            <div class="partner-logo-card">
+              <span style="color: #dc2626;">★ MIC BẢO HIỂM</span>
+            </div>
+            <div class="partner-logo-card">
+              <span style="color: #0284c7;">VNI HÀNG KHÔNG</span>
+            </div>
+            <div class="partner-logo-card">
+              <span style="color: #b91c1c;">PVI INSURANCE</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2.4 DANH MỤC XE ("XE DÀNH CHO BẠN") -->
+      <section class="catalog-section" id="catalogSection">
+        <div class="container">
+          
+          <div class="section-title-wrap">
+            <h2 class="section-title">Xe Dành Cho Bạn</h2>
+            <p class="section-subtitle">Đa dạng lựa chọn với hơn 500+ mẫu xe đời mới sẵn sàng phục vụ</p>
+          </div>
+
+          <!-- Quick Filter Pills (Mioto Filter Row) -->
+          <div class="quick-filter-scroll">
+            <button class="quick-pill active" onclick="App.applyQuickTag('ALL')">Tất cả xe</button>
+            <button class="quick-pill" onclick="App.applyQuickTag('INSTANT')">Đặt xe nhanh (Duyệt ngay)</button>
+            <button class="quick-pill" onclick="App.applyQuickTag('ALL')">Miễn thế chấp</button>
+            <button class="quick-pill" onclick="App.applyQuickTag('ALL')">Giao xe tận nơi</button>
+            <button class="quick-pill" onclick="App.applyQuickTag('EV')">Xe điện thế hệ mới (EV)</button>
+            <button class="quick-pill" onclick="App.applyQuickTag('SAVING')">Giá tốt &lt; 800K</button>
+          </div>
+
+          <!-- Detailed Filter Bar -->
           <div class="filter-bar">
-            <!-- Row 1: Hãng xe Chips -->
+            <!-- Row 1: Brand Chips -->
             <div class="filter-row" style="margin-bottom: 0.85rem;">
               <div class="filter-chips-group">
                 <span class="filter-label">Hãng xe:</span>
@@ -244,52 +354,48 @@
               </div>
             </div>
 
-            <!-- Row 2: Số chỗ Chips -->
+            <!-- Row 2: Seats Chips -->
             <div class="filter-row">
               <div class="filter-chips-group">
                 <span class="filter-label">Số chỗ & Phân khúc:</span>
-                <button class="chip active" data-filter-seats="ALL">Tất cả xe</button>
+                <button class="chip active" data-filter-seats="ALL">Tất cả</button>
                 <button class="chip" data-filter-seats="4-5">4 - 5 chỗ (Sedan / CUV)</button>
                 <button class="chip" data-filter-seats="7">7 chỗ (MPV / SUV)</button>
-                <button class="chip" data-filter-seats="PICKUP">Xe bán tải (4x4)</button>
+                <button class="chip" data-filter-seats="PICKUP">Xe bán tải</button>
               </div>
               <button class="btn btn-ghost btn-sm" onclick="App.resetFilters()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-                Xóa bộ lọc
+                Đặt lại
               </button>
             </div>
 
-            <!-- Row 3: Dropdown filters -->
+            <!-- Row 3: Dropdowns -->
             <div class="filter-secondary-row">
-              <div style="display: flex; gap: 0.65rem; flex-wrap: wrap; align-items: center;">
-                <div>
-                  <select class="select-filter" id="selectTransmission">
-                    <option value="ALL">Hộp số: Tất cả</option>
-                    <option value="AUTOMATIC">Số tự động (AT)</option>
-                    <option value="MANUAL">Số sàn (MT)</option>
-                  </select>
-                </div>
-                <div>
-                  <select class="select-filter" id="selectFuel">
-                    <option value="ALL">Nhiên liệu: Tất cả</option>
-                    <option value="GASOLINE">Chạy xăng</option>
-                    <option value="ELECTRIC">Chạy điện (EV)</option>
-                    <option value="DIESEL">Dầu Diesel</option>
-                  </select>
-                </div>
-                <div>
-                  <select class="select-filter" id="selectPrice">
-                    <option value="ALL">Mức giá: Tất cả</option>
-                    <option value="UNDER_800">Dưới 800.000 đ</option>
-                    <option value="800_1200">Từ 800k - 1.200.000 đ</option>
-                    <option value="OVER_1200">Trên 1.200.000 đ</option>
-                  </select>
-                </div>
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <select class="select-filter" id="selectTransmission">
+                  <option value="ALL">Hộp số: Tất cả</option>
+                  <option value="AUTOMATIC">Số tự động</option>
+                  <option value="MANUAL">Số sàn</option>
+                </select>
+
+                <select class="select-filter" id="selectFuel">
+                  <option value="ALL">Nhiên liệu: Tất cả</option>
+                  <option value="GASOLINE">Chạy xăng</option>
+                  <option value="ELECTRIC">Chạy điện (EV)</option>
+                  <option value="DIESEL">Dầu Diesel</option>
+                </select>
+
+                <select class="select-filter" id="selectPrice">
+                  <option value="ALL">Mức giá: Tất cả</option>
+                  <option value="UNDER_800">Dưới 800.000 đ</option>
+                  <option value="800_1200">Từ 800k - 1.200.000 đ</option>
+                  <option value="OVER_1200">Trên 1.200.000 đ</option>
+                </select>
               </div>
 
-              <div style="display: flex; align-items: center; gap: 0.85rem; justify-content: space-between;">
-                <div class="results-count-text">
-                  Tìm thấy <span id="resultsCountNumber">9</span> xe có sẵn
+              <div style="display: flex; align-items: center; gap: 0.85rem;">
+                <div style="font-size: 0.85rem; color: var(--slate-500);">
+                  Tìm thấy <strong id="resultsCountNumber" style="color: var(--slate-900);">9</strong> xe có sẵn
                 </div>
                 <select class="select-filter" id="selectSort">
                   <option value="RECOMMENDED">Gợi ý tốt nhất</option>
@@ -302,11 +408,353 @@
             </div>
           </div>
 
-          <!-- Car Cards Grid -->
-          <div class="car-grid" id="carGridContainer">
-            <!-- Sẽ được RenderService.renderCarGrid chèn động -->
+          <!-- Car Cards Grid (Sẽ được RenderService.renderCarGrid chèn động) -->
+          <div class="car-grid" id="carGridContainer"></div>
+
+        </div>
+      </section>
+
+      <!-- 2.5 ĐỊA ĐIỂM NỔI BẬT (CHỮ KÝ VÁT GÓC ĐẶC TRƯNG MIOTO) -->
+      <section class="locations-section">
+        <div class="container">
+          <div class="section-title-wrap">
+            <h2 class="section-title">Địa Điểm Nổi Bật</h2>
+            <p class="section-subtitle">Khám phá các thành phố sôi động cùng dịch vụ xe tự lái hàng đầu</p>
           </div>
 
+          <div class="locations-grid">
+            <!-- TP. Hồ Chí Minh -->
+            <div class="location-cut-card" onclick="document.getElementById('searchLocationSelect').value='TP. Hồ Chí Minh'; App.applyFilters(); window.scrollTo({top: 800, behavior: 'smooth'});">
+              <img src="https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=800&auto=format&fit=crop" alt="TP. Hồ Chí Minh" />
+              <div class="location-overlay"></div>
+              <div class="location-card-content">
+                <h3 class="location-name">TP. Hồ Chí Minh</h3>
+                <span class="location-car-count">6000+ xe</span>
+              </div>
+            </div>
+
+            <!-- Hà Nội -->
+            <div class="location-cut-card" onclick="document.getElementById('searchLocationSelect').value='Hà Nội'; App.applyFilters(); window.scrollTo({top: 800, behavior: 'smooth'});">
+              <img src="https://images.unsplash.com/photo-1599827552599-ea26c36f56d7?q=80&w=800&auto=format&fit=crop" alt="Hà Nội" />
+              <div class="location-overlay"></div>
+              <div class="location-card-content">
+                <h3 class="location-name">Hà Nội</h3>
+                <span class="location-car-count">3000+ xe</span>
+              </div>
+            </div>
+
+            <!-- Đà Nẵng -->
+            <div class="location-cut-card" onclick="document.getElementById('searchLocationSelect').value='Đà Nẵng'; App.applyFilters(); window.scrollTo({top: 800, behavior: 'smooth'});">
+              <img src="https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?q=80&w=800&auto=format&fit=crop" alt="Đà Nẵng" />
+              <div class="location-overlay"></div>
+              <div class="location-card-content">
+                <h3 class="location-name">Đà Nẵng</h3>
+                <span class="location-car-count">1000+ xe</span>
+              </div>
+            </div>
+
+            <!-- Bình Dương -->
+            <div class="location-cut-card" onclick="document.getElementById('searchLocationSelect').value='ALL'; App.applyFilters(); window.scrollTo({top: 800, behavior: 'smooth'});">
+              <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=800&auto=format&fit=crop" alt="Bình Dương" />
+              <div class="location-overlay"></div>
+              <div class="location-card-content">
+                <h3 class="location-name">Bình Dương</h3>
+                <span class="location-car-count">500+ xe</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2.6 GIAO XE TẠI SÂN BAY -->
+      <section class="airport-section">
+        <div class="container">
+          <div class="airport-strip-container">
+            <div class="airport-strip-title">
+              Giao xe tại sân bay
+            </div>
+            <div class="airport-cards-row">
+              <div class="airport-card" onclick="App.showToast('Lựa chọn địa điểm nhận tại Sân bay Tân Sơn Nhất', 'info')">
+                <div class="airport-img-circle">
+                  <img src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?q=80&w=300&auto=format&fit=crop" alt="Tân Sơn Nhất" />
+                </div>
+                <div class="airport-name">Tân Sơn Nhất</div>
+                <div class="airport-vehicles">2000+ xe</div>
+              </div>
+
+              <div class="airport-card" onclick="App.showToast('Lựa chọn địa điểm nhận tại Ga T3 (TSN)', 'info')">
+                <div class="airport-img-circle">
+                  <img src="https://images.unsplash.com/photo-1542296332-2e4473faf563?q=80&w=300&auto=format&fit=crop" alt="Ga T3 TSN" />
+                </div>
+                <div class="airport-name">Ga T3 (TSN)</div>
+                <div class="airport-vehicles">2000+ xe</div>
+              </div>
+
+              <div class="airport-card" onclick="App.showToast('Lựa chọn địa điểm nhận tại Sân bay Nội Bài', 'info')">
+                <div class="airport-img-circle">
+                  <img src="https://images.unsplash.com/photo-1520437358207-323b43b50729?q=80&w=300&auto=format&fit=crop" alt="Nội Bài" />
+                </div>
+                <div class="airport-name">Nội Bài</div>
+                <div class="airport-vehicles">200+ xe</div>
+              </div>
+
+              <div class="airport-card" onclick="App.showToast('Lựa chọn địa điểm nhận tại Sân bay Đà Nẵng', 'info')">
+                <div class="airport-img-circle">
+                  <img src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?q=80&w=300&auto=format&fit=crop" alt="Đà Nẵng" />
+                </div>
+                <div class="airport-name">Đà Nẵng</div>
+                <div class="airport-vehicles">100+ xe</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2.7 ƯU ĐIỂM CỦA MIOTO -->
+      <section class="advantages-section">
+        <div class="container">
+          <div class="section-title-wrap">
+            <h2 class="section-title">Ưu Điểm Của Mioto</h2>
+            <p class="section-subtitle">Những tính năng giúp bạn dễ dàng hơn khi thuê xe trên Mioto.</p>
+          </div>
+
+          <div class="advantages-grid">
+            <!-- Card 1 -->
+            <div class="advantage-card">
+              <div class="advantage-icon-wrap">
+                <svg width="90" height="90" viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="45" fill="#e8f9ee"/>
+                  <path d="M30 45 L50 25 L70 45 L70 70 L30 70 Z" fill="#5fcf86"/>
+                  <path d="M42 55 L48 61 L58 48" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <h3 class="advantage-title">Lái xe an toàn cùng Mioto</h3>
+              <p class="advantage-desc">Chuyến đi trên Mioto được bảo vệ với Gói bảo hiểm thuê xe tự lái từ MIC & DBV (VNI). Khách thuê sẽ chỉ bồi thường tối đa 2.000.000VNĐ trong trường hợp có sự cố ngoài ý muốn.</p>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="advantage-card">
+              <div class="advantage-icon-wrap">
+                <svg width="90" height="90" viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="45" fill="#fff7ed"/>
+                  <path d="M50 20 C35 20 25 32 25 45 C25 62 50 80 50 80 C50 80 75 62 75 45 C75 32 65 20 50 20 Z" fill="#ff6433"/>
+                  <circle cx="50" cy="45" r="10" fill="#ffffff"/>
+                </svg>
+              </div>
+              <h3 class="advantage-title">An tâm đặt xe</h3>
+              <p class="advantage-desc">Không tính phí huỷ chuyến trong vòng 1h sau khi thanh toán giữ chỗ. Hoàn tiền giữ chỗ và bồi thường 100% nếu chủ xe huỷ chuyến trong vòng 7 ngày trước chuyến đi.</p>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="advantage-card">
+              <div class="advantage-icon-wrap">
+                <svg width="90" height="90" viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="45" fill="#eff6ff"/>
+                  <rect x="28" y="25" width="44" height="50" rx="6" fill="#3b82f6"/>
+                  <line x1="36" y1="38" x2="64" y2="38" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+                  <line x1="36" y1="48" x2="58" y2="48" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+                  <line x1="36" y1="58" x2="50" y2="58" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h3 class="advantage-title">Thủ tục đơn giản</h3>
+              <p class="advantage-desc">Chỉ cần có CCCD gắn chip (hoặc Passport) & Giấy phép lái xe hợp lệ là bạn đã đủ điều kiện thuê xe trên Mioto mà không cần hộ khẩu hay thế chấp rườm rà.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2.8 HƯỚNG DẪN THUÊ XE (4 BƯỚC) -->
+      <section class="guide-section">
+        <div class="container">
+          <div class="section-title-wrap">
+            <h2 class="section-title">Hướng Dẫn Thuê Xe</h2>
+            <p class="section-subtitle">Chỉ với 4 bước đơn giản để trải nghiệm thuê xe Mioto một cách nhanh chóng</p>
+          </div>
+
+          <div class="steps-grid">
+            <div class="step-card">
+              <div class="step-icon-box">
+                <svg width="80" height="80" viewBox="0 0 100 100" fill="none">
+                  <rect x="25" y="15" width="50" height="70" rx="10" fill="#e8f9ee" stroke="#5fcf86" stroke-width="3"/>
+                  <circle cx="50" cy="74" r="3" fill="#5fcf86"/>
+                  <rect x="33" y="26" width="34" height="38" rx="4" fill="#5fcf86"/>
+                </svg>
+              </div>
+              <div class="step-number">01</div>
+              <h4 class="step-title">Đặt xe trên app/web Mioto</h4>
+            </div>
+
+            <div class="step-card">
+              <div class="step-icon-box">
+                <svg width="80" height="80" viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="38" fill="#e8f9ee"/>
+                  <path d="M35 52 L45 62 L65 42" stroke="#5fcf86" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="step-number">02</div>
+              <h4 class="step-title">Nhận xe</h4>
+            </div>
+
+            <div class="step-card">
+              <div class="step-icon-box">
+                <svg width="80" height="80" viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="38" fill="#e8f9ee"/>
+                  <circle cx="50" cy="50" r="24" stroke="#5fcf86" stroke-width="6"/>
+                  <line x1="50" y1="50" x2="50" y2="30" stroke="#5fcf86" stroke-width="5" stroke-linecap="round"/>
+                  <line x1="50" y1="50" x2="68" y2="50" stroke="#5fcf86" stroke-width="5" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="step-number">03</div>
+              <h4 class="step-title">Bắt đầu hành trình</h4>
+            </div>
+
+            <div class="step-card">
+              <div class="step-icon-box">
+                <svg width="80" height="80" viewBox="0 0 100 100" fill="none">
+                  <polygon points="50,15 61,38 86,41 68,58 73,83 50,70 27,83 32,58 14,41 39,38" fill="#5fcf86"/>
+                </svg>
+              </div>
+              <div class="step-number">04</div>
+              <h4 class="step-title">Trả xe & kết thúc chuyến đi</h4>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2.9 EXPLORER & OWNER CALLOUTS -->
+      <section class="explorer-section">
+        <div class="container">
+          <div class="explorer-grid">
+            <!-- Card 1: Về Mioto -->
+            <div class="explorer-banner-card">
+              <div class="explorer-card-img">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=500&auto=format&fit=crop" alt="Khách hàng du lịch" />
+              </div>
+              <div class="explorer-card-body">
+                <h3>Bạn muốn biết thêm về Mioto?</h3>
+                <p>Mioto kết nối khách hàng có nhu cầu thuê xe với hàng ngàn chủ xe ô tô ở TPHCM, Hà Nội & các tỉnh thành khác với chi phí tối ưu nhất.</p>
+                <button class="btn btn-primary btn-sm" onclick="App.showToast('Mioto - Nền tảng chia sẻ xe ô tô công nghệ hàng đầu!', 'info')">
+                  Tìm hiểu thêm
+                </button>
+              </div>
+            </div>
+
+            <!-- Card 2: Trở thành chủ xe -->
+            <div class="explorer-banner-card variant-owner">
+              <div class="explorer-card-img">
+                <img src="https://images.unsplash.com/photo-1560179707-f14e90ef3623?q=80&w=500&auto=format&fit=crop" alt="Chủ xe hợp tác" />
+              </div>
+              <div class="explorer-card-body">
+                <h3>Bạn muốn cho thuê xe?</h3>
+                <p>Trở thành đối tác chủ xe của Mioto để gia tăng thu nhập thụ động mỗi tháng lên đến 15 - 20 triệu đồng từ chiếc xe nhàn rỗi.</p>
+                <button class="btn btn-outline btn-sm" onclick="App.switchRole('OWNER'); OwnerService.showAddCarTab();">
+                  Đăng ký xe ngay
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2.10 TẢI ỨNG DỤNG MIOTO (MOBILE APP SHOWCASE) -->
+      <section class="app-download-section">
+        <div class="container">
+          <div class="app-showcase-card">
+            <div class="app-showcase-text">
+              <h2 class="app-showcase-title">Trải nghiệm trọn vẹn cùng ứng dụng Mioto</h2>
+              <p class="app-showcase-desc">Đặt xe nhanh chóng chỉ với vài thao tác trên điện thoại. Quản lý lịch trình, quét mã kiểm tra xe thông minh và nhận ưu đãi độc quyền trên app.</p>
+              
+              <div class="app-store-badges">
+                <!-- App Store -->
+                <a href="javascript:void(0)" class="store-badge-btn" onclick="App.showToast('Ứng dụng Mioto trên App Store', 'info')">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.14c.62-.75 1.04-1.8 0.92-2.85-.9.04-1.99.6-2.63 1.35-.57.65-1.07 1.71-.93 2.73 1.01.08 2.02-.48 2.64-1.23z"/></svg>
+                  <div class="store-badge-text">
+                    <span>Download on the</span>
+                    <span>App Store</span>
+                  </div>
+                </a>
+
+                <!-- Google Play -->
+                <a href="javascript:void(0)" class="store-badge-btn" onclick="App.showToast('Ứng dụng Mioto trên Google Play', 'info')">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.5,12.92 20.16,13.19L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/></svg>
+                  <div class="store-badge-text">
+                    <span>GET IT ON</span>
+                    <span>Google Play</span>
+                  </div>
+                </a>
+              </div>
+            </div>
+
+            <!-- Phone Mockup Illustration -->
+            <div class="phone-mockup-wrapper">
+              <div class="phone-speaker"></div>
+              <div class="phone-screen-content">
+                <div style="background: #5fcf86; color: white; padding: 0.65rem; border-radius: 12px; margin-bottom: 0.65rem; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between;">
+                  <span>MIOTO</span>
+                  <span style="font-size: 0.65rem; background: rgba(0,0,0,0.15); padding: 2px 6px; border-radius: 6px;">App Version</span>
+                </div>
+                
+                <!-- Mini card on phone screen -->
+                <div style="background: #f8fafc; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; margin-bottom: 0.5rem;">
+                  <img src="https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=400&auto=format&fit=crop" style="width: 100%; height: 95px; object-fit: cover;" />
+                  <div style="padding: 0.5rem;">
+                    <div style="font-weight: 800; font-size: 0.82rem;">VinFast VF5 Plus 2024</div>
+                    <div style="color: #008744; font-weight: 800; font-size: 0.9rem; margin-top: 2px;">650.000 đ/ngày</div>
+                    <div style="font-size: 0.7rem; color: #64748b;">Quận 7, TP.HCM · 5.0 ⭐</div>
+                  </div>
+                </div>
+
+                <div style="background: #eefbf3; border: 1px solid #c4f1d4; padding: 0.5rem; border-radius: 8px; font-size: 0.72rem; color: #008744; font-weight: 700;">
+                  ✓ Đã duyệt tự động · Giữ chỗ 30%
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2.11 MIOTO BLOG / CẨM NANG DU LỊCH -->
+      <section class="blog-section" id="blogSection">
+        <div class="container">
+          <div class="section-title-wrap">
+            <h2 class="section-title">MIOTO Blog</h2>
+            <p class="section-subtitle">Kinh nghiệm du lịch, cẩm nang lái xe và điểm đến thú vị</p>
+          </div>
+
+          <div class="blog-grid">
+            <div class="blog-card" onclick="App.showToast('Bài viết: Gợi Ý 5 Điểm Đến Gần TP.HCM', 'info')">
+              <div class="blog-img-box">
+                <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=800&auto=format&fit=crop" alt="Điểm đến gần TP.HCM" />
+              </div>
+              <div class="blog-card-body">
+                <span class="blog-date">30/08/2026 · Cẩm nang du lịch</span>
+                <h3 class="blog-title">Gợi Ý 5 Điểm Đến Gần TP.HCM Cho Chuyến Du Lịch Ngắn Ngày Bằng Ô Tô</h3>
+                <p class="blog-excerpt">Tổng hợp các cung đường tuyệt đẹp thích hợp cho chuyến dã ngoại cuối tuần cùng gia đình và bạn bè.</p>
+              </div>
+            </div>
+
+            <div class="blog-card" onclick="App.showToast('Bài viết: Kinh nghiệm thuê xe tự lái', 'info')">
+              <div class="blog-img-box">
+                <img src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=800&auto=format&fit=crop" alt="Kinh nghiệm thuê xe" />
+              </div>
+              <div class="blog-card-body">
+                <span class="blog-date">24/08/2026 · Hướng dẫn</span>
+                <h3 class="blog-title">Xu Hướng Thuê Xe Tự Lái Dịp Lễ 2/9: Những Lưu Ý Quan Trọng Cần Biết</h3>
+                <p class="blog-excerpt">Bí quyết chọn xe, kiểm tra biên bản bàn giao và thủ tục cọc giúp bạn có một kỳ nghỉ an tâm trọn vẹn.</p>
+              </div>
+            </div>
+
+            <div class="blog-card" onclick="App.showToast('Bài viết: Trải nghiệm xe điện VinFast', 'info')">
+              <div class="blog-img-box">
+                <img src="https://images.unsplash.com/photo-1563720223185-11003d516935?q=80&w=800&auto=format&fit=crop" alt="Xe điện VinFast" />
+              </div>
+              <div class="blog-card-body">
+                <span class="blog-date">18/08/2026 · Xe công nghệ</span>
+                <h3 class="blog-title">Trải Nghiệm Du Lịch Bằng Xe Điện: Tiết Kiệm Chi Phí & Thân Thiện Môi Trường</h3>
+                <p class="blog-excerpt">Hệ thống trạm sạc phủ rộng giúp xe điện trở thành sự lựa chọn thông minh hàng đầu cho các chuyến đi.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -319,7 +767,7 @@
           <div class="portal-title-row">
             <div class="portal-title-group">
               <h2>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" color="#0f766e">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" color="#00a550">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                   <line x1="16" y1="2" x2="16" y2="6"></line>
                   <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -327,7 +775,7 @@
                 </svg>
                 Lịch Sử Chuyến Đi Của Tôi
               </h2>
-              <div class="portal-subtitle">Khách thuê: <strong>Lê Hoàng Nam</strong> · GPLX Hạng B2 (Đã xác minh)</div>
+              <div class="portal-subtitle">Khách thuê: <strong>Lê Hoàng Nam</strong> · GPLX Hạng B2 (Đã xác thực CCCD)</div>
             </div>
             <button class="btn btn-outline btn-sm" onclick="App.showCatalogView()">
               + Đặt thêm chuyến xe mới
@@ -336,7 +784,7 @@
         </div>
       </div>
 
-      <div class="container">
+      <div class="container" style="padding-top: 2rem; padding-bottom: 4rem;">
         <div id="myBookingsListContainer">
           <!-- RenderService.renderMyBookings -->
         </div>
@@ -371,7 +819,7 @@
         </button>
       </div>
       <div class="modal-body" id="carDetailModalBody">
-        <!-- Nội dung xe -->
+        <!-- Nội dung chi tiết xe -->
       </div>
     </div>
   </div>
@@ -391,18 +839,92 @@
     </div>
   </div>
 
-  <!-- Footer -->
-  <footer style="background: var(--white); border-top: 1px solid var(--slate-200); padding: 2rem 0; margin-top: auto;">
-    <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-      <div>
-        <div style="font-weight: 800; font-size: 1.15rem; color: var(--primary);">DriveShare</div>
-        <div style="color: var(--slate-500); font-size: 0.82rem; margin-top: 0.2rem;">
-          Đề tài thực tập K4: Nền tảng chia sẻ xe ô tô tự lái trực tuyến (Mô hình Mioto)
+  <!-- ==================== 3. CHÂN TRANG (FOOTER CHUẨN MIOTO) ==================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-top-grid">
+        <!-- Brand & Hotline -->
+        <div class="footer-brand-col">
+          <div class="brand-logo">
+            <div class="brand-logo-symbol">
+              <svg viewBox="0 0 100 45" width="40" height="22" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M 28 8 C 15 8 8 16 8 23 C 8 30 15 37 28 37 C 42 37 49 14 56 14 C 63 14 70 37 84 37 C 97 37 104 30 104 23 C 104 16 97 8 84 8 C 70 8 63 31 56 31 C 49 31 42 8 28 8 Z" stroke="#5fcf86" />
+              </svg>
+            </div>
+            <span class="brand-logo-text">MIOTO</span>
+          </div>
+          
+          <div class="footer-hotline">
+            <div class="footer-hotline-number">1900 9217</div>
+            <div class="footer-hotline-label">Tổng đài hỗ trợ: 7AM - 10PM</div>
+          </div>
+
+          <p style="margin-top: 0.85rem;">
+            <strong>contact@mioto.vn</strong><br />
+            Gửi email phản hồi cho chúng tôi
+          </p>
+
+          <div class="footer-social-icons">
+            <a href="javascript:void(0)" class="social-icon-btn" title="Facebook">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+            </a>
+            <a href="javascript:void(0)" class="social-icon-btn" title="TikTok">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg>
+            </a>
+            <a href="javascript:void(0)" class="social-icon-btn" title="Zalo">
+              <span style="font-weight: 800; font-size: 0.75rem;">Zalo</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Chính Sách -->
+        <div>
+          <h4 class="footer-col-title">Chính Sách</h4>
+          <ul class="footer-links-list">
+            <li><a href="javascript:void(0)">Chính sách & quy định</a></li>
+            <li><a href="javascript:void(0)">Quy chế hoạt động</a></li>
+            <li><a href="javascript:void(0)">Chính sách bảo mật BVDLCN</a></li>
+            <li><a href="javascript:void(0)">Giải quyết khiếu nại</a></li>
+            <li><a href="javascript:void(0)">Bảo hiểm chuyến đi</a></li>
+          </ul>
+        </div>
+
+        <!-- Tìm Hiểu Thêm -->
+        <div>
+          <h4 class="footer-col-title">Tìm Hiểu Thêm</h4>
+          <ul class="footer-links-list">
+            <li><a href="javascript:void(0)">Hướng dẫn chung</a></li>
+            <li><a href="javascript:void(0)">Hướng dẫn đặt xe</a></li>
+            <li><a href="javascript:void(0)">Hướng dẫn thanh toán & cọc</a></li>
+            <li><a href="javascript:void(0)">Hỏi và trả lời (FAQ)</a></li>
+            <li><a href="javascript:void(0)">Về chúng tôi</a></li>
+          </ul>
+        </div>
+
+        <!-- Đối Tác -->
+        <div>
+          <h4 class="footer-col-title">Đối Tác</h4>
+          <ul class="footer-links-list">
+            <li><a href="javascript:void(0)">Đăng ký chủ xe Mioto</a></li>
+            <li><a href="javascript:void(0)">Đăng ký GPS định vị</a></li>
+            <li><a href="javascript:void(0)">Đăng ký cho thuê xe dài hạn</a></li>
+            <li><a href="javascript:void(0)">Chính sách hoa hồng chủ xe</a></li>
+            <li><a href="javascript:void(0)">Tuyển dụng nhân tài</a></li>
+          </ul>
         </div>
       </div>
-      <div style="font-size: 0.82rem; color: var(--slate-500); text-align: right;">
-        <div>Nhóm thực hiện: <strong>Lâm Chí Vĩ, Đỗ Ngọc Phát, Hồ Huỳnh Khiêm, Nguyễn Duy Quân, Nguyễn Hữu Tín</strong></div>
-        <div style="margin-top: 0.2rem;">Thiết kế giao diện chuẩn mực, tối ưu hóa di động và máy tính · 2026</div>
+
+      <!-- Bottom Bar -->
+      <div class="footer-bottom-bar">
+        <div>
+          © 2026 Mioto Asia. Nền tảng kết nối cho thuê xe tự lái và có tài xế trực tuyến hàng đầu Việt Nam.
+        </div>
+        <div>
+          <span class="bocongthuong-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            Đã Đăng Ký Bộ Công Thương
+          </span>
+        </div>
       </div>
     </div>
   </footer>
