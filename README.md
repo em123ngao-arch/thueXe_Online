@@ -21,14 +21,18 @@
 
 ```plaintext
 Spring_ThucTap_k4/
-├── docs/                                    # Tài liệu kỹ thuật & kiến trúc
-│   ├── database_schema.sql                  # Script khởi tạo CSDL MySQL (v2.0 - 3 Database tinh gọn)
+├── docs/                                    # Toàn bộ tài liệu kỹ thuật & quản lý
+│   ├── database/                            # Kịch bản khởi tạo CSDL MySQL
+│   │   ├── database_schema.sql
+│   │   └── DriveShare_Database_Design_v2.sql
+│   ├── requirements/                        # Đề bài & yêu cầu thực tập
+│   │   └── deBai.docx
+│   ├── scrum/                               # Bảng tiến độ Sprint & User Stories
+│   │   ├── DriveShare_TienDo.xlsx
+│   │   └── Huong_Dan_Scrum_Product_Backlog_DriveShare.docx
 │   ├── flow_diagrams.md                     # Sơ đồ 10 luồng nghiệp vụ chính (Mermaid)
 │   └── glossary.md                          # Sổ tay 85+ thuật ngữ & câu trả lời bảo vệ
-├── problem/                                 # Đề bài & yêu cầu thực tập
-│   └── deBai.docx
-├── DriveShare_TienDo.xlsx                   # Bảng theo dõi tiến độ công việc & Sprint
-├── Huong_Dan_Scrum_Product_Backlog_DriveShare.docx # Product Backlog & User Stories
+├── frontend/                                # Giao diện Web (HTML/CSS/JS)
 ├── .gitignore                               # Quy tắc bỏ qua file rác / build
 └── README.md                                # Hướng dẫn tổng quan dự án
 ```
@@ -48,7 +52,7 @@ Spring_ThucTap_k4/
 
 ## 📑 Tài Liệu Tham Khảo Nhanh
 
-1. **[Thiết kế Cơ sở dữ liệu (database_schema.sql)](./docs/database_schema.sql)**:
+1. **[Thiết kế Cơ sở dữ liệu (database_schema.sql)](./docs/database/database_schema.sql)**:
    - Bản v2.0 tinh gọn gồm 10-11 bảng cốt lõi, loại bỏ bảng thừa, phân chia rõ ràng theo 3 CSDL: Khách thuê (`driveshare_renter_db`), Chủ xe (`driveshare_owner_db`), Quản trị (`driveshare_admin_db`). Kèm sẵn dữ liệu mẫu (`seed data`).
 2. **[Sơ đồ Luồng nghiệp vụ (flow_diagrams.md)](./docs/flow_diagrams.md)**:
    - 10 sơ đồ trực quan: Luồng đăng ký/đăng nhập, Đăng xe & Phê duyệt, Đặt xe & Đặt cọc, Bàn giao xe & Trả xe, Hủy cọc & Hoàn tiền, Đánh giá & Khiếu nại, State Machine đơn xe.
@@ -65,7 +69,7 @@ Spring_ThucTap_k4/
 mysql -u root -p
 
 # Chạy file script schema
-source docs/database_schema.sql;
+source docs/database/database_schema.sql;
 ```
 
 ### 2. Thiết lập Git & Làm Việc Nhóm
