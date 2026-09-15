@@ -9,11 +9,12 @@
 
 | STT | Thành Viên | Vai Trò (Role) | Trách Nhiệm Chính |
 |:---:|:---|:---|:---|
-| 1 | **Lâm Chí Vĩ** | **Scrum Master / Team Lead** | Quản lý dự án, Fullstack, điều phối chung |
-| 2 | **Đỗ Ngọc Phát** | **Backend Developer** | Thiết kế API, Auth, Quản lý xe, CSDL |
-| 3 | **Hồ Huỳnh Khiêm** | **Backend Developer** | Đặt xe, Thanh toán, Tự động hóa & Scheduler |
-| 4 | **Nguyễn Duy Quân** | **Frontend Developer** | Giao diện Web/UI-UX, Tích hợp API |
-| 5 | **Nguyễn Hữu Tín** | **QA / Tester** | Viết Test Cases, Kiểm thử API, Báo cáo lỗi |
+| 1 | **Bảo** | **Project Lead / Database** | Quản lý dự án, Thiết kế & Tối ưu CSDL v2, Review & Merge PR, CI/CD, Điều phối chung |
+| 2 | **Lộc Khiêm** | **Backend Core (Transaction Engine)** | **Gánh phần khó nhất**: Vòng đời Booking & State Machine, Concurrency Locking chống đặt trùng xe, Schedulers tự động hóa, Giao - Trả xe & Tính phụ phí (US-06, US-07, US-09, US-10) |
+| 3 | **Chí Vĩ** | **Backend Developer (Auth & Admin)** | Xác thực & Phân quyền RBAC, Quản lý User/Profile, Trang Quản trị Admin & Dashboard (US-01, US-02, US-14) |
+| 4 | **Phát** | **Backend Developer (Car & AI)** | Quản lý xe, Bộ lọc tìm kiếm đa tiêu chí, Tích hợp AI gợi ý xe & tóm tắt khiếu nại (US-03, US-04, US-05, US-15) |
+| 5 | **Quân** | **Backend Developer (Services)** | Hỗ trợ BE Thanh toán, Lịch sử giao dịch, Đánh giá, Khiếu nại, WebSocket Thông báo (US-08, US-11, US-12, US-13) |
+| 6 | **Chí Tín** | **Frontend / QA & Tester (Payment Specialist)** | Phụ trách toàn bộ Web UI, **Chủ trì phân hệ Thanh toán (Payment)** do đã có kinh nghiệm, Viết Test Cases & QA toàn bộ 15 Stories |
 
 ---
 
@@ -58,6 +59,12 @@ Spring_ThucTap_k4/
    - 10 sơ đồ trực quan: Luồng đăng ký/đăng nhập, Đăng xe & Phê duyệt, Đặt xe & Đặt cọc, Bàn giao xe & Trả xe, Hủy cọc & Hoàn tiền, Đánh giá & Khiếu nại, State Machine đơn xe.
 3. **[Sổ tay Thuật ngữ & Trả lời câu hỏi (glossary.md)](./docs/glossary.md)**:
    - Tra cứu nhanh các khái niệm Scrum, REST API, JWT, Optimistic Locking, Soft Delete, Cron Job,... để tự tin khi báo cáo & bảo vệ dự án.
+4. **[Quy Chuẩn Git & Làm Việc Nhóm (GIT_WORKFLOW.md)](./docs/GIT_WORKFLOW.md)**:
+   - Hướng dẫn phân nhánh `feature/*`, quy tắc commit, tạo Pull Request vào `develop` và chống xung đột (merge conflict).
+5. **[Quy Chuẩn Lập Trình Backend (BACKEND_CONVENTION.md)](./docs/BACKEND_CONVENTION.md)**:
+   - Cấu trúc package theo module, chuẩn RESTful URL, bọc dữ liệu `ApiResponse`, bắt lỗi tập trung `GlobalExceptionHandler`.
+6. **[Quy Chuẩn Frontend & Tích Hợp API (FRONTEND_CONVENTION.md)](./docs/FRONTEND_CONVENTION.md)**:
+   - Cấu trúc thư mục UI, quản lý JWT token và header, chuẩn hóa Fetch/Axios, bảng mã màu Design Tokens.
 
 ---
 
