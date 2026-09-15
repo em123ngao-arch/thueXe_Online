@@ -1,0 +1,401 @@
+{
+	"info": {
+		"_postman_id": "driveshare-sprint1-collection",
+		"name": "DriveShare - Sprint 1 API Collection",
+		"description": "API Collection dành cho Sprint 1 dự án DriveShare. Chuẩn RESTful, có sẵn auth header, query params phân trang, filter, search, sort và example response.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "POST Register (Owner / Renter)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"chuxe_hoangnam\",\n  \"email\": \"hoangnam@gmail.com\",\n  \"phone\": \"0909123456\",\n  \"password\": \"Pass@123456\",\n  \"full_name\": \"Nguyễn Hoàng Nam\",\n  \"role\": \"owner\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success && jsonData.data && jsonData.data.access_token) {",
+									"    pm.collectionVariables.set('accessToken', jsonData.data.access_token);",
+									"    console.log('Saved token to collectionVariables');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"identifier\": \"hoangnam@gmail.com\",\n  \"password\": \"Pass@123456\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. User Profile (Renter & Owner)",
+			"item": [
+				{
+					"name": "GET Current User Profile (/users/me)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/users/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PUT Update Profile (/users/me)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"full_name\": \"Nguyễn Hoàng Nam (Đã cập nhật)\",\n  \"phone\": \"0909999888\",\n  \"avatar_url\": \"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde\",\n  \"id_card_number\": \"079201012345\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PUT Change Password (/users/me/password)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"old_password\": \"Pass@123456\",\n  \"new_password\": \"NewSecure@999\",\n  \"confirm_password\": \"NewSecure@999\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/me/password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"me",
+								"password"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Admin User Management",
+			"item": [
+				{
+					"name": "GET Admin List Users (Filter, Search, Sort, Paging)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users?page=1&limit=10&search=nam&role=owner&status=all&sortBy=created_at&sortDir=desc",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"users"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Số trang (1-based)"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Số lượng user mỗi trang"
+								},
+								{
+									"key": "search",
+									"value": "nam",
+									"description": "Tìm kiếm theo tên, email, sđt"
+								},
+								{
+									"key": "role",
+									"value": "owner",
+									"description": "Lọc role: all, renter, owner, admin, staff"
+								},
+								{
+									"key": "status",
+									"value": "all",
+									"description": "Lọc trạng thái: all, pending, active, locked"
+								},
+								{
+									"key": "sortBy",
+									"value": "created_at",
+									"description": "Trường sắp xếp: created_at, full_name, email"
+								},
+								{
+									"key": "sortDir",
+									"value": "desc",
+									"description": "Hướng sắp xếp: asc hoặc desc"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET Admin User Detail (/admin/users/:userId)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PATCH Approve/Reject Owner (/admin/users/:userId/approve-owner)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"verification_status\": \"verified\",\n  \"rejection_reason\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/1/approve-owner",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"1",
+								"approve-owner"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PATCH Lock/Unlock User Status (/admin/users/:userId/status)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"locked\",\n  \"reason\": \"Vi phạm quy định nhiều lần\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/1/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"1",
+								"status"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4. Owner Cars (Bonus)",
+			"item": [
+				{
+					"name": "POST Owner Đăng Xe Mới",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"brand\": \"Mazda\",\n  \"model\": \"CX-5 2.0 Premium\",\n  \"year\": 2023,\n  \"license_plate\": \"51K-988.88\",\n  \"seats\": 5,\n  \"transmission\": \"automatic\",\n  \"fuel_type\": \"gasoline\",\n  \"color\": \"Trắng\",\n  \"description\": \"Xe gia đình giữ gìn sạch sẽ, bảo dưỡng định kỳ tại hãng.\",\n  \"pickup_address\": \"123 Nguyễn Huệ, Bến Nghé, Quận 1, TP.HCM\",\n  \"base_price_per_day\": 950000\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/owner/cars",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"owner",
+								"cars"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

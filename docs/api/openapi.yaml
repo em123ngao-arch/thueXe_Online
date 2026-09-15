@@ -1,0 +1,781 @@
+openapi: 3.0.3
+info:
+  title: DriveShare API Specification - Sprint 1
+  description: >
+    Tài liệu đặc tả API chuẩn (API Contract) cho Sprint 1 dự án DriveShare (Thuê xe tự lái).
+    Bao gồm các luồng: Auth (Register, Login, Logout), Profile & Password cho Renter/Owner,
+    và Admin Quản lý User (phân trang, lọc, tìm kiếm, sắp xếp, duyệt owner, khóa tài khoản).
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local Spring Boot Server (Dev)
+  - url: https://api.driveshare.example.com/api/v1
+    description: Staging Server
+
+tags:
+  - name: Auth
+    description: Đăng ký, Đăng nhập, Đăng xuất, Refresh Token
+  - name: User Profile
+    description: Quản lý thông tin cá nhân của User hiện tại (Renter & Owner)
+  - name: Admin Users
+    description: Quản trị viên quản lý danh sách user, phê duyệt owner, khóa tài khoản
+  - name: Owner Cars
+    description: Quản lý xe (Bonus nếu kịp thời gian Sprint 1)
+
+paths:
+  # ==========================================
+  # AUTHENTICATION
+  # ==========================================
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Đăng ký tài khoản mới (Renter hoặc Owner)
+      description: >
+        Người dùng tự đăng ký với vai trò RENTER hoặc OWNER.
+        Mặc định tài khoản tạo xong có trạng thái status = 'active' (hoặc 'pending' nếu cần duyệt hồ sơ).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Đăng ký thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Dữ liệu không hợp lệ hoặc email/username/phone đã tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Đăng nhập hệ thống
+      description: Đăng nhập bằng username hoặc email + password. Trả về JWT Access Token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Đăng nhập thành công, trả về token và thông tin user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Sai thông tin đăng nhập hoặc tài khoản bị khóa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Đăng xuất
+      description: Hủy bỏ token phiên đăng nhập hiện tại
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Đăng xuất thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==========================================
+  # USER PROFILE (RENTER & OWNER)
+  # ==========================================
+  /users/me:
+    get:
+      tags:
+        - User Profile
+      summary: Lấy thông tin tài khoản đang đăng nhập
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Trả về chi tiết profile của user kèm thông tin renter/owner nếu có
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          description: Chưa đăng nhập hoặc token hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - User Profile
+      summary: Cập nhật thông tin tài khoản cá nhân
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '400':
+          description: Dữ liệu gửi lên không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/me/password:
+    put:
+      tags:
+        - User Profile
+      summary: Đổi mật khẩu
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Đổi mật khẩu thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Mật khẩu cũ không chính xác hoặc mật khẩu mới trùng mật khẩu cũ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==========================================
+  # ADMIN USER MANAGEMENT
+  # ==========================================
+  /admin/users:
+    get:
+      tags:
+        - Admin Users
+      summary: Lấy danh sách người dùng (Phân trang, Lọc, Tìm kiếm, Sắp xếp)
+      description: >
+        API cốt lõi cho trang Quản lý Người dùng của Admin.
+        Bắt buộc hỗ trợ Pagination, Search keyword, Filter theo role/status, và Sort.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Số trang (bắt đầu từ 1)
+          required: false
+          schema:
+            type: integer
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Số lượng bản ghi mỗi trang (kích thước trang)
+          required: false
+          schema:
+            type: integer
+            default: 10
+            example: 10
+        - name: search
+          in: query
+          description: Từ khóa tìm kiếm (tìm tương đối theo username, email, full_name, phone)
+          required: false
+          schema:
+            type: string
+            example: "nguyen van a"
+        - name: role
+          in: query
+          description: Lọc theo vai trò
+          required: false
+          schema:
+            type: string
+            enum: [all, renter, owner, admin, staff]
+            default: all
+            example: "owner"
+        - name: status
+          in: query
+          description: Lọc theo trạng thái tài khoản
+          required: false
+          schema:
+            type: string
+            enum: [all, pending, active, locked]
+            default: all
+            example: "pending"
+        - name: sortBy
+          in: query
+          description: Trường muốn sắp xếp
+          required: false
+          schema:
+            type: string
+            enum: [created_at, full_name, email, status]
+            default: created_at
+            example: "created_at"
+        - name: sortDir
+          in: query
+          description: Hướng sắp xếp (tăng dần hoặc giảm dần)
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+            example: "desc"
+      responses:
+        '200':
+          description: Lấy danh sách thành công kèm dữ liệu phân trang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserListResponse'
+        '403':
+          description: Không có quyền truy cập (Chỉ Admin/Staff)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/users/{userId}:
+    get:
+      tags:
+        - Admin Users
+      summary: Xem chi tiết 1 người dùng
+      description: Trả về thông tin chi tiết của user cùng thông tin bằng lái (renter) hoặc ngân hàng/CCCD (owner)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID của người dùng
+          schema:
+            type: integer
+            example: 5
+      responses:
+        '200':
+          description: Lấy chi tiết user thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserDetailResponse'
+        '404':
+          description: Không tìm thấy user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/users/{userId}/approve-owner:
+    patch:
+      tags:
+        - Admin Users
+      summary: Phê duyệt hoặc từ chối hồ sơ Chủ xe (Owner Verification)
+      description: Duyệt giấy tờ CCCD/ngân hàng để cho phép Owner bắt đầu đăng xe
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 5
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveOwnerRequest'
+      responses:
+        '200':
+          description: Cập nhật trạng thái duyệt thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /admin/users/{userId}/status:
+    patch:
+      tags:
+        - Admin Users
+      summary: Khóa hoặc Mở khóa tài khoản người dùng (Block/Unblock)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 5
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserStatusRequest'
+      responses:
+        '200':
+          description: Thay đổi trạng thái tài khoản thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==========================================
+  # OWNER CARS (BONUS NẾU THỪA THỜI GIAN)
+  # ==========================================
+  /owner/cars:
+    post:
+      tags:
+        - Owner Cars
+      summary: [Bonus] Chủ xe đăng xe mới lên hệ thống
+      description: Tạo mới thông tin xe để gửi Admin phê duyệt
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCarRequest'
+      responses:
+        '201':
+          description: Đăng ký xe thành công (chờ Admin duyệt)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+    get:
+      tags:
+        - Owner Cars
+      summary: [Bonus] Lấy danh sách xe của chính chủ xe hiện tại
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Lấy danh sách xe thành công
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # --- REQUEST SCHEMAS ---
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - email
+        - phone
+        - password
+        - full_name
+        - role
+      properties:
+        username:
+          type: string
+          example: "nguyenvana"
+        email:
+          type: string
+          format: email
+          example: "vana@gmail.com"
+        phone:
+          type: string
+          example: "0912345678"
+        password:
+          type: string
+          format: password
+          example: "Password123@"
+        full_name:
+          type: string
+          example: "Nguyễn Văn A"
+        role:
+          type: string
+          enum: [renter, owner]
+          example: "owner"
+
+    LoginRequest:
+      type: object
+      required:
+        - identifier
+        - password
+      properties:
+        identifier:
+          type: string
+          description: Username hoặc Email
+          example: "vana@gmail.com"
+        password:
+          type: string
+          format: password
+          example: "Password123@"
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+          example: "Nguyễn Văn A (Cập nhật)"
+        phone:
+          type: string
+          example: "0987654321"
+        avatar_url:
+          type: string
+          example: "https://example.com/avatar.jpg"
+        id_card_number:
+          type: string
+          example: "079201009999"
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - old_password
+        - new_password
+        - confirm_password
+      properties:
+        old_password:
+          type: string
+          format: password
+          example: "Password123@"
+        new_password:
+          type: string
+          format: password
+          example: "NewPassword456@"
+        confirm_password:
+          type: string
+          format: password
+          example: "NewPassword456@"
+
+    ApproveOwnerRequest:
+      type: object
+      required:
+        - verification_status
+      properties:
+        verification_status:
+          type: string
+          enum: [verified, rejected]
+          example: "verified"
+        rejection_reason:
+          type: string
+          example: "Ảnh chụp CCCD bị mờ, vui lòng chụp lại"
+
+    UpdateUserStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [active, locked]
+          example: "locked"
+        reason:
+          type: string
+          example: "Vi phạm chính sách cộng đồng"
+
+    CreateCarRequest:
+      type: object
+      required:
+        - brand
+        - model
+        - year
+        - license_plate
+        - seats
+        - transmission
+        - fuel_type
+        - base_price_per_day
+        - pickup_address
+      properties:
+        brand:
+          type: string
+          example: "Mazda"
+        model:
+          type: string
+          example: "CX-5 Premium"
+        year:
+          type: integer
+          example: 2023
+        license_plate:
+          type: string
+          example: "51K-123.45"
+        seats:
+          type: integer
+          example: 5
+        transmission:
+          type: string
+          enum: [manual, automatic]
+          example: "automatic"
+        fuel_type:
+          type: string
+          enum: [gasoline, diesel, electric, hybrid]
+          example: "gasoline"
+        color:
+          type: string
+          example: "Trắng"
+        description:
+          type: string
+          example: "Xe mới 100%, nội thất da sạch sẽ, camera 360, bảo hiểm 2 chiều"
+        pickup_address:
+          type: string
+          example: "Số 123 đường Nguyễn Huệ, Quận 1, TP.HCM"
+        base_price_per_day:
+          type: number
+          example: 900000
+
+    # --- RESPONSE SCHEMAS ---
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Thao tác thành công"
+        data:
+          type: object
+          nullable: true
+          example: null
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-09-14T14:30:00Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Dữ liệu không hợp lệ hoặc lỗi nghiệp vụ"
+        errorCode:
+          type: string
+          example: "INVALID_REQUEST"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "email"
+              message:
+                type: string
+                example: "Email đã tồn tại trên hệ thống"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-09-14T14:30:00Z"
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Đăng nhập thành công"
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            token_type:
+              type: string
+              example: "Bearer"
+            expires_in:
+              type: integer
+              description: Thời gian sống tính theo giây (ví dụ 86400 = 1 ngày)
+              example: 86400
+            user:
+              $ref: '#/components/schemas/UserItem'
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-09-14T14:30:00Z"
+
+    UserProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Lấy thông tin tài khoản thành công"
+        data:
+          $ref: '#/components/schemas/UserItem'
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-09-14T14:30:00Z"
+
+    UserItem:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: "nguyenvana"
+        email:
+          type: string
+          example: "vana@gmail.com"
+        phone:
+          type: string
+          example: "0912345678"
+        full_name:
+          type: string
+          example: "Nguyễn Văn A"
+        avatar_url:
+          type: string
+          example: "https://example.com/avatar.jpg"
+        id_card_number:
+          type: string
+          example: "079201009999"
+        status:
+          type: string
+          enum: [pending, active, locked]
+          example: "active"
+        roles:
+          type: array
+          items:
+            type: string
+          example: ["owner"]
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-09-14T08:00:00Z"
+        renter_profile:
+          type: object
+          nullable: true
+          properties:
+            license_number:
+              type: string
+              example: "B2-123456789"
+            license_verification_status:
+              type: string
+              example: "verified"
+        owner_profile:
+          type: object
+          nullable: true
+          properties:
+            bank_account_number:
+              type: string
+              example: "1903345678901"
+            bank_name:
+              type: string
+              example: "Techcombank"
+            verification_status:
+              type: string
+              example: "verified"
+
+    AdminUserListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Lấy danh sách người dùng thành công"
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserItem'
+            pagination:
+              $ref: '#/components/schemas/PaginationMeta'
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-09-14T14:30:00Z"
+
+    AdminUserDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Lấy chi tiết người dùng thành công"
+        data:
+          $ref: '#/components/schemas/UserItem'
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-09-14T14:30:00Z"
+
+    PaginationMeta:
+      type: object
+      description: Dữ liệu chuẩn cho mọi API List có phân trang
+      properties:
+        page:
+          type: integer
+          description: Trang hiện tại (1-based)
+          example: 1
+        limit:
+          type: integer
+          description: Kích thước trang
+          example: 10
+        total_items:
+          type: integer
+          description: Tổng số bản ghi thỏa điều kiện lọc
+          example: 45
+        total_pages:
+          type: integer
+          description: Tổng số trang
+          example: 5
+        has_next:
+          type: boolean
+          description: Còn trang tiếp theo không
+          example: true
+        has_prev:
+          type: boolean
+          description: Có trang trước đó không
+          example: false
