@@ -1127,3 +1127,231 @@
     height: 200px;
   }
 }
+
+/* ---------- 6. AUTH & USER PROFILE STYLES ---------- */
+.auth-modal-content {
+  padding: 0.5rem 0.25rem;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.auth-header h3 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--slate-900);
+  margin-bottom: 0.35rem;
+}
+
+.auth-header p {
+  color: var(--slate-500);
+  font-size: 0.88rem;
+}
+
+.social-login-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--slate-300);
+  background: var(--white);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--slate-700);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.social-btn:hover {
+  background: var(--slate-50);
+  border-color: var(--slate-400);
+  transform: translateY(-1px);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.25rem 0;
+  color: var(--slate-400);
+  font-size: 0.8rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--slate-200);
+}
+
+.auth-divider span {
+  padding: 0 0.75rem;
+}
+
+.auth-footer-prompt {
+  text-align: center;
+  margin-top: 1.25rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--slate-100);
+  font-size: 0.88rem;
+  color: var(--slate-600);
+}
+
+.auth-footer-prompt a {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-footer-prompt a:hover {
+  text-decoration: underline;
+}
+
+/* User Profile Badge in Navbar */
+.user-profile-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-full);
+  background: var(--slate-50);
+}
+
+.nav-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.nav-user-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.nav-user-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--slate-800);
+}
+
+.nav-user-role {
+  font-size: 0.7rem;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ---------- 7. OWNER HOME REGISTRATION BANNER & FORM ---------- */
+.owner-home-section {
+  padding: 3.5rem 0;
+  background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+  color: var(--white);
+  border-radius: var(--radius-xl);
+  margin: 2.5rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.owner-home-section::after {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.owner-home-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 2.5rem;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.owner-home-info h2 {
+  font-size: 2.1rem;
+  font-weight: 800;
+  line-height: 1.25;
+  margin-bottom: 0.85rem;
+  color: var(--white);
+}
+
+.owner-home-info p {
+  font-size: 1rem;
+  color: var(--primary-subtle);
+  line-height: 1.6;
+  margin-bottom: 1.75rem;
+}
+
+.owner-benefits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.owner-benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.owner-benefit-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.owner-register-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-xl);
+  color: var(--slate-800);
+}
+
+.owner-register-card h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--slate-900);
+  margin-bottom: 0.35rem;
+}
+
+.owner-register-card p {
+  font-size: 0.85rem;
+  color: var(--slate-500);
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 992px) {
+  .owner-home-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
