@@ -54,9 +54,12 @@
           <span class="nav-text-label">Chuyến đi</span>
           <span class="badge-count" id="navBookingBadgeCount" style="display: none;">0</span>
         </a>
-        <button class="btn btn-primary btn-sm" onclick="App.switchRole('OWNER'); OwnerService.showAddCarTab();">
+        <button class="btn btn-primary btn-sm nav-btn-post-car" onclick="App.switchRole('OWNER'); OwnerService.showAddCarTab();">
           + Đăng xe
         </button>
+
+        <!-- Phân hệ xác thực Đăng nhập (CRP 12-16) -->
+        <div id="navAuthContainer"></div>
       </div>
 
     </div>
@@ -410,6 +413,7 @@
   <!-- Scripts -->
   <script src="js/data.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/render.js"></script>
   <script src="js/booking.js"></script>
   <script src="js/owner.js"></script>
