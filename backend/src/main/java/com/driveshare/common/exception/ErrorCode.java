@@ -19,6 +19,10 @@ public enum ErrorCode {
     ACCOUNT_LOCKED("ACCOUNT_LOCKED", "Tài khoản của bạn đã bị khóa", HttpStatus.FORBIDDEN),
     ACCOUNT_PENDING("ACCOUNT_PENDING", "Tài khoản của bạn đang chờ phê duyệt", HttpStatus.FORBIDDEN),
     TOKEN_INVALID("TOKEN_INVALID", "Mã xác thực JWT không hợp lệ hoặc đã hết hạn", HttpStatus.UNAUTHORIZED),
+    RATE_LIMITED("RATE_LIMITED", "Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau 15 phút", HttpStatus.TOO_MANY_REQUESTS),
+    WEAK_PASSWORD("WEAK_PASSWORD", "Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường và chữ số", HttpStatus.BAD_REQUEST),
+    PASSWORD_CONFIRM_MISMATCH("PASSWORD_CONFIRM_MISMATCH", "Mật khẩu xác nhận không khớp", HttpStatus.BAD_REQUEST),
+    RESET_TOKEN_INVALID("RESET_TOKEN_INVALID", "Liên kết đặt lại mật khẩu không hợp lệ, đã hết hạn hoặc đã được sử dụng", HttpStatus.BAD_REQUEST),
 
     // User & Profile
     USER_NOT_FOUND("USER_NOT_FOUND", "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),

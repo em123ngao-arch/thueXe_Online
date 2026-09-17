@@ -26,6 +26,7 @@ public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationEntryPoint unauthorizedHandler;
+    private final JwtAccessDeniedHandler accessDeniedHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
@@ -51,11 +52,21 @@ public class SecurityConfig {
         http
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
-                .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(unauthorizedHandler)
+                        .accessDeniedHandler(accessDeniedHandler)
+                )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/register/**",
+                                "/api/v1/auth/refresh-token",
+                                "/api/v1/auth/forgot-password",
+                                "/api/v1/auth/reset-password",
+                                "/api/v1/auth/logout"
+                        ).permitAll()
                         .requestMatchers("/api/v1/health/**").permitAll()
                         .requestMatchers(
                                 "/v3/api-docs/**",
@@ -63,7 +74,14 @@ public class SecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Protected endpoints
+
+                        // Role requirements are declared centrally here (CRP-16)
+                        .requestMatchers("/api/v1/auth/renter-test").hasRole("RENTER")
+                        .requestMatchers("/api/v1/auth/owner-test").hasRole("OWNER")
+                        .requestMatchers("/api/v1/auth/admin-test").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/auth/pending-owners").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/auth/approve-owner/**").hasRole("ADMIN")
+
                         .anyRequest().authenticated()
                 );
 
