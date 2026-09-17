@@ -37,8 +37,10 @@ const AuthService = (function () {
   }
 
   function setSession(authData) {
-    if (authData.accessToken || authData.access_token) {
-      localStorage.setItem(KEY_ACCESS_TOKEN, authData.accessToken || authData.access_token);
+    const token = authData.accessToken || authData.access_token;
+    if (token) {
+      localStorage.setItem(KEY_ACCESS_TOKEN, token);
+      localStorage.setItem('driveshare_access_token', token);
     }
     if (authData.refreshToken || authData.refresh_token) {
       localStorage.setItem(KEY_REFRESH_TOKEN, authData.refreshToken || authData.refresh_token);
@@ -56,6 +58,7 @@ const AuthService = (function () {
 
   function clearSession() {
     localStorage.removeItem(KEY_ACCESS_TOKEN);
+    localStorage.removeItem('driveshare_access_token');
     localStorage.removeItem(KEY_REFRESH_TOKEN);
     localStorage.removeItem(KEY_USER);
     updateNavAuthUI();
@@ -271,8 +274,21 @@ const AuthService = (function () {
         : 'USER';
       const roleColor = roleName === 'ADMIN' ? '#ef4444' : (roleName === 'OWNER' ? '#f59e0b' : '#3b82f6');
 
+      const portalBtnHtml = roleName === 'ADMIN'
+        ? `<button class="btn btn-sm" onclick="App.switchRole('ADMIN')" title="Mở Kênh Quản trị" style="padding: 6px 11px; font-size: 0.8rem; background: #ef4444; color: white; border: none; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(239,68,68,0.25); cursor: pointer;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            Kênh Quản trị
+           </button>`
+        : (roleName === 'OWNER'
+            ? `<button class="btn btn-sm" onclick="App.switchRole('OWNER')" title="Mở Kênh Chủ xe" style="padding: 6px 11px; font-size: 0.8rem; background: #f59e0b; color: white; border: none; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(245,158,11,0.25); cursor: pointer;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>
+                Kênh Chủ xe
+               </button>`
+            : '');
+
       navAuthContainer.innerHTML = `
         <div class="auth-user-badge-wrapper" style="display: flex; align-items: center; gap: 8px;">
+          ${portalBtnHtml}
           <div class="user-avatar-chip" style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--slate-100, #f1f5f9); border-radius: 20px; font-size: 0.85rem; border: 1px solid var(--slate-200, #e2e8f0);">
             <div style="width: 24px; height: 24px; border-radius: 50%; background: ${roleColor}; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem;">
               ${(user.username || 'U').charAt(0).toUpperCase()}
@@ -282,6 +298,10 @@ const AuthService = (function () {
               <span style="display: block; font-size: 0.7rem; color: ${roleColor}; font-weight: 700;">${roleName}</span>
             </div>
           </div>
+          <button class="btn btn-outline btn-sm" onclick="AuthModal.openLogin()" title="Chuyển nhanh tài khoản test khác" style="padding: 6px 10px; font-size: 0.8rem; color: #0284c7; border-color: #bae6fd; background: #f0f9ff; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+            Đổi TK
+          </button>
           <button class="btn btn-outline btn-sm" onclick="AuthModal.openChangePassword()" title="Đổi mật khẩu" style="padding: 6px 10px; font-size: 0.8rem;">
             Đổi MK
           </button>
@@ -430,20 +450,133 @@ const AuthModal = (function () {
           </button>
         </form>
 
-        <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #f1f5f9; text-align: center; font-size: 0.85rem; color: #64748b;">
+        <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid #f1f5f9; text-align: center; font-size: 0.85rem; color: #64748b;">
           Chưa có tài khoản? 
           <a href="javascript:void(0)" onclick="AuthModal.openRegister()" style="color: #2563eb; font-weight: 600; text-decoration: none;">Đăng ký ngay</a>
         </div>
 
-        <div style="margin-top: 1rem; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px; font-size: 0.78rem; color: #475569;">
-          <strong>Tài khoản mẫu test nhanh:</strong><br>
-          • Admin: <code>admin@driveshare.com</code> / <code>Admin123@</code><br>
-          • Chủ xe (Owner): <code>owner@driveshare.com</code> / <code>Owner123@</code><br>
-          • Khách thuê (Renter): <code>renter@driveshare.com</code> / <code>Renter123@</code>
+        <!-- Khung Chuyển nhanh tài khoản test (1-Click) -->
+        <div style="margin-top: 1rem; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+          <div style="font-weight: 700; font-size: 0.8rem; color: #334155; margin-bottom: 0.65rem; display: flex; align-items: center; justify-content: space-between;">
+            <span style="display: flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" color="#0284c7"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              <span>CHỌN TÀI KHOẢN ĐỂ TEST NHANH</span>
+            </span>
+            <span style="font-size: 0.68rem; font-weight: 700; color: #059669; background: #ecfdf5; padding: 2px 7px; border-radius: 10px; border: 1px solid #a7f3d0;">Database Seed</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <!-- 1. Admin -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 10px; transition: all 0.15s;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 28px; height: 28px; border-radius: 6px; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.75rem;">
+                  A
+                </div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.82rem; color: #1e293b; line-height: 1.2;">
+                    Quản trị viên (Admin)
+                  </div>
+                  <div style="font-size: 0.72rem; color: #64748b; font-family: monospace;">admin@driveshare.com</div>
+                </div>
+              </div>
+              <button type="button" onclick="AuthModal.quickLogin('admin@driveshare.com', 'Admin123@', 'ADMIN')" style="background: #ef4444; color: white; border: none; font-weight: 700; font-size: 0.75rem; padding: 5px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(239,68,68,0.2);">
+                <span>⚡ Chọn</span>
+              </button>
+            </div>
+
+            <!-- 2. Owner -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 10px; transition: all 0.15s;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 28px; height: 28px; border-radius: 6px; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.75rem;">
+                  O
+                </div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.82rem; color: #1e293b; line-height: 1.2;">
+                    Chủ xe (Owner)
+                  </div>
+                  <div style="font-size: 0.72rem; color: #64748b; font-family: monospace;">owner@driveshare.com</div>
+                </div>
+              </div>
+              <button type="button" onclick="AuthModal.quickLogin('owner@driveshare.com', 'Owner123@', 'OWNER')" style="background: #f59e0b; color: white; border: none; font-weight: 700; font-size: 0.75rem; padding: 5px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(245,158,11,0.2);">
+                <span>⚡ Chọn</span>
+              </button>
+            </div>
+
+            <!-- 3. Renter -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 10px; transition: all 0.15s;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 28px; height: 28px; border-radius: 6px; background: #dbeafe; color: #2563eb; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.75rem;">
+                  R
+                </div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.82rem; color: #1e293b; line-height: 1.2;">
+                    Khách thuê (Renter)
+                  </div>
+                  <div style="font-size: 0.72rem; color: #64748b; font-family: monospace;">renter@driveshare.com</div>
+                </div>
+              </div>
+              <button type="button" onclick="AuthModal.quickLogin('renter@driveshare.com', 'Renter123@', 'RENTER')" style="background: #3b82f6; color: white; border: none; font-weight: 700; font-size: 0.75rem; padding: 5px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(59,130,246,0.2);">
+                <span>⚡ Chọn</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     `;
     showModal('Đăng nhập vào DriveShare', html);
+  }
+
+  async function quickLogin(identifier, password, targetRole) {
+    const idField = document.getElementById('loginIdentifier');
+    const pwdField = document.getElementById('loginPassword');
+    if (idField) idField.value = identifier;
+    if (pwdField) pwdField.value = password;
+
+    const btn = document.getElementById('btnLoginSubmit');
+    const alertBox = document.getElementById('loginAlertBox');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = `Đang đăng nhập ${identifier}...`;
+    }
+    if (alertBox) alertBox.style.display = 'none';
+
+    const res = await AuthService.login(identifier, password);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = 'Đăng nhập';
+    }
+
+    if (res.success) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#dcfce7';
+        alertBox.style.color = '#166534';
+        alertBox.style.border = '1px solid #bbf7d0';
+        alertBox.innerText = `Đăng nhập thành công!`;
+      }
+      setTimeout(() => {
+        closeModal();
+        if (targetRole) {
+          App.switchRole(targetRole);
+        } else {
+          const user = AuthService.getCurrentUser();
+          if (user && user.roles) {
+            if (user.roles.includes('ROLE_ADMIN')) App.switchRole('ADMIN');
+            else if (user.roles.includes('ROLE_OWNER')) App.switchRole('OWNER');
+            else App.switchRole('RENTER');
+          }
+        }
+        App.showToast(`Đã đăng nhập tài khoản: ${identifier}`, 'success');
+      }, 300);
+    } else {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fee2e2';
+        alertBox.style.color = '#991b1b';
+        alertBox.style.border = '1px solid #fecaca';
+        alertBox.innerText = res.message || 'Đăng nhập thất bại!';
+      }
+    }
   }
 
   async function submitLogin(e) {
@@ -1047,6 +1180,7 @@ Nhấn các nút kiểm tra ở trên để xem phản hồi thực tế từ m�
     closeModal,
     openLogin,
     submitLogin,
+    quickLogin,
     openRegister,
     switchRegisterTab,
     onPasswordInput,

@@ -29,24 +29,25 @@
         <span class="brand-badge">K4 Pro</span>
       </a>
 
-      <!-- Center Role Switcher (Desktop) -->
-      <div class="role-switcher-wrapper">
-        <div class="role-pill active" id="pillRoleRenter" onclick="App.switchRole('RENTER')">
-          Khách thuê xe
-        </div>
-        <div class="role-pill" id="pillRoleOwner" onclick="App.switchRole('OWNER')">
-          Chủ xe
-        </div>
-        <div class="role-pill" id="pillRoleAdmin" onclick="App.switchRole('ADMIN')">
-          Nhân viên / Admin
-        </div>
-      </div>
+      <!-- Center Navigation Menu (Chuẩn ứng dụng thương mại điện tử) -->
+      <nav class="nav-center-menu" style="display: flex; align-items: center; gap: 1.8rem;">
+        <a href="javascript:void(0)" onclick="App.switchRole('RENTER'); App.showCatalogView();" class="nav-menu-item active" id="navMenuCatalog" style="font-weight: 600; font-size: 0.95rem; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="12 8 8 12 12 16 12 8"></polygon></svg>
+          Thuê xe tự lái
+        </a>
+        <a href="javascript:void(0)" onclick="App.switchRole('OWNER')" class="nav-menu-item" id="navMenuOwner" style="font-weight: 500; font-size: 0.95rem; color: var(--slate-600); text-decoration: none; display: flex; align-items: center; gap: 6px;">
+          Trở thành chủ xe
+        </a>
+        <a href="javascript:void(0)" onclick="App.showAboutModal()" class="nav-menu-item" style="font-weight: 500; font-size: 0.95rem; color: var(--slate-600); text-decoration: none;">
+          Về DriveShare
+        </a>
+      </nav>
 
       <!-- Right Nav Actions -->
       <div class="nav-actions">
         <!-- Auth Container (Đăng nhập / Đăng ký / Thông tin cá nhân) -->
         <div id="navAuthContainer" style="display: flex; align-items: center; gap: 0.5rem;">
-          <!-- Được sinh tự động bởi AuthService.updateAuthUI() -->
+          <!-- Được sinh tự động bởi AuthService.updateNavAuthUI() -->
         </div>
 
         <a href="javascript:void(0)" class="nav-link booking-badge-btn" id="navMyBookings" onclick="App.showMyBookingsView()" title="Chuyến của tôi">
@@ -62,28 +63,10 @@
         <button class="btn btn-primary btn-sm nav-btn-post-car" onclick="App.switchRole('OWNER'); OwnerService.showAddCarTab();">
           + Đăng xe
         </button>
-
-        <!-- Phân hệ xác thực Đăng nhập (CRP 12-16) -->
-        <div id="navAuthContainer"></div>
       </div>
 
     </div>
   </header>
-
-  <!-- Mobile Secondary Role Bar -->
-  <div class="mobile-role-bar">
-    <div class="role-switcher-wrapper">
-      <div class="role-pill active" id="mobRoleRenter" onclick="App.switchRole('RENTER')">
-        Khách thuê
-      </div>
-      <div class="role-pill" id="mobRoleOwner" onclick="App.switchRole('OWNER')">
-        Chủ xe
-      </div>
-      <div class="role-pill" id="mobRoleAdmin" onclick="App.switchRole('ADMIN')">
-        Quản trị
-      </div>
-    </div>
-  </div>
 
   <!-- ==================== 2. MAIN VIEW CONTAINERS ==================== -->
   <main id="mainAppContent">

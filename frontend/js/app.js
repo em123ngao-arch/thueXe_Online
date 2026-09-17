@@ -83,7 +83,43 @@ const App = {
       AdminService.renderAdminPortal();
     }
 
+    // Cập nhật trạng thái menu chính
+    const navCatalog = document.getElementById('navMenuCatalog');
+    const navOwner = document.getElementById('navMenuOwner');
+    if (navCatalog) {
+      navCatalog.style.color = role === 'RENTER' ? 'var(--primary)' : 'var(--slate-600)';
+      navCatalog.style.fontWeight = role === 'RENTER' ? '700' : '500';
+    }
+    if (navOwner) {
+      navOwner.style.color = role === 'OWNER' ? 'var(--primary)' : 'var(--slate-600)';
+      navOwner.style.fontWeight = role === 'OWNER' ? '700' : '500';
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
+
+  showAboutModal() {
+    this.openModal(
+      'Về nền tảng DriveShare (K4 Pro)',
+      `
+      <div style="line-height: 1.6; color: #334155; font-size: 0.92rem;">
+        <div style="text-align: center; margin-bottom: 1.25rem;">
+          <div style="font-size: 1.4rem; font-weight: 800; color: var(--primary, #0f766e);">DriveShare</div>
+          <div style="font-size: 0.85rem; color: #64748b;">Nền tảng chia sẻ xe ô tô tự lái trực tuyến — Thực tập tốt nghiệp K4</div>
+        </div>
+        <p>Hệ thống kết nối trực tiếp giữa Chủ xe có phương tiện nhàn rỗi và Khách hàng có nhu cầu thuê xe tự lái uy tín, minh bạch.</p>
+        <div style="background: #f8fafc; padding: 12px 14px; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 0.85rem; margin-top: 1rem;">
+          <div style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">👥 Phân công nhiệm vụ nhóm thực tập:</div>
+          <div>• <strong>Lâm Chí Vĩ:</strong> Xác thực & Phân quyền bảo mật (CRP-12 → 16)</div>
+          <div>• <strong>Hồ Huỳnh Khiêm:</strong> Quản trị viên, Phê duyệt & Khóa tài khoản (CRP-19 → 22)</div>
+          <div>• <strong>Nguyễn Duy Quân:</strong> Hồ sơ cá nhân Chủ xe & Khách thuê (CRP-17, 18)</div>
+          <div>• <strong>Trần Ngọc Bảo:</strong> Quản lý danh sách xe & Đăng xe (CRP-23 → 26)</div>
+          <div>• <strong>Nguyễn Hữu Tín:</strong> Đặt xe & Hợp đồng (CRP-27 → 30)</div>
+          <div>• <strong>Đỗ Ngọc Phát:</strong> Thanh toán cọc & Đánh giá (CRP-31 → 35)</div>
+        </div>
+      </div>
+      `
+    );
   },
 
   // Hiển thị màn hình "Chuyến của tôi" (cho Renter)

@@ -12,7 +12,7 @@ const API_CONFIG = {
 const ApiService = {
   // Lấy Access Token lưu trữ (nếu có đăng nhập)
   getAuthHeader() {
-    const token = localStorage.getItem('driveshare_access_token');
+    const token = localStorage.getItem('driveshare_access_token') || localStorage.getItem('ds_access_token');
     return token ? { 'Authorization': `Bearer ${token}` } : {};
   },
 
