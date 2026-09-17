@@ -49,6 +49,15 @@ class UserProfileControllerTest {
     @MockBean
     private com.driveshare.security.CustomUserDetailsService customUserDetailsService;
 
+    @MockBean
+    private com.driveshare.modules.auth.repository.AuthSessionRepository authSessionRepository;
+
+    @MockBean
+    private com.driveshare.security.JwtAccessDeniedHandler jwtAccessDeniedHandler;
+
+    @MockBean
+    private com.driveshare.security.JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+
     @Test
     @DisplayName("AC3: Given invalid values are submitted, when I save, then per-field validation errors are shown")
     void updateOwnerProfile_InvalidValues_ReturnsFieldValidationErrors() throws Exception {
