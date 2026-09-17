@@ -47,4 +47,7 @@ public class OwnerProfile extends BaseEntity {
 
     @Column(name = "verified_at")
     private Instant verifiedAt;
+
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason;
 }
