@@ -298,14 +298,7 @@ const AuthService = (function () {
               <span style="display: block; font-size: 0.7rem; color: ${roleColor}; font-weight: 700;">${roleName}</span>
             </div>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="AuthModal.openLogin()" title="Chuyển nhanh tài khoản test khác" style="padding: 6px 10px; font-size: 0.8rem; color: #0284c7; border-color: #bae6fd; background: #f0f9ff; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
-            Đổi TK
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="AuthModal.openChangePassword()" title="Đổi mật khẩu" style="padding: 6px 10px; font-size: 0.8rem;">
-            Đổi MK
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="AuthService.handleLogout()" title="Đăng xuất" style="padding: 6px 10px; font-size: 0.8rem; color: #ef4444; border-color: #fecaca;">
+          <button class="btn btn-outline btn-sm" onclick="AuthService.handleLogout()" title="Đăng xuất khỏi hệ thống" style="padding: 6px 12px; font-size: 0.82rem; color: #ef4444; border-color: #fecaca; font-weight: 500;">
             Đăng xuất
           </button>
         </div>
@@ -455,14 +448,13 @@ const AuthModal = (function () {
           <a href="javascript:void(0)" onclick="AuthModal.openRegister()" style="color: #2563eb; font-weight: 600; text-decoration: none;">Đăng ký ngay</a>
         </div>
 
-        <!-- Khung Chuyển nhanh tài khoản test (1-Click) -->
-        <div style="margin-top: 1rem; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
-          <div style="font-weight: 700; font-size: 0.8rem; color: #334155; margin-bottom: 0.65rem; display: flex; align-items: center; justify-content: space-between;">
+        <!-- Khung Tài khoản trải nghiệm nhanh -->
+        <div style="margin-top: 1.15rem; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+          <div style="font-weight: 700; font-size: 0.78rem; color: #475569; margin-bottom: 0.65rem; display: flex; align-items: center; justify-content: space-between;">
             <span style="display: flex; align-items: center; gap: 6px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" color="#0284c7"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-              <span>CHỌN TÀI KHOẢN ĐỂ TEST NHANH</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" color="#0284c7"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span>Tài khoản trải nghiệm mẫu</span>
             </span>
-            <span style="font-size: 0.68rem; font-weight: 700; color: #059669; background: #ecfdf5; padding: 2px 7px; border-radius: 10px; border: 1px solid #a7f3d0;">Database Seed</span>
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -479,8 +471,8 @@ const AuthModal = (function () {
                   <div style="font-size: 0.72rem; color: #64748b; font-family: monospace;">admin@driveshare.com</div>
                 </div>
               </div>
-              <button type="button" onclick="AuthModal.quickLogin('admin@driveshare.com', 'Admin123@', 'ADMIN')" style="background: #ef4444; color: white; border: none; font-weight: 700; font-size: 0.75rem; padding: 5px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(239,68,68,0.2);">
-                <span>⚡ Chọn</span>
+              <button type="button" onclick="AuthModal.quickLogin('admin@driveshare.com', 'Admin123@', 'ADMIN')" style="background: #ef4444; color: white; border: none; font-weight: 600; font-size: 0.75rem; padding: 5px 12px; border-radius: 6px; cursor: pointer;">
+                Đăng nhập
               </button>
             </div>
 
@@ -497,8 +489,8 @@ const AuthModal = (function () {
                   <div style="font-size: 0.72rem; color: #64748b; font-family: monospace;">owner@driveshare.com</div>
                 </div>
               </div>
-              <button type="button" onclick="AuthModal.quickLogin('owner@driveshare.com', 'Owner123@', 'OWNER')" style="background: #f59e0b; color: white; border: none; font-weight: 700; font-size: 0.75rem; padding: 5px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(245,158,11,0.2);">
-                <span>⚡ Chọn</span>
+              <button type="button" onclick="AuthModal.quickLogin('owner@driveshare.com', 'Owner123@', 'OWNER')" style="background: #f59e0b; color: white; border: none; font-weight: 600; font-size: 0.75rem; padding: 5px 12px; border-radius: 6px; cursor: pointer;">
+                Đăng nhập
               </button>
             </div>
 
@@ -515,8 +507,8 @@ const AuthModal = (function () {
                   <div style="font-size: 0.72rem; color: #64748b; font-family: monospace;">renter@driveshare.com</div>
                 </div>
               </div>
-              <button type="button" onclick="AuthModal.quickLogin('renter@driveshare.com', 'Renter123@', 'RENTER')" style="background: #3b82f6; color: white; border: none; font-weight: 700; font-size: 0.75rem; padding: 5px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(59,130,246,0.2);">
-                <span>⚡ Chọn</span>
+              <button type="button" onclick="AuthModal.quickLogin('renter@driveshare.com', 'Renter123@', 'RENTER')" style="background: #3b82f6; color: white; border: none; font-weight: 600; font-size: 0.75rem; padding: 5px 12px; border-radius: 6px; cursor: pointer;">
+                Đăng nhập
               </button>
             </div>
           </div>
