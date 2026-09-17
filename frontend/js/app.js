@@ -33,6 +33,9 @@ const App = {
       if (e.key === 'Escape') {
         this.closeModal();
         this.closeCarDetailModal();
+        if (typeof AuthModal !== 'undefined') {
+          AuthModal.closeModal();
+        }
       }
     });
 
