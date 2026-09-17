@@ -1,257 +1,206 @@
 /**
- * DRIVESHARE — API Service Bridge
- * Kết nối giao tiếp trực tiếp với Backend Spring Boot REST API (http://localhost:8080/api/v1)
- * Có cơ chế tự động Fallback về StorageService (LocalStorage) nếu Backend đang offline
+ * DRIVESHARE — API Service Layer
+ * Tầng kết nối Frontend → Backend Spring Boot (Port 8080)
+ * Tất cả giao tiếp HTTP với backend đều đi qua file này.
+ *
+ * Quy ước response của backend:
+ *   { success: true, message: "...", data: { ... } }
+ *
+ * Các endpoint Car Module:
+ *   POST   /api/v1/cars              — Đăng xe mới (CRP-23)
+ *   GET    /api/v1/cars/my-cars      — Danh sách xe của Owner (CRP-24)
+ *   PUT    /api/v1/cars/{id}         — Cập nhật thông tin xe (CRP-24)
+ *   PATCH  /api/v1/cars/{id}/status  — Đổi trạng thái xe (CRP-24)
+ *   DELETE /api/v1/cars/{id}         — Xóa mềm xe (CRP-24)
  */
+
+// ─────────────────────────────────────────────────────────────
+// CẤU HÌNH
+// ─────────────────────────────────────────────────────────────
 
 const API_CONFIG = {
   BASE_URL: 'http://localhost:8080/api/v1',
-  TIMEOUT_MS: 3000
+  TIMEOUT_MS: 10000
 };
 
-const ApiService = {
-  // Lấy Access Token lưu trữ (nếu có đăng nhập)
-  getAuthHeader() {
-    const token = localStorage.getItem('driveshare_access_token');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
-  },
+// ─────────────────────────────────────────────────────────────
+// TOKEN HELPERS (JWT được lưu sau khi login thành công)
+// ─────────────────────────────────────────────────────────────
 
-  /**
-   * Helper fetch có timeout để phát hiện nhanh nếu backend chưa bật
-   */
-  async fetchWithTimeout(url, options = {}) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT_MS);
-    
+const TokenService = {
+  getToken() {
+    return localStorage.getItem('ds_access_token');
+  },
+  setToken(token) {
+    localStorage.setItem('ds_access_token', token);
+  },
+  clearToken() {
+    localStorage.removeItem('ds_access_token');
+  },
+  isLoggedIn() {
+    return !!this.getToken();
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// BACKEND HEALTH CHECK
+// Ping /api/v1/health để kiểm tra backend có đang chạy không
+// Trả về: 'online' | 'offline' | 'no-auth'
+// ─────────────────────────────────────────────────────────────
+
+const BackendStatus = {
+  _cache: null,
+  _cacheTime: 0,
+  CACHE_TTL_MS: 15000, // cache 15 giây, tránh ping liên tục
+
+  async check() {
+    const now = Date.now();
+    if (this._cache && (now - this._cacheTime) < this.CACHE_TTL_MS) {
+      return this._cache;
+    }
+
     try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          ...this.getAuthHeader(),
-          ...(options.headers || {})
-        }
+      const res = await fetch(`${API_CONFIG.BASE_URL}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000)
       });
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      throw error;
+      const result = res.ok ? 'online' : 'offline';
+      this._cache = result;
+      this._cacheTime = now;
+      return result;
+    } catch (_) {
+      this._cache = 'offline';
+      this._cacheTime = now;
+      return 'offline';
     }
   },
 
-  /**
-   * API: Lấy danh sách người dùng (Admin)
-   * GET /api/v1/admin/users
-   */
-  async getAdminUsers(params = {}) {
-    const query = new URLSearchParams();
-    if (params.page) query.append('page', params.page);
-    if (params.limit) query.append('limit', params.limit);
-    if (params.search) query.append('search', params.search);
-    if (params.role) query.append('role', params.role);
-    if (params.status) query.append('status', params.status);
+  invalidate() {
+    this._cache = null;
+    this._cacheTime = 0;
+  }
+};
 
-    const url = `${API_CONFIG.BASE_URL}/admin/users?${query.toString()}`;
+// ─────────────────────────────────────────────────────────────
+// HÀM GỌI API CHUNG
+// Mọi request đều đi qua đây — tự gắn Authorization header
+// ─────────────────────────────────────────────────────────────
 
-    try {
-      const res = await this.fetchWithTimeout(url);
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.success && json.data) {
-          console.info(' DriveShare API: Nhận dữ liệu người dùng trực tiếp từ Backend Spring Boot');
-          return {
-            source: 'BACKEND_API',
-            ...json.data // PageResponse: { items, pagination }
-          };
-        }
+async function apiCall(endpoint, method = 'GET', body = null) {
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+
+  const token = TokenService.getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const config = { method, headers };
+  if (body) {
+    config.body = JSON.stringify(body);
+  }
+
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, config);
+    const data = await response.json();
+
+    // Backend trả lỗi (4xx, 5xx)
+    if (!response.ok) {
+      // 401 — chưa đăng nhập hoặc token hết hạn
+      if (response.status === 401) {
+        const err = new Error('Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.');
+        err.code = 'UNAUTHORIZED';
+        throw err;
       }
-      throw new Error(`HTTP ${res.status}`);
-    } catch (error) {
-      console.warn('⚠️ DriveShare: Không thể kết nối Backend API (đang offline hoặc chưa có token), tự động chuyển sang Local Storage:', error.message);
-      const localData = StorageService.getUsers(params);
-      return {
-        source: 'LOCAL_STORAGE',
-        ...localData
-      };
+      const errorMsg = data.message || data.error || 'Lỗi kết nối tới máy chủ';
+      throw new Error(errorMsg);
     }
+
+    return data; // { success: true, message: "...", data: {...} }
+
+  } catch (err) {
+    // Lỗi network (backend chưa chạy, CORS, timeout...)
+    if (err.name === 'TypeError' && err.message.includes('fetch')) {
+      const netErr = new Error('Không thể kết nối tới máy chủ. Hãy đảm bảo backend đang chạy tại ' + API_CONFIG.BASE_URL);
+      netErr.code = 'NETWORK_ERROR';
+      throw netErr;
+    }
+    if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+      const timeoutErr = new Error('Kết nối tới backend bị timeout. Vui lòng kiểm tra lại server.');
+      timeoutErr.code = 'TIMEOUT';
+      throw timeoutErr;
+    }
+    throw err;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// CAR API — Mapping với CarController.java
+// Base path: /api/v1/cars
+// Yêu cầu JWT với ROLE_OWNER cho tất cả endpoints
+// ─────────────────────────────────────────────────────────────
+
+const CarAPI = {
+
+  /**
+   * POST /api/v1/cars
+   * Đăng xe mới, xe sẽ ở trạng thái PENDING chờ Admin duyệt.
+   */
+  createCar(carData) {
+    return apiCall('/cars', 'POST', carData);
   },
 
   /**
-   * API: Lấy chi tiết một người dùng (Admin)
-   * GET /api/v1/admin/users/{userId}
+   * GET /api/v1/cars/my-cars?page=0&size=10
+   * Lấy danh sách xe của Owner đang đăng nhập, có phân trang.
    */
-  async getAdminUserById(userId) {
-    const url = `${API_CONFIG.BASE_URL}/admin/users/${userId}`;
-
-    try {
-      const res = await this.fetchWithTimeout(url);
-      if (res.status === 404) {
-        let errJson = null;
-        try { errJson = await res.json(); } catch(e) {}
-        return {
-          success: false,
-          status: 404,
-          errorCode: errJson?.errorCode || 'USER_NOT_FOUND',
-          message: errJson?.message || 'Không tìm thấy người dùng (404 Not Found)',
-          source: 'BACKEND_API'
-        };
-      }
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.success && json.data) {
-          console.info(` DriveShare API: Nhận chi tiết user #${userId} từ Backend Spring Boot`);
-          return {
-            success: true,
-            source: 'BACKEND_API',
-            data: json.data
-          };
-        }
-      }
-      throw new Error(`HTTP ${res.status}`);
-    } catch (error) {
-      // Nếu là lỗi 404 từ backend thì không fallback local data giả
-      if (error && error.status === 404) {
-        return error;
-      }
-      console.warn(`⚠️ DriveShare: Không thể kết nối Backend API, kiểm tra Local Storage cho user #${userId}:`, error.message);
-      const localUser = StorageService.getUserById(userId);
-      if (localUser) {
-        return {
-          success: true,
-          source: 'LOCAL_STORAGE',
-          data: localUser
-        };
-      }
-      return {
-        success: false,
-        status: 404,
-        errorCode: 'USER_NOT_FOUND',
-        message: `Không tìm thấy người dùng #${userId} (404 Not Found)`,
-        source: 'LOCAL_STORAGE'
-      };
-    }
+  getMyCars(page = 0, size = 20) {
+    return apiCall(`/cars/my-cars?page=${page}&size=${size}`);
   },
 
   /**
-   * API: Phê duyệt hoặc từ chối hồ sơ Chủ xe (Admin)
-   * PATCH /api/v1/admin/users/{userId}/approve-owner
+   * PUT /api/v1/cars/{id}
+   * Cập nhật thông tin xe.
    */
-  async approveOwner(userId, data = {}) {
-    const url = `${API_CONFIG.BASE_URL}/admin/users/${userId}/approve-owner`;
-
-    try {
-      const res = await this.fetchWithTimeout(url, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          verification_status: data.verification_status,
-          rejection_reason: data.rejection_reason
-        })
-      });
-
-      if (res.status === 403) {
-        return {
-          success: false,
-          status: 403,
-          errorCode: 'FORBIDDEN',
-          message: 'Bạn không có quyền thực hiện thao tác này (403 Forbidden)'
-        };
-      }
-
-      if (res.status === 400) {
-        let errJson = null;
-        try { errJson = await res.json(); } catch(e) {}
-        return {
-          success: false,
-          status: 400,
-          errorCode: errJson?.errorCode || 'VALIDATION_FAILED',
-          message: errJson?.message || 'Dữ liệu không hợp lệ hoặc thiếu lý do từ chối'
-        };
-      }
-
-      if (res.ok) {
-        const json = await res.json();
-        return {
-          success: true,
-          source: 'BACKEND_API',
-          message: json.message || 'Cập nhật trạng thái duyệt thành công',
-          data: json.data
-        };
-      }
-      throw new Error(`HTTP ${res.status}`);
-    } catch (error) {
-      console.warn(`⚠️ DriveShare: Không thể kết nối Backend API khi duyệt chủ xe #${userId}, cập nhật Local Storage:`, error.message);
-      const localUser = StorageService.approveOwner(userId, data.verification_status, data.rejection_reason);
-      if (localUser) {
-        return {
-          success: true,
-          source: 'LOCAL_STORAGE',
-          message: data.verification_status === 'verified' 
-            ? 'Phê duyệt hồ sơ chủ xe thành công (Local Storage)' 
-            : 'Đã từ chối hồ sơ chủ xe (Local Storage)',
-          data: localUser
-        };
-      }
-      return {
-        success: false,
-        message: 'Lỗi cập nhật trạng thái chủ xe'
-      };
-    }
+  updateCar(carId, carData) {
+    return apiCall(`/cars/${carId}`, 'PUT', carData);
   },
 
   /**
-   * API: Khóa hoặc Mở khóa tài khoản người dùng (Admin)
-   * PATCH /api/v1/admin/users/{userId}/status
+   * PATCH /api/v1/cars/{id}/status
+   * Chủ xe bật/tắt hiển thị xe: ACTIVE ↔ INACTIVE.
    */
-  async updateUserStatus(userId, data = {}) {
-    const url = `${API_CONFIG.BASE_URL}/admin/users/${userId}/status`;
+  updateCarStatus(carId, status) {
+    return apiCall(`/cars/${carId}/status`, 'PATCH', { status });
+  },
 
-    try {
-      const res = await this.fetchWithTimeout(url, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          status: data.status,
-          reason: data.reason
-        })
-      });
+  /**
+   * DELETE /api/v1/cars/{id}
+   * Xóa mềm xe.
+   */
+  deleteCar(carId) {
+    return apiCall(`/cars/${carId}`, 'DELETE');
+  }
+};
 
-      if (res.status === 403) {
-        return {
-          success: false,
-          status: 403,
-          errorCode: 'FORBIDDEN',
-          message: 'Bạn không có quyền thực hiện thao tác này (403 Forbidden)'
-        };
-      }
+// ─────────────────────────────────────────────────────────────
+// AUTH API (dùng để đăng nhập lấy JWT)
+// Endpoint thực tế: POST /api/v1/auth/login
+// ─────────────────────────────────────────────────────────────
 
-      if (res.ok) {
-        const json = await res.json();
-        return {
-          success: true,
-          source: 'BACKEND_API',
-          message: json.message || 'Cập nhật trạng thái người dùng thành công',
-          data: json.data
-        };
-      }
-      throw new Error(`HTTP ${res.status}`);
-    } catch (error) {
-      console.warn(`⚠️ DriveShare: Không thể kết nối Backend API khi đổi trạng thái user #${userId}, cập nhật Local Storage:`, error.message);
-      const localUser = StorageService.updateUserStatus(userId, data.status);
-      if (localUser) {
-        return {
-          success: true,
-          source: 'LOCAL_STORAGE',
-          message: data.status === 'locked' 
-            ? 'Khóa tài khoản thành công (Local Storage)' 
-            : 'Mở khóa tài khoản thành công (Local Storage)',
-          data: localUser
-        };
-      }
-      return {
-        success: false,
-        message: 'Lỗi cập nhật trạng thái người dùng'
-      };
+const AuthAPI = {
+  async login(username, password) {
+    const data = await apiCall('/auth/login', 'POST', { username, password });
+    if (data.data?.accessToken) {
+      TokenService.setToken(data.data.accessToken);
+      BackendStatus.invalidate();
     }
+    return data;
+  },
+
+  logout() {
+    TokenService.clearToken();
+    BackendStatus.invalidate();
   }
 };
