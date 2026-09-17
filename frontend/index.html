@@ -44,6 +44,11 @@
 
       <!-- Right Nav Actions -->
       <div class="nav-actions">
+        <!-- Auth Container (Đăng nhập / Đăng ký / Thông tin cá nhân) -->
+        <div id="navAuthContainer" style="display: flex; align-items: center; gap: 0.5rem;">
+          <!-- Được sinh tự động bởi AuthService.updateAuthUI() -->
+        </div>
+
         <a href="javascript:void(0)" class="nav-link booking-badge-btn" id="navMyBookings" onclick="App.showMyBookingsView()" title="Chuyến của tôi">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -310,6 +315,97 @@
         </div>
       </section>
 
+      <!-- ==================== BANNER ĐĂNG KÝ TRỞ THÀNH CHỦ XE NGAY TRANG CHỦ ==================== -->
+      <section class="container">
+        <div class="owner-home-section">
+          <div class="container">
+            <div class="owner-home-grid">
+              
+              <!-- Left Info -->
+              <div class="owner-home-info">
+                <h2>Biến chiếc xe nhàn rỗi thành nguồn thu nhập vượt trội</h2>
+                <p>
+                  Gia nhập cộng đồng hơn 5.000+ chủ xe cùng DriveShare. Bảo hiểm vật chất 2 chiều MIC bảo vệ 100% chuyến đi, công nghệ định vị GPS giám sát hành trình thời gian thực.
+                </p>
+                
+                <div class="owner-benefits-list">
+                  <div class="owner-benefit-item">
+                    <div class="owner-benefit-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                    <span>Thu nhập bình quân từ 12 - 25 triệu đồng / tháng / xe</span>
+                  </div>
+
+                  <div class="owner-benefit-item">
+                    <div class="owner-benefit-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                    <span>Khách thuê được định danh CCCD chip & Giấy phép lái xe chặt chẽ</span>
+                  </div>
+
+                  <div class="owner-benefit-item">
+                    <div class="owner-benefit-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                    <span>Nhận tiền cọc giữ chỗ 30% trực tiếp vào tài khoản ngân hàng</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Form -->
+              <div class="owner-register-card">
+                <h3>Đăng ký trở thành Chủ xe</h3>
+                <p>Điền thông tin cơ bản để nhận bảng ước tính doanh thu và chuyên viên liên hệ trong 30 phút</p>
+
+                <form id="formHomeOwnerRegister" onsubmit="AuthService.handleOwnerHomeRegister(event)">
+                  <div class="form-group">
+                    <label class="form-label">Họ và tên chủ xe <span style="color: var(--danger);">*</span></label>
+                    <input type="text" class="form-control" id="ownerRegName" placeholder="Ví dụ: Nguyễn Văn Hùng" required />
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Số điện thoại liên hệ <span style="color: var(--danger);">*</span></label>
+                    <input type="tel" class="form-control" id="ownerRegPhone" placeholder="0901 234 567" required />
+                  </div>
+
+                  <div class="form-grid-2">
+                    <div class="form-group">
+                      <label class="form-label">Khu vực cho thuê <span style="color: var(--danger);">*</span></label>
+                      <select class="form-control" id="ownerRegArea" required>
+                        <option value="">Chọn khu vực</option>
+                        <option value="TP. Hồ Chí Minh (Quận 1, 3, 7, Bình Thạnh...)">TP. Hồ Chí Minh</option>
+                        <option value="Hà Nội (Cầu Giấy, Nam Từ Liêm, Đống Đa...)">Hà Nội</option>
+                        <option value="Đà Nẵng (Hải Châu, Sơn Trà...)">Đà Nẵng</option>
+                        <option value="Bình Dương (Thủ Dầu Một, Thuận An...)">Bình Dương</option>
+                        <option value="Đồng Nai (Biên Hòa...)">Đồng Nai</option>
+                        <option value="Khác">Tỉnh thành khác</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group">
+                      <label class="form-label">Loại xe cho thuê <span style="color: var(--danger);">*</span></label>
+                      <select class="form-control" id="ownerRegCarType" required>
+                        <option value="">Chọn loại xe</option>
+                        <option value="Sedan 4-5 chỗ (Vios, Accent, City, Mazda 3...)">Sedan 4 - 5 chỗ</option>
+                        <option value="SUV / Crossover (CX-5, Tucson, SantaFe...)">SUV / Crossover</option>
+                        <option value="MPV 7 chỗ (Xpander, Veloz, Innova, Carnival...)">MPV 7 chỗ</option>
+                        <option value="Xe điện thông minh (VF8, VF9, VF5...)">Xe điện thông minh (EV)</option>
+                        <option value="Bán tải (Ranger, Hilux, Triton...)">Xe Bán tải</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button type="submit" class="btn btn-accent btn-lg" style="width: 100%; margin-top: 0.5rem; font-weight: 700;">
+                    Gửi yêu cầu đăng ký Chủ xe
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
 
     <!-- ==================== PHÂN HỆ: CHUYẾN CỦA TÔI (MY BOOKINGS) ==================== -->
@@ -410,6 +506,8 @@
   <!-- Scripts -->
   <script src="js/data.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/render.js"></script>
   <script src="js/booking.js"></script>
   <script src="js/owner.js"></script>

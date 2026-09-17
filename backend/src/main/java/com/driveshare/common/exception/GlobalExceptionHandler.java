@@ -72,6 +72,28 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
+    @ExceptionHandler(org.springframework.security.authentication.LockedException.class)
+    public ResponseEntity<ErrorResponse> handleLockedException(org.springframework.security.authentication.LockedException ex) {
+        ErrorResponse response = ErrorResponse.builder()
+                .success(false)
+                .message("Tài khoản của bạn đã bị khóa bởi Quản trị viên")
+                .errorCode(ErrorCode.ACCOUNT_LOCKED.getCode())
+                .timestamp(Instant.now())
+                .build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler(org.springframework.security.authentication.DisabledException.class)
+    public ResponseEntity<ErrorResponse> handleDisabledException(org.springframework.security.authentication.DisabledException ex) {
+        ErrorResponse response = ErrorResponse.builder()
+                .success(false)
+                .message("Tài khoản của bạn đang chờ phê duyệt hoặc đã bị vô hiệu hóa")
+                .errorCode(ErrorCode.ACCOUNT_PENDING.getCode())
+                .timestamp(Instant.now())
+                .build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
         ErrorResponse response = ErrorResponse.builder()

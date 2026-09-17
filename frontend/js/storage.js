@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   BOOKINGS: 'driveshare_bookings_v2',
   RENTERS: 'driveshare_renters_v2',
   OWNERS: 'driveshare_owners_v2',
+  USERS: 'driveshare_users_v2',
   CURRENT_ROLE: 'driveshare_current_role',
   CURRENT_RENTER: 'driveshare_current_renter',
   CURRENT_OWNER: 'driveshare_current_owner'
@@ -27,6 +28,9 @@ const StorageService = {
     }
     if (!localStorage.getItem(STORAGE_KEYS.OWNERS)) {
       localStorage.setItem(STORAGE_KEYS.OWNERS, JSON.stringify(INITIAL_DATA.owners));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_DATA.users || []));
     }
     if (!localStorage.getItem(STORAGE_KEYS.CURRENT_ROLE)) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_ROLE, 'RENTER'); // RENTER | OWNER | ADMIN
@@ -157,6 +161,116 @@ const StorageService = {
   getCurrentOwner() {
     const owners = this.getOwners();
     return owners[0]; // Mặc định Anh Hùng (Quận 1)
+  },
+
+  // Người dùng (Users & Roles)
+  getUsers(filters = {}) {
+    let users = [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.USERS);
+      users = data ? JSON.parse(data) : (INITIAL_DATA.users || []);
+    } catch (e) {
+      users = INITIAL_DATA.users || [];
+    }
+
+    // Filter by role
+    if (filters.role && filters.role !== 'all') {
+      const targetRole = filters.role.toLowerCase().replace('role_', '');
+      users = users.filter(u => Array.isArray(u.roles) && u.roles.some(r => r.toLowerCase().replace('role_', '') === targetRole));
+    }
+
+    // Filter by status
+    if (filters.status && filters.status !== 'all') {
+      users = users.filter(u => String(u.status).toUpperCase() === String(filters.status).toUpperCase());
+    }
+
+    // Filter by search keyword (name or email or phone or username)
+    if (filters.search && filters.search.trim()) {
+      const kw = filters.search.trim().toLowerCase();
+      users = users.filter(u => 
+        (u.full_name && u.full_name.toLowerCase().includes(kw)) ||
+        (u.email && u.email.toLowerCase().includes(kw)) ||
+        (u.username && u.username.toLowerCase().includes(kw)) ||
+        (u.phone && u.phone.includes(kw))
+      );
+    }
+
+    const totalItems = users.length;
+    const page = Math.max(1, filters.page || 1);
+    const limit = Math.max(1, filters.limit || 5);
+    const totalPages = Math.ceil(totalItems / limit) || 1;
+    const startIndex = (page - 1) * limit;
+    const items = users.slice(startIndex, startIndex + limit);
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    };
+  },
+
+  // Lấy chi tiết một người dùng theo ID
+  getUserById(userId) {
+    let users = [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.USERS);
+      users = data ? JSON.parse(data) : (INITIAL_DATA.users || []);
+    } catch (e) {
+      users = INITIAL_DATA.users || [];
+    }
+    return users.find(u => String(u.user_id || u.userId) === String(userId)) || null;
+  },
+
+  // Phê duyệt hoặc từ chối hồ sơ chủ xe trong local storage
+  approveOwner(userId, status, reason = '') {
+    let users = [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.USERS);
+      users = data ? JSON.parse(data) : (INITIAL_DATA.users || []);
+    } catch (e) {
+      users = INITIAL_DATA.users || [];
+    }
+
+    const user = users.find(u => String(u.user_id || u.userId) === String(userId));
+    if (user) {
+      if (!user.owner_profile) user.owner_profile = {};
+      if (status === 'verified') {
+        user.status = 'ACTIVE';
+        user.owner_profile.verification_status = 'VERIFIED';
+        user.owner_profile.rejection_reason = null;
+      } else if (status === 'rejected') {
+        user.owner_profile.verification_status = 'REJECTED';
+        user.owner_profile.rejection_reason = reason;
+      }
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+      return user;
+    }
+    return null;
+  },
+
+  // Cập nhật trạng thái người dùng (Khóa / Mở khóa)
+  updateUserStatus(userId, status) {
+    let users = [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.USERS);
+      users = data ? JSON.parse(data) : (INITIAL_DATA.users || []);
+    } catch (e) {
+      users = INITIAL_DATA.users || [];
+    }
+
+    const user = users.find(u => String(u.user_id || u.userId) === String(userId));
+    if (user) {
+      user.status = status.toUpperCase();
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+      return user;
+    }
+    return null;
   },
 
   // Định dạng tiền tệ VND
