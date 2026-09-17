@@ -1,28 +1,207 @@
 /**
- * DRIVESHARE — API Service Bridge
- * Kết nối giao tiếp trực tiếp với Backend Spring Boot REST API (http://localhost:8080/api/v1)
- * Có cơ chế tự động Fallback về StorageService (LocalStorage) nếu Backend đang offline
+ * DRIVESHARE — API Service Layer & Bridge
+ * Tầng kết nối Frontend → Backend Spring Boot (Port 8080)
+ * Hỗ trợ đồng thời:
+ *   - Car Module (Phat: CRP-23, CRP-24)
+ *   - Admin & User Management Module (Khiêm: CRP-19 → 22)
+ *   - Auth & Token helpers (Vĩ: CRP-12 → 16)
  */
+
+// ─────────────────────────────────────────────────────────────
+// CẤU HÌNH
+// ─────────────────────────────────────────────────────────────
 
 const API_CONFIG = {
   BASE_URL: 'http://localhost:8080/api/v1',
-  TIMEOUT_MS: 3000
+  TIMEOUT_MS: 10000
 };
 
-const ApiService = {
-  // Lấy Access Token lưu trữ (nếu có đăng nhập)
-  getAuthHeader() {
-    const token = localStorage.getItem('driveshare_access_token') || localStorage.getItem('ds_access_token');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
+// ─────────────────────────────────────────────────────────────
+// TOKEN HELPERS (JWT được lưu sau khi login thành công)
+// ─────────────────────────────────────────────────────────────
+
+const TokenService = {
+  getToken() {
+    return localStorage.getItem('ds_access_token') || localStorage.getItem('driveshare_access_token');
+  },
+  setToken(token) {
+    localStorage.setItem('ds_access_token', token);
+    localStorage.setItem('driveshare_access_token', token);
+  },
+  clearToken() {
+    localStorage.removeItem('ds_access_token');
+    localStorage.removeItem('driveshare_access_token');
+  },
+  isLoggedIn() {
+    return !!this.getToken();
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// BACKEND HEALTH CHECK
+// Ping /api/v1/health để kiểm tra backend có đang chạy không
+// ─────────────────────────────────────────────────────────────
+
+const BackendStatus = {
+  _cache: null,
+  _cacheTime: 0,
+  CACHE_TTL_MS: 15000,
+
+  async check() {
+    const now = Date.now();
+    if (this._cache && (now - this._cacheTime) < this.CACHE_TTL_MS) {
+      return this._cache;
+    }
+
+    try {
+      const res = await fetch(`${API_CONFIG.BASE_URL}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined
+      });
+      const result = res.ok ? 'online' : 'offline';
+      this._cache = result;
+      this._cacheTime = now;
+      return result;
+    } catch (_) {
+      this._cache = 'offline';
+      this._cacheTime = now;
+      return 'offline';
+    }
+  },
+
+  invalidate() {
+    this._cache = null;
+    this._cacheTime = 0;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// HÀM GỌI API CHUNG
+// Mọi request đều đi qua đây — tự gắn Authorization header
+// ─────────────────────────────────────────────────────────────
+
+async function apiCall(endpoint, method = 'GET', body = null) {
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+
+  const token = TokenService.getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const config = { method, headers };
+  if (body) {
+    config.body = JSON.stringify(body);
+  }
+
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, config);
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        const err = new Error('Chưa đăng nhập hoặc phiên làm việc đã hết hạn.');
+        err.code = 'UNAUTHORIZED';
+        throw err;
+      }
+      const errorMsg = data.message || data.error || 'Lỗi kết nối tới máy chủ';
+      throw new Error(errorMsg);
+    }
+
+    return data;
+  } catch (err) {
+    if (err.name === 'TypeError' && err.message.includes('fetch')) {
+      const netErr = new Error('Không thể kết nối tới máy chủ. Hãy đảm bảo backend đang chạy tại ' + API_CONFIG.BASE_URL);
+      netErr.code = 'NETWORK_ERROR';
+      throw netErr;
+    }
+    if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+      const timeoutErr = new Error('Kết nối tới backend bị timeout. Vui lòng kiểm tra lại server.');
+      timeoutErr.code = 'TIMEOUT';
+      throw timeoutErr;
+    }
+    throw err;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// CAR API — Mapping với CarController.java (CRP-23, CRP-24)
+// Base path: /api/v1/cars
+// ─────────────────────────────────────────────────────────────
+
+const CarAPI = {
+  /**
+   * POST /api/v1/cars — Đăng xe mới (chờ Admin duyệt)
+   */
+  createCar(carData) {
+    return apiCall('/cars', 'POST', carData);
   },
 
   /**
-   * Helper fetch có timeout để phát hiện nhanh nếu backend chưa bật
+   * GET /api/v1/cars/my-cars?page=0&size=10 — Lấy danh sách xe của Owner đang đăng nhập
    */
+  getMyCars(page = 0, size = 20) {
+    return apiCall(`/cars/my-cars?page=${page}&size=${size}`);
+  },
+
+  /**
+   * PUT /api/v1/cars/{id} — Cập nhật thông tin xe
+   */
+  updateCar(carId, carData) {
+    return apiCall(`/cars/${carId}`, 'PUT', carData);
+  },
+
+  /**
+   * PATCH /api/v1/cars/{id}/status — Bật/tắt hiển thị xe: ACTIVE ↔ INACTIVE
+   */
+  updateCarStatus(carId, status) {
+    return apiCall(`/cars/${carId}/status`, 'PATCH', { status });
+  },
+
+  /**
+   * DELETE /api/v1/cars/{id} — Xóa mềm xe
+   */
+  deleteCar(carId) {
+    return apiCall(`/cars/${carId}`, 'DELETE');
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// AUTH API
+// ─────────────────────────────────────────────────────────────
+
+const AuthAPI = {
+  async login(username, password) {
+    const data = await apiCall('/auth/login', 'POST', { username, password });
+    if (data.data?.accessToken || data.data?.access_token) {
+      TokenService.setToken(data.data.accessToken || data.data.access_token);
+      BackendStatus.invalidate();
+    }
+    return data;
+  },
+
+  logout() {
+    TokenService.clearToken();
+    BackendStatus.invalidate();
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// API SERVICE (Admin & User Management — Khiêm CRP-19 → 22)
+// Hỗ trợ fallback sang StorageService nếu backend offline
+// ─────────────────────────────────────────────────────────────
+
+const ApiService = {
+  getAuthHeader() {
+    const token = TokenService.getToken();
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  },
+
   async fetchWithTimeout(url, options = {}) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT_MS);
-    
+
     try {
       const response = await fetch(url, {
         ...options,
@@ -60,17 +239,16 @@ const ApiService = {
       if (res.ok) {
         const json = await res.json();
         if (json && json.success && json.data) {
-          console.info(' DriveShare API: Nhận dữ liệu người dùng trực tiếp từ Backend Spring Boot');
           return {
             source: 'BACKEND_API',
-            ...json.data // PageResponse: { items, pagination }
+            ...json.data
           };
         }
       }
       throw new Error(`HTTP ${res.status}`);
     } catch (error) {
-      console.warn('⚠️ DriveShare: Không thể kết nối Backend API (đang offline hoặc chưa có token), tự động chuyển sang Local Storage:', error.message);
-      const localData = StorageService.getUsers(params);
+      console.warn('DriveShare: Chuyển sang Local Storage cho danh sách người dùng:', error.message);
+      const localData = typeof StorageService !== 'undefined' ? StorageService.getUsers(params) : { items: [], pagination: {} };
       return {
         source: 'LOCAL_STORAGE',
         ...localData
@@ -101,7 +279,6 @@ const ApiService = {
       if (res.ok) {
         const json = await res.json();
         if (json && json.success && json.data) {
-          console.info(` DriveShare API: Nhận chi tiết user #${userId} từ Backend Spring Boot`);
           return {
             success: true,
             source: 'BACKEND_API',
@@ -111,24 +288,16 @@ const ApiService = {
       }
       throw new Error(`HTTP ${res.status}`);
     } catch (error) {
-      // Nếu là lỗi 404 từ backend thì không fallback local data giả
-      if (error && error.status === 404) {
-        return error;
-      }
-      console.warn(`⚠️ DriveShare: Không thể kết nối Backend API, kiểm tra Local Storage cho user #${userId}:`, error.message);
-      const localUser = StorageService.getUserById(userId);
+      if (error && error.status === 404) return error;
+      const localUser = typeof StorageService !== 'undefined' ? StorageService.getUserById(userId) : null;
       if (localUser) {
-        return {
-          success: true,
-          source: 'LOCAL_STORAGE',
-          data: localUser
-        };
+        return { success: true, source: 'LOCAL_STORAGE', data: localUser };
       }
       return {
         success: false,
         status: 404,
         errorCode: 'USER_NOT_FOUND',
-        message: `Không tìm thấy người dùng #${userId} (404 Not Found)`,
+        message: `Không tìm thấy người dùng #${userId}`,
         source: 'LOCAL_STORAGE'
       };
     }
@@ -151,52 +320,31 @@ const ApiService = {
       });
 
       if (res.status === 403) {
-        return {
-          success: false,
-          status: 403,
-          errorCode: 'FORBIDDEN',
-          message: 'Bạn không có quyền thực hiện thao tác này (403 Forbidden)'
-        };
+        return { success: false, status: 403, errorCode: 'FORBIDDEN', message: 'Bạn không có quyền thực hiện thao tác này' };
       }
-
       if (res.status === 400) {
         let errJson = null;
         try { errJson = await res.json(); } catch(e) {}
-        return {
-          success: false,
-          status: 400,
-          errorCode: errJson?.errorCode || 'VALIDATION_FAILED',
-          message: errJson?.message || 'Dữ liệu không hợp lệ hoặc thiếu lý do từ chối'
-        };
+        return { success: false, status: 400, errorCode: errJson?.errorCode || 'VALIDATION_FAILED', message: errJson?.message || 'Dữ liệu không hợp lệ' };
       }
-
       if (res.ok) {
         const json = await res.json();
-        return {
-          success: true,
-          source: 'BACKEND_API',
-          message: json.message || 'Cập nhật trạng thái duyệt thành công',
-          data: json.data
-        };
+        return { success: true, source: 'BACKEND_API', message: json.message || 'Cập nhật trạng thái duyệt thành công', data: json.data };
       }
       throw new Error(`HTTP ${res.status}`);
     } catch (error) {
-      console.warn(`⚠️ DriveShare: Không thể kết nối Backend API khi duyệt chủ xe #${userId}, cập nhật Local Storage:`, error.message);
-      const localUser = StorageService.approveOwner(userId, data.verification_status, data.rejection_reason);
-      if (localUser) {
-        return {
-          success: true,
-          source: 'LOCAL_STORAGE',
-          message: data.verification_status === 'verified' 
-            ? 'Phê duyệt hồ sơ chủ xe thành công (Local Storage)' 
-            : 'Đã từ chối hồ sơ chủ xe (Local Storage)',
-          data: localUser
-        };
+      if (typeof StorageService !== 'undefined') {
+        const localUser = StorageService.approveOwner(userId, data.verification_status, data.rejection_reason);
+        if (localUser) {
+          return {
+            success: true,
+            source: 'LOCAL_STORAGE',
+            message: data.verification_status === 'verified' ? 'Phê duyệt hồ sơ chủ xe thành công' : 'Đã từ chối hồ sơ chủ xe',
+            data: localUser
+          };
+        }
       }
-      return {
-        success: false,
-        message: 'Lỗi cập nhật trạng thái chủ xe'
-      };
+      return { success: false, message: 'Lỗi cập nhật trạng thái chủ xe' };
     }
   },
 
@@ -217,41 +365,26 @@ const ApiService = {
       });
 
       if (res.status === 403) {
-        return {
-          success: false,
-          status: 403,
-          errorCode: 'FORBIDDEN',
-          message: 'Bạn không có quyền thực hiện thao tác này (403 Forbidden)'
-        };
+        return { success: false, status: 403, errorCode: 'FORBIDDEN', message: 'Bạn không có quyền thực hiện thao tác này' };
       }
-
       if (res.ok) {
         const json = await res.json();
-        return {
-          success: true,
-          source: 'BACKEND_API',
-          message: json.message || 'Cập nhật trạng thái người dùng thành công',
-          data: json.data
-        };
+        return { success: true, source: 'BACKEND_API', message: json.message || 'Cập nhật trạng thái người dùng thành công', data: json.data };
       }
       throw new Error(`HTTP ${res.status}`);
     } catch (error) {
-      console.warn(`⚠️ DriveShare: Không thể kết nối Backend API khi đổi trạng thái user #${userId}, cập nhật Local Storage:`, error.message);
-      const localUser = StorageService.updateUserStatus(userId, data.status);
-      if (localUser) {
-        return {
-          success: true,
-          source: 'LOCAL_STORAGE',
-          message: data.status === 'locked' 
-            ? 'Khóa tài khoản thành công (Local Storage)' 
-            : 'Mở khóa tài khoản thành công (Local Storage)',
-          data: localUser
-        };
+      if (typeof StorageService !== 'undefined') {
+        const localUser = StorageService.updateUserStatus(userId, data.status);
+        if (localUser) {
+          return {
+            success: true,
+            source: 'LOCAL_STORAGE',
+            message: data.status === 'locked' ? 'Khóa tài khoản thành công' : 'Mở khóa tài khoản thành công',
+            data: localUser
+          };
+        }
       }
-      return {
-        success: false,
-        message: 'Lỗi cập nhật trạng thái người dùng'
-      };
+      return { success: false, message: 'Lỗi cập nhật trạng thái người dùng' };
     }
   }
 };
