@@ -65,6 +65,8 @@ Spring_ThucTap_k4/
    - Cấu trúc package theo module, chuẩn RESTful URL, bọc dữ liệu `ApiResponse`, bắt lỗi tập trung `GlobalExceptionHandler`.
 6. **[Quy Chuẩn Frontend & Tích Hợp API (FRONTEND_CONVENTION.md)](./docs/FRONTEND_CONVENTION.md)**:
    - Cấu trúc thư mục UI, quản lý JWT token và header, chuẩn hóa Fetch/Axios, bảng mã màu Design Tokens.
+7. **[Đặc Tả Chi Tiết Nhiệm Vụ Thành Viên (NHIEM_VU_THANH_VIEN.md)](./docs/scrum/NHIEM_VU_THANH_VIEN.md)**:
+   - Bản phân rã công việc chi tiết cho từng người (NB, CN, KT, QD, VL, Phát): API, DTO, logic xử lý và điều kiện nghiệm thu theo đúng Jira Sprint 0.
 
 ---
 

@@ -23,11 +23,19 @@ const App = {
     // 2. Cập nhật số lượng đơn cọc trên badge
     this.updateBookingCountBadge();
 
+    // 2.1. Cập nhật trạng thái đăng nhập / đăng ký trên Header
+    if (typeof AuthService !== 'undefined') {
+      AuthService.updateAuthUI();
+    }
+
     // 3. Lắng nghe sự kiện modal đóng
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         this.closeModal();
         this.closeCarDetailModal();
+        if (typeof AuthModal !== 'undefined') {
+          AuthModal.closeModal();
+        }
       }
     });
 

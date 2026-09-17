@@ -22,6 +22,11 @@ public class CustomUserDetails implements UserDetails {
     private final String password;
     private final EUserStatus status;
     private final Collection<? extends GrantedAuthority> authorities;
+    private final long tokenVersion;
+
+    public CustomUserDetails(Long userId, String username, String email, String password, EUserStatus status, Collection<? extends GrantedAuthority> authorities) {
+        this(userId, username, email, password, status, authorities, 0L);
+    }
 
     public static CustomUserDetails build(User user) {
         List<GrantedAuthority> authorities = user.getRoles().stream()
@@ -34,7 +39,8 @@ public class CustomUserDetails implements UserDetails {
                 user.getEmail(),
                 user.getPasswordHash(),
                 user.getStatus(),
-                authorities
+                authorities,
+                user.getTokenVersion()
         );
     }
 
