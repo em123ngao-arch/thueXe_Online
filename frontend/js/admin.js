@@ -352,9 +352,6 @@ const AdminService = {
 
     const users = data.items || [];
     const pagination = data.pagination || { page: 1, limit: 5, totalItems: users.length, totalPages: 1, hasNext: false, hasPrev: false };
-    const sourceLabel = data.source === 'BACKEND_API' 
-      ? '<span class="badge badge-success" style="font-size: 0.72rem;">● Kết nối API Backend (8080)</span>' 
-      : '<span class="badge badge-neutral" style="font-size: 0.72rem;">○ Dữ liệu Cục bộ (Local Mock)</span>';
 
     let roleBadgeClass = (r) => {
       switch(String(r).toLowerCase()) {
@@ -375,10 +372,6 @@ const AdminService = {
     };
 
     wrapper.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1.25rem; background: var(--slate-50); border-bottom: 1px solid var(--slate-200);">
-        <span style="font-size: 0.78rem; color: var(--slate-600);">Trạng thái nguồn cấp dữ liệu:</span>
-        ${sourceLabel}
-      </div>
       <table class="custom-table">
         <thead>
           <tr>
