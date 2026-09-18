@@ -26,27 +26,24 @@
           <circle cx="17" cy="17" r="2"></circle>
         </svg>
         <span>DriveShare</span>
-        <span class="brand-badge">K4 Pro</span>
       </a>
 
-      <!-- Center Role Switcher (Desktop) -->
-      <div class="role-switcher-wrapper">
-        <div class="role-pill active" id="pillRoleRenter" onclick="App.switchRole('RENTER')">
-          Khách thuê xe
-        </div>
-        <div class="role-pill" id="pillRoleOwner" onclick="App.switchRole('OWNER')">
-          Chủ xe
-        </div>
-        <div class="role-pill" id="pillRoleAdmin" onclick="App.switchRole('ADMIN')">
-          Nhân viên / Admin
-        </div>
-      </div>
+      <!-- Center Navigation Menu (Chuẩn ứng dụng thương mại điện tử) -->
+      <nav class="nav-center-menu" style="display: flex; align-items: center; gap: 1.8rem;">
+        <a href="javascript:void(0)" onclick="App.switchRole('RENTER'); App.showCatalogView();" class="nav-menu-item active" id="navMenuCatalog" style="font-weight: 600; font-size: 0.95rem; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="12 8 8 12 12 16 12 8"></polygon></svg>
+          Thuê xe tự lái
+        </a>
+        <a href="javascript:void(0)" onclick="App.switchRole('OWNER')" class="nav-menu-item" id="navMenuOwner" style="font-weight: 500; font-size: 0.95rem; color: var(--slate-600); text-decoration: none; display: flex; align-items: center; gap: 6px;">
+          Trở thành chủ xe
+        </a>
+      </nav>
 
       <!-- Right Nav Actions -->
       <div class="nav-actions">
         <!-- Auth Container (Đăng nhập / Đăng ký / Thông tin cá nhân) -->
         <div id="navAuthContainer" style="display: flex; align-items: center; gap: 0.5rem;">
-          <!-- Được sinh tự động bởi AuthService.updateAuthUI() -->
+          <!-- Được sinh tự động bởi AuthService.updateNavAuthUI() -->
         </div>
 
         <a href="javascript:void(0)" class="nav-link booking-badge-btn" id="navMyBookings" onclick="App.showMyBookingsView()" title="Chuyến của tôi">
@@ -59,28 +56,13 @@
           <span class="nav-text-label">Chuyến đi</span>
           <span class="badge-count" id="navBookingBadgeCount" style="display: none;">0</span>
         </a>
-        <button class="btn btn-primary btn-sm" onclick="App.switchRole('OWNER'); OwnerService.showAddCarTab();">
+        <button class="btn btn-primary btn-sm nav-btn-post-car" onclick="App.switchRole('OWNER'); OwnerService.showAddCarTab();">
           + Đăng xe
         </button>
       </div>
 
     </div>
   </header>
-
-  <!-- Mobile Secondary Role Bar -->
-  <div class="mobile-role-bar">
-    <div class="role-switcher-wrapper">
-      <div class="role-pill active" id="mobRoleRenter" onclick="App.switchRole('RENTER')">
-        Khách thuê
-      </div>
-      <div class="role-pill" id="mobRoleOwner" onclick="App.switchRole('OWNER')">
-        Chủ xe
-      </div>
-      <div class="role-pill" id="mobRoleAdmin" onclick="App.switchRole('ADMIN')">
-        Quản trị
-      </div>
-    </div>
-  </div>
 
   <!-- ==================== 2. MAIN VIEW CONTAINERS ==================== -->
   <main id="mainAppContent">
@@ -493,12 +475,12 @@
       <div>
         <div style="font-weight: 800; font-size: 1.15rem; color: var(--primary);">DriveShare</div>
         <div style="color: var(--slate-500); font-size: 0.82rem; margin-top: 0.2rem;">
-          Đề tài thực tập K4: Nền tảng chia sẻ xe ô tô tự lái trực tuyến (Mô hình Mioto)
+          Nền tảng chia sẻ xe ô tô tự lái trực tuyến uy tín, tiện lợi và an tâm trên mọi cung đường
         </div>
       </div>
       <div style="font-size: 0.82rem; color: var(--slate-500); text-align: right;">
-        <div>Nhóm thực hiện: <strong>Lâm Chí Vĩ, Đỗ Ngọc Phát, Hồ Huỳnh Khiêm, Nguyễn Duy Quân, Nguyễn Hữu Tín</strong></div>
-        <div style="margin-top: 0.2rem;">Thiết kế giao diện chuẩn mực, tối ưu hóa di động và máy tính · 2026</div>
+        <div>Bản quyền © 2026 DriveShare Vietnam. Mọi quyền được bảo lưu.</div>
+        <div style="margin-top: 0.2rem;">Bảo hiểm 2 chiều MIC · Tổng đài hỗ trợ: 1900 6868 (24/7)</div>
       </div>
     </div>
   </footer>

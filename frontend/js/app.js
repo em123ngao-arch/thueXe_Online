@@ -33,6 +33,9 @@ const App = {
       if (e.key === 'Escape') {
         this.closeModal();
         this.closeCarDetailModal();
+        if (typeof AuthModal !== 'undefined') {
+          AuthModal.closeModal();
+        }
       }
     });
 
@@ -78,6 +81,18 @@ const App = {
       if (ownerView) ownerView.style.display = 'none';
       if (adminView) adminView.style.display = 'block';
       AdminService.renderAdminPortal();
+    }
+
+    // Cập nhật trạng thái menu chính
+    const navCatalog = document.getElementById('navMenuCatalog');
+    const navOwner = document.getElementById('navMenuOwner');
+    if (navCatalog) {
+      navCatalog.style.color = role === 'RENTER' ? 'var(--primary)' : 'var(--slate-600)';
+      navCatalog.style.fontWeight = role === 'RENTER' ? '700' : '500';
+    }
+    if (navOwner) {
+      navOwner.style.color = role === 'OWNER' ? 'var(--primary)' : 'var(--slate-600)';
+      navOwner.style.fontWeight = role === 'OWNER' ? '700' : '500';
     }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });

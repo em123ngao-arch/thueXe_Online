@@ -48,6 +48,18 @@ public class User extends BaseEntity {
     @Builder.Default
     private EUserStatus status = EUserStatus.PENDING;
 
+    @Column(name = "failed_login_attempts", nullable = false)
+    @Builder.Default
+    private int failedLoginAttempts = 0;
+
+    @Column(name = "locked_until")
+    private java.time.Instant lockedUntil;
+
+    /** Tăng mỗi khi mật khẩu thay đổi; dùng để vô hiệu hóa các JWT cũ. */
+    @Column(name = "token_version", nullable = false)
+    @Builder.Default
+    private long tokenVersion = 0L;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",

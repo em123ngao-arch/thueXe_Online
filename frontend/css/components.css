@@ -1044,6 +1044,19 @@
     display: none; /* Hiển thị qua mobile-role-bar */
   }
 
+  .nav-actions {
+    gap: 0.45rem;
+  }
+
+  .nav-actions .nav-text-label {
+    display: none;
+  }
+
+  .nav-actions .btn-sm {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.8rem;
+  }
+
   .mobile-role-bar {
     display: block;
   }

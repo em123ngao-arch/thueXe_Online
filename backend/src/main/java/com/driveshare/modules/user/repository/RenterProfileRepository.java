@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface RenterProfileRepository extends JpaRepository<RenterProfile, Long> {
     Optional<RenterProfile> findByLicenseNumber(String licenseNumber);
+    boolean existsByLicenseNumber(String licenseNumber);
 }
