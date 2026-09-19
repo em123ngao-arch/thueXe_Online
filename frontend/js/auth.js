@@ -10,24 +10,36 @@
  * - CRP-16: RBAC Authorization testing (200, 401, 403) & Admin Owner Approval
  */
 
-const AuthService = (function () {
-  const API_BASE = 'http://localhost:8080/api/v1/auth';
+const AUTH_STORAGE_KEY = "driveshare_current_auth_user";
 
-  // State keys in localStorage
-  const KEY_ACCESS_TOKEN = 'ds_access_token';
-  const KEY_REFRESH_TOKEN = 'ds_refresh_token';
-  const KEY_USER = 'ds_user';
+const AuthService = {
+  // Callback chờ sau khi đăng nhập (dùng cho login-gate xem chi tiết / đặt xe)
+  _pendingCallback: null,
 
-  // In-memory / localStorage helpers
-  function getAccessToken() {
-    return localStorage.getItem(KEY_ACCESS_TOKEN);
-  }
+  // ==================== LOGIN GATE ====================
+  // Kiểm tra đăng nhập trước khi thực hiện hành động.
+  // Nếu chưa đăng nhập → lưu callback rồi mở modal đăng nhập.
+  // Sau khi đăng nhập thành công → callback được gọi tự động.
+  requireLoginThen(callback) {
+    if (this.getCurrentUser()) {
+      callback();
+      return;
+    }
+    this._pendingCallback = callback;
+    this.openLoginModal();
+  },
 
-  function getRefreshToken() {
-    return localStorage.getItem(KEY_REFRESH_TOKEN);
-  }
+  // Gọi callback đang chờ (nếu có) sau khi đăng nhập / đăng ký thành công
+  _runPendingCallback() {
+    if (this._pendingCallback) {
+      const cb = this._pendingCallback;
+      this._pendingCallback = null;
+      setTimeout(cb, 200);
+    }
+  },
 
-  function getCurrentUser() {
+  // Lấy thông tin tài khoản đang đăng nhập
+  getCurrentUser() {
     try {
       const u = localStorage.getItem(KEY_USER);
       return u ? JSON.parse(u) : null;
@@ -180,133 +192,10 @@ const AuthService = (function () {
     clearSession();
   }
 
-  // CRP-13: Change Password
-  async function changePassword(currentPassword, newPassword, confirmPassword) {
-    return await request('/change-password', {
-      method: 'POST',
-      body: JSON.stringify({
-        currentPassword,
-        current_password: currentPassword,
-        newPassword,
-        new_password: newPassword,
-        confirmPassword,
-        confirm_password: confirmPassword
-      })
-    });
-  }
-
-  // CRP-14: Forgot Password
-  async function forgotPassword(email) {
-    return await request('/forgot-password', {
-      method: 'POST',
-      body: JSON.stringify({ email })
-    });
-  }
-
-  // CRP-14: Reset Password
-  async function resetPassword(token, newPassword, confirmPassword) {
-    return await request('/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({
-        token,
-        newPassword,
-        new_password: newPassword,
-        confirmPassword,
-        confirm_password: confirmPassword
-      })
-    });
-  }
-
-  // CRP-16: RBAC Test Calls
-  async function testRenterEndpoint() {
-    return await request('/renter-test', { method: 'GET' });
-  }
-
-  async function testOwnerEndpoint() {
-    return await request('/owner-test', { method: 'GET' });
-  }
-
-  async function testAdminEndpoint() {
-    return await request('/admin-test', { method: 'GET' });
-  }
-
-  // Admin Approval for Pending Owners
-  async function getPendingOwners() {
-    return await request('/pending-owners', { method: 'GET' });
-  }
-
-  async function approveOwner(userId) {
-    return await request(`/approve-owner/${userId}`, { method: 'POST' });
-  }
-
-  // Password Strength Evaluation
-  function evaluatePasswordStrength(password) {
-    if (!password) return { score: 0, label: 'Chưa nhập', color: '#94a3b8', width: '0%' };
-    let score = 0;
-    if (password.length >= 8) score += 1;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
-    if (/\d/.test(password)) score += 1;
-    if (/[^A-Za-z0-9]/.test(password)) score += 1;
-
-    switch (score) {
-      case 1:
-        return { score: 1, label: 'Yếu (Cần ít nhất 8 ký tự, chữ hoa, thường & số)', color: '#ef4444', width: '25%' };
-      case 2:
-        return { score: 2, label: 'Trung bình (Cần thêm chữ số hoặc chữ hoa)', color: '#f59e0b', width: '50%' };
-      case 3:
-        return { score: 3, label: 'Khá mạnh (Đạt chuẩn bảo mật)', color: '#3b82f6', width: '75%' };
-      case 4:
-        return { score: 4, label: 'Rất mạnh (Tối ưu an toàn)', color: '#10b981', width: '100%' };
-      default:
-        return { score: 0, label: 'Quá ngắn (< 8 ký tự)', color: '#ef4444', width: '10%' };
-    }
-  }
-
-  // Fetch full user profile from backend: GET /api/v1/users/me (CRP-17 / CRP-18)
-  async function fetchUserProfile() {
-    const token = getAccessToken();
-    if (!token) return null;
-    try {
-      const res = await fetch('http://localhost:8080/api/v1/users/me', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.data) {
-          const u = getCurrentUser() || {};
-          u.fullName = json.data.fullName || u.username;
-          u.phone = json.data.phone || '';
-          u.idCardNumber = json.data.idCardNumber || '';
-          if (json.data.ownerProfile) {
-            u.bankName = json.data.ownerProfile.bankName;
-            u.bankAccountNumber = json.data.ownerProfile.bankAccountNumber;
-            u.ownerVerificationStatus = json.data.ownerProfile.verificationStatus;
-          }
-          if (json.data.renterProfile) {
-            u.licenseNumber = json.data.renterProfile.licenseNumber;
-            u.licenseVerificationStatus = json.data.renterProfile.licenseVerificationStatus;
-          }
-          localStorage.setItem(KEY_USER, JSON.stringify(u));
-          updateNavAuthUI();
-          if (typeof OwnerService !== 'undefined' && document.getElementById('ownerSection')?.style.display === 'block') {
-            OwnerService.renderOwnerPortal();
-          }
-          return json.data;
-        }
-      }
-    } catch (e) {
-      console.warn('Lỗi nạp thông tin người dùng từ Backend:', e);
-    }
-    return null;
-  }
-
-  // Update Top Navigation Auth UI State
-  function updateNavAuthUI() {
-    const user = getCurrentUser();
-    const navAuthContainer = document.getElementById('navAuthContainer');
+  // Cập nhật trạng thái đăng nhập trên giao diện
+  updateAuthUI() {
+    const user = this.getCurrentUser();
+    const navAuthContainer = document.getElementById("navAuthContainer");
     if (!navAuthContainer) return;
 
     if (user && isAuthenticated()) {
@@ -328,23 +217,18 @@ const AuthService = (function () {
             : '');
 
       navAuthContainer.innerHTML = `
-        <div class="auth-user-badge-wrapper" style="display: flex; align-items: center; gap: 8px;">
-          ${portalBtnHtml}
-          <div class="user-avatar-chip" onclick="AuthModal.openProfile()" style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--slate-100, #f1f5f9); border-radius: 20px; font-size: 0.85rem; border: 1px solid var(--slate-200, #e2e8f0); cursor: pointer; transition: all 0.2s ease;" title="Xem & chỉnh sửa hồ sơ">
-            <div style="width: 24px; height: 24px; border-radius: 50%; background: ${roleColor}; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem;">
-              ${(user.fullName || user.username || 'U').charAt(0).toUpperCase()}
-            </div>
-            <div style="text-align: left; line-height: 1.2;">
-              <span style="font-weight: 600; color: var(--slate-800, #1e293b);">${user.fullName || user.username || user.email}</span>
-              <span style="display: block; font-size: 0.7rem; color: ${roleColor}; font-weight: 700;">${roleName}</span>
-            </div>
+        <div class="user-profile-badge">
+          <img src="${user.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"}" alt="${user.name}" class="nav-avatar" />
+          <div class="nav-user-info">
+            <span class="nav-user-name">${user.name}</span>
+            <span class="nav-user-role">${user.role === "OWNER" ? "Chủ xe" : user.role === "ADMIN" ? "Quản trị" : "Khách thuê"}</span>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="AuthModal.openProfile()" title="Xem và cập nhật Hồ sơ của tôi (CRP-17)" style="padding: 6px 12px; font-size: 0.82rem; color: var(--slate-700, #334155); border-color: var(--slate-300, #cbd5e1); font-weight: 600; display: inline-flex; align-items: center; gap: 5px; background: white; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-            Hồ sơ của tôi
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="AuthService.handleLogout()" title="Đăng xuất khỏi hệ thống" style="padding: 6px 12px; font-size: 0.82rem; color: #ef4444; border-color: #fecaca; font-weight: 500;">
-            Đăng xuất
+          <button class="btn btn-ghost btn-sm" onclick="AuthService.logout()" title="Đăng xuất" style="padding: 0.3rem 0.5rem; color: var(--slate-500);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
           </button>
         </div>
       `;
@@ -371,31 +255,19 @@ const AuthService = (function () {
     }
   }
 
-  return {
-    getAccessToken,
-    getRefreshToken,
-    getCurrentUser,
-    isAuthenticated,
-    hasRole,
-    login,
-    registerOwner,
-    registerRenter,
-    refreshToken,
-    logout,
-    handleLogout,
-    changePassword,
-    forgotPassword,
-    resetPassword,
-    testRenterEndpoint,
-    testOwnerEndpoint,
-    testAdminEndpoint,
-    getPendingOwners,
-    approveOwner,
-    evaluatePasswordStrength,
-    fetchUserProfile,
-    updateNavAuthUI
-  };
-})();
+        <!-- Social Login -->
+        <div class="social-login-grid">
+          <!-- TODO: Gán Google OAuth Client ID thật vào đây -->
+          <!-- Hướng dẫn: https://developers.google.com/identity/oauth2/web/guides/overview -->
+          <button class="social-btn google" id="btnGoogleLogin" onclick="AuthService.loginWithGoogle()">
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            Tiếp tục với Google
+        </div>
 
 /**
  * Modal Manager for Auth Dialogs (Login, Register Owner/Renter, Forgot, Change Password, RBAC Console)
@@ -564,11 +436,8 @@ const AuthModal = (function () {
     showModal('Đăng nhập vào DriveShare', html);
   }
 
-  async function quickLogin(identifier, password, targetRole) {
-    const idField = document.getElementById('loginIdentifier');
-    const pwdField = document.getElementById('loginPassword');
-    if (idField) idField.value = identifier;
-    if (pwdField) pwdField.value = password;
+    App.openModal("Đăng nhập khách hàng", html);
+  },
 
     const btn = document.getElementById('btnLoginSubmit');
     const alertBox = document.getElementById('loginAlertBox');
@@ -578,109 +447,17 @@ const AuthModal = (function () {
     }
     if (alertBox) alertBox.style.display = 'none';
 
-    const res = await AuthService.login(identifier, password);
-    if (btn) {
-      btn.disabled = false;
-      btn.innerText = 'Đăng nhập';
-    }
-
-    if (res.success) {
-      if (alertBox) {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#dcfce7';
-        alertBox.style.color = '#166534';
-        alertBox.style.border = '1px solid #bbf7d0';
-        alertBox.innerText = `Đăng nhập thành công!`;
-      }
-      setTimeout(() => {
-        closeModal();
-        if (targetRole) {
-          App.switchRole(targetRole);
-        } else {
-          const user = AuthService.getCurrentUser();
-          if (user && user.roles) {
-            if (user.roles.includes('ROLE_ADMIN')) App.switchRole('ADMIN');
-            else if (user.roles.includes('ROLE_OWNER')) App.switchRole('OWNER');
-            else App.switchRole('RENTER');
-          }
-        }
-        App.showToast(`Đã đăng nhập tài khoản: ${identifier}`, 'success');
-      }, 300);
-    } else {
-      if (alertBox) {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#fee2e2';
-        alertBox.style.color = '#991b1b';
-        alertBox.style.border = '1px solid #fecaca';
-        alertBox.innerText = res.message || 'Đăng nhập thất bại!';
-      }
-    }
-  }
-
-  async function submitLogin(e) {
-    e.preventDefault();
-    const idField = document.getElementById('loginIdentifier');
-    const pwdField = document.getElementById('loginPassword');
-    const btn = document.getElementById('btnLoginSubmit');
-    const alertBox = document.getElementById('loginAlertBox');
-
-    btn.disabled = true;
-    btn.innerText = 'Đang xử lý đăng nhập...';
-    alertBox.style.display = 'none';
-
-    const res = await AuthService.login(idField.value.trim(), pwdField.value);
-    btn.disabled = false;
-    btn.innerText = 'Đăng nhập';
-
-    if (res.success) {
-      alertBox.style.display = 'block';
-      alertBox.style.background = '#dcfce7';
-      alertBox.style.color = '#166534';
-      alertBox.style.border = '1px solid #bbf7d0';
-      alertBox.innerText = 'Đăng nhập thành công!';
-      
-      setTimeout(() => {
-        closeModal();
-        const user = AuthService.getCurrentUser();
-        if (user && user.roles) {
-          if (user.roles.includes('ROLE_ADMIN')) {
-            App.switchRole('ADMIN');
-          } else if (user.roles.includes('ROLE_OWNER')) {
-            App.switchRole('OWNER');
-          } else {
-            App.switchRole('RENTER');
-          }
-        }
-        App.showToast(`Chào mừng trở lại, ${user.username || user.email}!`, 'success');
-      }, 500);
-    } else {
-      alertBox.style.display = 'block';
-      alertBox.style.background = '#fee2e2';
-      alertBox.style.color = '#991b1b';
-      alertBox.style.border = '1px solid #fecaca';
-
-      if (res.errorCode === 'ACCOUNT_PENDING') {
-        alertBox.innerHTML = `<strong>Tài khoản Chờ duyệt:</strong> Tài khoản Chủ xe của bạn đang chờ Admin phê duyệt trước khi có thể đăng nhập.`;
-      } else if (res.errorCode === 'RATE_LIMITED') {
-        alertBox.innerHTML = `<strong>Khóa tạm thời:</strong> Bạn đã thử đăng nhập sai quá 5 lần. Vui lòng thử lại sau 15 phút.`;
-      } else if (res.errorCode === 'ACCOUNT_LOCKED') {
-        alertBox.innerHTML = `<strong>Tài khoản bị khóa:</strong> Vui lòng liên hệ hỗ trợ để mở khóa.`;
-      } else {
-        alertBox.innerText = res.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!';
-      }
-    }
-  }
-
-  // 2. Register Tabs Modal (CRP-10: Owner, CRP-11: Renter)
-  function openRegister(defaultTab = 'renter') {
-    const html = `
-      <div class="auth-register-tabs">
-        <div style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.25rem;">
-          <button type="button" id="tabBtnRenter" onclick="AuthModal.switchRegisterTab('renter')" style="flex: 1; padding: 10px; border: none; background: transparent; font-weight: 700; font-size: 0.95rem; cursor: pointer; border-bottom: 3px solid ${defaultTab === 'renter' ? '#2563eb' : 'transparent'}; color: ${defaultTab === 'renter' ? '#2563eb' : '#64748b'};">
-            👤 Khách thuê (Renter)
-          </button>
-          <button type="button" id="tabBtnOwner" onclick="AuthModal.switchRegisterTab('owner')" style="flex: 1; padding: 10px; border: none; background: transparent; font-weight: 700; font-size: 0.95rem; cursor: pointer; border-bottom: 3px solid ${defaultTab === 'owner' ? '#f59e0b' : 'transparent'}; color: ${defaultTab === 'owner' ? '#f59e0b' : '#64748b'};">
-            🚗 Chủ xe (Owner)
+        <!-- Social Registration -->
+        <div class="social-login-grid">
+          <!-- TODO: Gán Google OAuth Client ID thật vào đây -->
+          <button class="social-btn google" id="btnGoogleRegister" onclick="AuthService.loginWithGoogle()">
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            Đăng ký bằng Google
           </button>
         </div>
 
@@ -788,121 +565,16 @@ const AuthModal = (function () {
     const btnRenter = document.getElementById('tabBtnRenter');
     const btnOwner = document.getElementById('tabBtnOwner');
 
-    btnRenter.style.borderBottomColor = isRenter ? '#2563eb' : 'transparent';
-    btnRenter.style.color = isRenter ? '#2563eb' : '#64748b';
-    btnOwner.style.borderBottomColor = isRenter ? 'transparent' : '#f59e0b';
-    btnOwner.style.color = isRenter ? '#64748b' : '#f59e0b';
-
-    const alertBox = document.getElementById('registerAlertBox');
-    if (alertBox) alertBox.style.display = 'none';
-  }
-
-  function onPasswordInput(val, targetId) {
-    const res = AuthService.evaluatePasswordStrength(val);
-    const el = document.getElementById(targetId);
-    if (!el) return;
-    el.innerHTML = `
-      <div style="height: 4px; width: 100%; background: #e2e8f0; border-radius: 2px; overflow: hidden; margin-top: 4px;">
-        <div style="height: 100%; width: ${res.width}; background: ${res.color}; transition: all 0.3s ease;"></div>
-      </div>
-      <span style="font-size: 0.75rem; color: ${res.color}; font-weight: 600; display: block; margin-top: 2px;">
-        ${res.label}
-      </span>
-    `;
-  }
+    App.openModal("Đăng ký tài khoản khách thuê", html);
+  },
 
   async function submitRegister(e, role) {
     e.preventDefault();
-    const alertBox = document.getElementById('registerAlertBox');
-    alertBox.style.display = 'none';
+    const identifier = document.getElementById("loginIdentifier").value.trim();
+    const password = document.getElementById("loginPassword").value;
 
-    let payload = {};
-    let btnSubmit = null;
-
-    if (role === 'RENTER') {
-      btnSubmit = document.getElementById('btnRegisterRenter');
-      const email = document.getElementById('renterEmail').value.trim();
-      const fullName = document.getElementById('renterFullName').value.trim();
-      const phone = document.getElementById('renterPhone').value.trim();
-      const password = document.getElementById('renterPassword').value;
-      const confirmPassword = document.getElementById('renterConfirmPassword').value;
-
-      if (password !== confirmPassword) {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#fee2e2';
-        alertBox.style.color = '#991b1b';
-        alertBox.innerText = 'Mật khẩu xác nhận không khớp!';
-        return;
-      }
-
-      payload = { email, fullName, phone, password, confirmPassword, role: 'RENTER' };
-      btnSubmit.disabled = true;
-      btnSubmit.innerText = 'Đang xử lý đăng ký...';
-
-      const res = await AuthService.registerRenter(payload);
-      btnSubmit.disabled = false;
-      btnSubmit.innerText = 'Đăng ký tài khoản Khách thuê';
-
-      if (res.success) {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#dcfce7';
-        alertBox.style.color = '#166534';
-        alertBox.innerHTML = `<strong>Thành công!</strong> ${res.message || 'Đăng ký thành công! Bạn có thể đăng nhập ngay.'}`;
-        setTimeout(() => openLogin(), 1500);
-      } else {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#fee2e2';
-        alertBox.style.color = '#991b1b';
-        alertBox.innerText = res.message || 'Đăng ký thất bại!';
-      }
-    } else {
-      btnSubmit = document.getElementById('btnRegisterOwner');
-      const email = document.getElementById('ownerEmail').value.trim();
-      const fullName = document.getElementById('ownerFullName').value.trim();
-      const phone = document.getElementById('ownerPhone').value.trim();
-      const bankAccountNumber = document.getElementById('ownerBankAccount').value.trim();
-      const bankName = document.getElementById('ownerBankName').value.trim();
-      const password = document.getElementById('ownerPassword').value;
-      const confirmPassword = document.getElementById('ownerConfirmPassword').value;
-
-      if (password !== confirmPassword) {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#fee2e2';
-        alertBox.style.color = '#991b1b';
-        alertBox.innerText = 'Mật khẩu xác nhận không khớp!';
-        return;
-      }
-
-      payload = { email, fullName, phone, bankAccountNumber, bankName, password, confirmPassword, role: 'OWNER' };
-      btnSubmit.disabled = true;
-      btnSubmit.innerText = 'Đang xử lý đăng ký...';
-
-      const res = await AuthService.registerOwner(payload);
-      btnSubmit.disabled = false;
-      btnSubmit.innerText = 'Đăng ký tài khoản Chủ xe (Chờ duyệt)';
-
-      if (res.success) {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#fef3c7';
-        alertBox.style.color = '#92400e';
-        alertBox.innerHTML = `
-          <strong>Đăng ký thành công!</strong><br>
-          Tài khoản Chủ xe của bạn đang ở trạng thái <strong>Chờ duyệt (Pending Approval)</strong>.<br>
-          Admin sẽ tiến hành duyệt tài khoản trước khi bạn có thể đăng nhập.
-        `;
-      } else {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#fee2e2';
-        alertBox.style.color = '#991b1b';
-        alertBox.innerText = res.message || 'Đăng ký thất bại!';
-      }
-    }
-  }
-
-  // 3. Change Password Modal (CRP-13)
-  function openChangePassword() {
-    if (!AuthService.isAuthenticated()) {
-      openLogin();
+    if (!identifier || !password) {
+      App.showToast("Vui lòng nhập đầy đủ thông tin!", "error");
       return;
     }
     const html = `
@@ -911,22 +583,23 @@ const AuthModal = (function () {
           Sau khi đổi mật khẩu thành công, tất cả các phiên đăng nhập khác của bạn trên các thiết bị sẽ tự động hết hiệu lực (Revoked).
         </p>
 
-        <div id="changePwdAlertBox" style="display: none; padding: 10px 12px; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;"></div>
+    // Giả lập đăng nhập thành công
+    const user = {
+      id: Date.now(),
+      name: identifier.includes("@") ? identifier.split("@")[0] : identifier,
+      email: identifier.includes("@") ? identifier : `${identifier}@gmail.com`,
+      phone: !identifier.includes("@") ? identifier : "0901 234 567",
+      role: "RENTER",
+      avatar:
+        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
+    };
 
-        <form id="authChangePwdForm" onsubmit="AuthModal.submitChangePassword(event)">
-          <div class="form-group" style="margin-bottom: 0.85rem;">
-            <label style="display: block; font-weight: 600; font-size: 0.85rem; color: #334155; margin-bottom: 4px;">Mật khẩu hiện tại *</label>
-            <input type="password" id="curPassword" class="form-control" required placeholder="••••••••" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem;">
-          </div>
-          <div class="form-group" style="margin-bottom: 0.85rem;">
-            <label style="display: block; font-weight: 600; font-size: 0.85rem; color: #334155; margin-bottom: 4px;">Mật khẩu mới *</label>
-            <input type="password" id="newPassword" class="form-control" required placeholder="Tối thiểu 8 ký tự" oninput="AuthModal.onPasswordInput(this.value, 'newPwdStrength')" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem;">
-            <div id="newPwdStrength" style="margin-top: 5px;"></div>
-          </div>
-          <div class="form-group" style="margin-bottom: 1.25rem;">
-            <label style="display: block; font-weight: 600; font-size: 0.85rem; color: #334155; margin-bottom: 4px;">Xác nhận mật khẩu mới *</label>
-            <input type="password" id="confirmNewPassword" class="form-control" required placeholder="Nhập lại mật khẩu mới" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem;">
-          </div>
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    this.updateAuthUI();
+    App.closeModal();
+    App.showToast(`Chào mừng bạn trở lại, ${user.name}!`, "success");
+    this._runPendingCallback();
+  },
 
           <button type="submit" id="btnChangePwdSubmit" class="btn btn-primary" style="width: 100%; padding: 11px; font-weight: 600; border-radius: 8px;">
             Cập nhật mật khẩu mới
@@ -939,60 +612,101 @@ const AuthModal = (function () {
 
   async function submitChangePassword(e) {
     e.preventDefault();
-    const cur = document.getElementById('curPassword').value;
-    const next = document.getElementById('newPassword').value;
-    const confirm = document.getElementById('confirmNewPassword').value;
-    const alertBox = document.getElementById('changePwdAlertBox');
-    const btn = document.getElementById('btnChangePwdSubmit');
+    const fullName = document.getElementById("regFullName").value.trim();
+    const phone = document.getElementById("regPhone").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const password = document.getElementById("regPassword").value;
+    const confirmPassword = document.getElementById("regConfirmPassword").value;
 
-    if (next !== confirm) {
-      alertBox.style.display = 'block';
-      alertBox.style.background = '#fee2e2';
-      alertBox.style.color = '#991b1b';
-      alertBox.innerText = 'Mật khẩu xác nhận không trùng khớp!';
+    if (password !== confirmPassword) {
+      App.showToast(
+        "Mật khẩu xác thực không khớp! Vui lòng kiểm tra lại.",
+        "error",
+      );
       return;
     }
 
-    btn.disabled = true;
-    btn.innerText = 'Đang đổi mật khẩu...';
-    alertBox.style.display = 'none';
+    const newUser = {
+      id: Date.now(),
+      name: fullName,
+      email: email,
+      phone: phone,
+      role: "RENTER",
+      avatar:
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
+    };
 
-    const res = await AuthService.changePassword(cur, next, confirm);
-    btn.disabled = false;
-    btn.innerText = 'Cập nhật mật khẩu mới';
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
+    this.updateAuthUI();
+    App.closeModal();
+    App.showToast(
+      `Đăng ký thành công! Chào mừng ${fullName} gia nhập DriveShare.`,
+      "success",
+    );
+    this._runPendingCallback();
+  },
 
-    if (res.success) {
-      alertBox.style.display = 'block';
-      alertBox.style.background = '#dcfce7';
-      alertBox.style.color = '#166534';
-      alertBox.innerText = 'Đổi mật khẩu thành công! Vui lòng đăng nhập lại với mật khẩu mới.';
-      setTimeout(() => {
-        AuthService.logout();
-        openLogin();
-      }, 1500);
-    } else {
-      alertBox.style.display = 'block';
-      alertBox.style.background = '#fee2e2';
-      alertBox.style.color = '#991b1b';
-      alertBox.innerText = res.message || 'Không thể đổi mật khẩu!';
-    }
-  }
+  // ==================== GOOGLE OAUTH ====================
+  // TODO: Tích hợp Google OAuth thật
+  // Bước 1: Vào https://console.cloud.google.com/ → tạo OAuth 2.0 Client ID
+  // Bước 2: Thêm <script src="https://accounts.google.com/gsi/client" async></script> vào index.html
+  // Bước 3: Thay YOUR_GOOGLE_CLIENT_ID bên dưới bằng Client ID thật
+  // Bước 4: Bỏ thuộc tính `disabled` và `style="opacity:0.5"` trên các nút Google
+  loginWithGoogle() {
+    const CLIENT_ID =
+      "297892126227-pv2j9270l1uuskn1luo2sqbd9bpe4n5c.apps.googleusercontent.com";
 
-  // 4. Forgot Password Modal (CRP-14)
-  function openForgotPassword() {
-    const html = `
-      <div class="auth-card">
-        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1.25rem;">
-          Nhập địa chỉ email tài khoản của bạn. Chúng tôi sẽ tạo liên kết đặt lại mật khẩu an toàn (hạn dùng 30 phút).
-        </p>
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: "email profile",
+      callback: (response) => {
+        if (response.error) {
+          App.showToast(
+            "Đăng nhập Google thất bại: " + response.error,
+            "error",
+          );
+          return;
+        }
+        fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${response.access_token}` },
+        })
+          .then((r) => r.json())
+          .then((profile) => {
+            const user = {
+              id: "google_" + profile.sub,
+              name: profile.name,
+              email: profile.email,
+              phone: "",
+              role: "RENTER",
+              avatar: profile.picture,
+            };
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+            this.updateAuthUI();
+            App.closeModal();
+            App.showToast(
+              `Chào mừng ${profile.name}! Đăng nhập Google thành công.`,
+              "success",
+            );
+            this._runPendingCallback();
+          })
+          .catch(() => {
+            App.showToast(
+              "Không lấy được thông tin tài khoản Google.",
+              "error",
+            );
+          });
+      },
+    });
 
-        <div id="forgotAlertBox" style="display: none; padding: 10px 12px; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;"></div>
+    // prompt: '' → lần đầu chọn tài khoản, lần sau dùng lại token không cần chọn lại
+    client.requestAccessToken({ prompt: "" });
+  },
 
-        <form id="authForgotForm" onsubmit="AuthModal.submitForgotPassword(event)">
-          <div class="form-group" style="margin-bottom: 1.25rem;">
-            <label style="display: block; font-weight: 600; font-size: 0.85rem; color: #334155; margin-bottom: 4px;">Email tài khoản *</label>
-            <input type="email" id="forgotEmail" class="form-control" required placeholder="admin@driveshare.com" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem;">
-          </div>
+  logout() {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    this.updateAuthUI();
+    App.showToast("Đã đăng xuất tài khoản thành công.", "info");
+  },
 
           <button type="submit" id="btnForgotSubmit" class="btn btn-primary" style="width: 100%; padding: 11px; font-weight: 600; border-radius: 8px;">
             Gửi yêu cầu đặt lại mật khẩu
@@ -1080,259 +794,35 @@ const AuthModal = (function () {
 
   async function submitResetPassword(e, token) {
     e.preventDefault();
-    const next = document.getElementById('resetNewPassword').value;
-    const confirm = document.getElementById('resetConfirmPassword').value;
-    const alertBox = document.getElementById('resetAlertBox');
-    const btn = document.getElementById('btnResetSubmit');
+    const name = document.getElementById("ownerRegName").value.trim();
+    const phone = document.getElementById("ownerRegPhone").value.trim();
+    const area = document.getElementById("ownerRegArea").value;
+    const carType = document.getElementById("ownerRegCarType").value;
 
-    if (next !== confirm) {
-      alertBox.style.display = 'block';
-      alertBox.style.background = '#fee2e2';
-      alertBox.style.color = '#991b1b';
-      alertBox.innerText = 'Mật khẩu xác nhận không khớp!';
+    if (!name || !phone || !area || !carType) {
+      App.showToast("Vui lòng điền đầy đủ các mục đăng ký chủ xe!", "error");
       return;
     }
 
-    btn.disabled = true;
-    btn.innerText = 'Đang đặt lại mật khẩu...';
-    alertBox.style.display = 'none';
-
-    const res = await AuthService.resetPassword(token, next, confirm);
-    btn.disabled = false;
-    btn.innerText = 'Lưu mật khẩu mới';
-
-    if (res.success) {
-      alertBox.style.display = 'block';
-      alertBox.style.background = '#dcfce7';
-      alertBox.style.color = '#166534';
-      alertBox.innerText = 'Đặt lại mật khẩu thành công! Chuyển hướng đến đăng nhập...';
-      window.location.hash = '';
-      setTimeout(() => openLogin(), 1500);
-    } else {
-      alertBox.style.display = 'block';
-      alertBox.style.background = '#fee2e2';
-      alertBox.style.color = '#991b1b';
-      alertBox.innerText = res.message || 'Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn!';
-    }
-  }
-
-  // 6. Interactive RBAC Tester Console (CRP-16 Demonstration)
-  function openRbacTester() {
-    const user = AuthService.getCurrentUser();
-    const roleText = user && user.roles && user.roles.length > 0 ? user.roles.join(', ') : 'Chưa đăng nhập (Unauthenticated)';
-
-    const html = `
-      <div class="rbac-tester-card">
-        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1rem;">
-          Kiểm tra tính năng <strong>Phân quyền tập trung (Centralized RBAC - CRP-16)</strong> qua Spring Security.<br>
-          Phiên hiện tại: <strong style="color: #1e293b;">${roleText}</strong>
-        </p>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 1rem;">
-          <button class="btn btn-outline btn-sm" onclick="AuthModal.runRbacTest('RENTER')" style="padding: 10px 4px; font-weight: 600; font-size: 0.82rem;">
-            Test /renter-test
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="AuthModal.runRbacTest('OWNER')" style="padding: 10px 4px; font-weight: 600; font-size: 0.82rem; color: #d97706; border-color: #fde68a;">
-            Test /owner-test
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="AuthModal.runRbacTest('ADMIN')" style="padding: 10px 4px; font-weight: 600; font-size: 0.82rem; color: #dc2626; border-color: #fecaca;">
-            Test /admin-test
-          </button>
-        </div>
-
-        <div style="display: flex; gap: 8px; margin-bottom: 1rem;">
-          <button class="btn btn-outline btn-sm" onclick="AuthModal.runRefreshTokenTest()" style="flex: 1; padding: 8px; font-size: 0.8rem;">
-            🔄 Test Refresh Token (CRP-15)
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="AuthModal.testInvalidToken()" style="flex: 1; padding: 8px; font-size: 0.8rem; color: #ef4444;">
-            ⛔ Giả lập Token bị thu hồi (401)
-          </button>
-        </div>
-
-        <div style="font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 4px;">
-          Kết quả phản hồi từ Backend API:
-        </div>
-        <pre id="rbacTestConsole" style="background: #0f172a; color: #38bdf8; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 0.8rem; min-height: 120px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">
-Nhấn các nút kiểm tra ở trên để xem phản hồi thực tế từ máy chủ (HTTP 200, 401 Unauthorized, 403 Forbidden)...
-        </pre>
-      </div>
-    `;
-    showModal('Console Kiểm thử Phân quyền (RBAC Tester)', html);
-  }
-
-  async function runRbacTest(targetRole) {
-    const consoleEl = document.getElementById('rbacTestConsole');
-    consoleEl.innerText = `Đang gửi HTTP GET /api/v1/auth/${targetRole.toLowerCase()}-test...`;
-
-    let res = null;
-    if (targetRole === 'RENTER') res = await AuthService.testRenterEndpoint();
-    else if (targetRole === 'OWNER') res = await AuthService.testOwnerEndpoint();
-    else if (targetRole === 'ADMIN') res = await AuthService.testAdminEndpoint();
-
-    formatConsoleOutput(consoleEl, `GET /api/v1/auth/${targetRole.toLowerCase()}-test`, res);
-  }
-
-  async function runRefreshTokenTest() {
-    const consoleEl = document.getElementById('rbacTestConsole');
-    consoleEl.innerText = 'Đang gửi HTTP POST /api/v1/auth/refresh-token...';
-    const res = await AuthService.refreshToken();
-    formatConsoleOutput(consoleEl, 'POST /api/v1/auth/refresh-token', res);
-  }
-
-  async function testInvalidToken() {
-    const consoleEl = document.getElementById('rbacTestConsole');
-    consoleEl.innerText = 'Đang gửi request với Header Authorization token rác...';
-    try {
-      const resp = await fetch('http://localhost:8080/api/v1/auth/me', {
-        headers: { 'Authorization': 'Bearer INVALID_REVOKED_TOKEN_XYZ' }
-      });
-      const data = await resp.json().catch(() => null);
-      formatConsoleOutput(consoleEl, 'GET /api/v1/auth/me [Forged/Revoked Token]', {
-        status: resp.status,
-        success: resp.ok,
-        data: data
-      });
-    } catch (e) {
-      consoleEl.innerText = 'Lỗi kết nối máy chủ: ' + e.message;
-    }
-  }
-
-  function formatConsoleOutput(el, requestLabel, res) {
-    let statusBadge = '';
-    if (res.status === 200) statusBadge = '🟢 HTTP 200 OK (Truy cập thành công)';
-    else if (res.status === 401) statusBadge = '🔴 HTTP 401 UNAUTHORIZED (Chưa đăng nhập / Token hết hạn)';
-    else if (res.status === 403) statusBadge = '🟠 HTTP 403 FORBIDDEN (Truy cập bị từ chối - Sai Role)';
-    else statusBadge = `⚪ HTTP ${res.status}`;
-
-    const output = [
-      `===> ${requestLabel}`,
-      `Trạng thái: ${statusBadge}`,
-      `Payload JSON nhận về:`,
-      JSON.stringify(res, null, 2)
-    ].join('\n');
-    el.innerText = output;
-  }
-
-  // --- 7. Profile Modal (CRP-17 / CRP-18: Hồ sơ cá nhân) ---
-  async function openProfile() {
-    const user = AuthService.getCurrentUser();
-    if (!user) {
-      openLogin();
-      return;
-    }
-
-    // Hiển thị modal loading phong cách hiện đại
-    showModal('Hồ sơ của tôi', `
-      <div style="text-align: center; padding: 2.5rem 1rem;">
-        <div style="display: inline-block; width: 36px; height: 36px; border: 3px solid #e2e8f0; border-top-color: #0f766e; border-radius: 50%; animation: spinProfile 0.8s linear infinite;"></div>
-        <p style="margin-top: 1rem; color: #64748b; font-size: 0.9rem; font-weight: 500;">Đang nạp dữ liệu hồ sơ từ máy chủ...</p>
-      </div>
-      <style>@keyframes spinProfile { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
-    `);
-
-    let profileData = {
-      username: user.username || '',
-      email: user.email || '',
-      fullName: user.fullName || user.username || '',
-      phone: user.phone || '',
-      idCardNumber: user.idCardNumber || '',
-      roles: user.roles || [],
-      renterProfile: null,
-      ownerProfile: null
+    // Lưu yêu cầu đăng ký chủ xe
+    const ownerRequest = {
+      id: Date.now(),
+      name,
+      phone,
+      area,
+      carType,
+      status: "PENDING_APPROVAL",
+      created_at: new Date().toLocaleString("vi-VN"),
     };
 
-    // Gọi API backend lấy dữ liệu mới nhất: GET /api/v1/users/me
-    try {
-      const token = AuthService.getAccessToken();
-      const res = await fetch('http://localhost:8080/api/v1/users/me', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.data) {
-          profileData = Object.assign(profileData, json.data);
-          user.fullName = profileData.fullName;
-          user.phone = profileData.phone;
-          user.idCardNumber = profileData.idCardNumber;
-          localStorage.setItem('ds_user', JSON.stringify(user));
-          AuthService.updateNavAuthUI();
-        }
-      }
-    } catch (err) {
-      console.warn('Lỗi nạp /users/me, sử dụng dữ liệu tạm:', err);
-    }
-
-    const isRenter = (profileData.roles || []).some(r => r.includes('RENTER'));
-    const isOwner = (profileData.roles || []).some(r => r.includes('OWNER'));
-    const isAdmin = (profileData.roles || []).some(r => r.includes('ADMIN'));
-
-    let roleBadgeText = 'Khách thuê (Renter)';
-    let roleBadgeColor = '#3b82f6';
-    if (isAdmin) { roleBadgeText = 'Quản trị viên (Admin)'; roleBadgeColor = '#ef4444'; }
-    else if (isOwner) { roleBadgeText = 'Chủ xe (Owner)'; roleBadgeColor = '#f59e0b'; }
-
-    let specificFieldsHtml = '';
-
-    if (isRenter) {
-      const licenseNumber = profileData.renterProfile ? (profileData.renterProfile.licenseNumber || '') : '';
-      const licenseStatus = profileData.renterProfile ? (profileData.renterProfile.licenseVerificationStatus || 'PENDING') : 'PENDING';
-      const licenseBadgeColor = licenseStatus === 'VERIFIED' ? '#16a34a' : '#d97706';
-      const licenseBadgeBg = licenseStatus === 'VERIFIED' ? '#dcfce7' : '#fef3c7';
-      const licenseBadgeText = licenseStatus === 'VERIFIED' ? 'Đã duyệt' : 'Chờ xác thực';
-
-      specificFieldsHtml = `
-        <div style="margin-top: 1.25rem; padding-top: 1.15rem; border-top: 1px dashed #e2e8f0;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <label style="font-weight: 700; color: #1e293b; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="7" y1="8" x2="17" y2="8"></line><line x1="7" y1="12" x2="17" y2="12"></line><line x1="7" y1="16" x2="11" y2="16"></line></svg>
-              Giấy phép lái xe (GPLX)
-            </label>
-            <span style="font-size: 0.75rem; font-weight: 700; color: ${licenseBadgeColor}; background: ${licenseBadgeBg}; padding: 2px 8px; border-radius: 12px;">
-              ${licenseBadgeText}
-            </span>
-          </div>
-          <div class="form-group" style="margin-bottom: 0.5rem;">
-            <label style="font-size: 0.8rem; color: #64748b; font-weight: 500; margin-bottom: 4px; display: block;">Số bằng lái xe (12 chữ số theo quy định)</label>
-            <input type="text" id="profLicenseNumber" value="${licenseNumber}" placeholder="VD: 790123456789" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; font-family: monospace;">
-          </div>
-        </div>
-      `;
-    } else if (isOwner) {
-      const bankName = profileData.ownerProfile ? (profileData.ownerProfile.bankName || '') : '';
-      const bankAccount = profileData.ownerProfile ? (profileData.ownerProfile.bankAccountNumber || '') : '';
-      const ownerStatus = profileData.ownerProfile ? (profileData.ownerProfile.verificationStatus || 'PENDING') : 'PENDING';
-      const ownerBadgeColor = ownerStatus === 'VERIFIED' ? '#16a34a' : '#d97706';
-      const ownerBadgeBg = ownerStatus === 'VERIFIED' ? '#dcfce7' : '#fef3c7';
-      const ownerBadgeText = ownerStatus === 'VERIFIED' ? 'Đã duyệt' : 'Chờ xét duyệt';
-
-      specificFieldsHtml = `
-        <div style="margin-top: 1.25rem; padding-top: 1.15rem; border-top: 1px dashed #e2e8f0;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <label style="font-weight: 700; color: #1e293b; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
-              Tài khoản nhận tiền thuê (Chủ xe)
-            </label>
-            <span style="font-size: 0.75rem; font-weight: 700; color: ${ownerBadgeColor}; background: ${ownerBadgeBg}; padding: 2px 8px; border-radius: 12px;">
-              ${ownerBadgeText}
-            </span>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div class="form-group" style="margin-bottom: 0.5rem;">
-              <label style="font-size: 0.8rem; color: #64748b; font-weight: 500; margin-bottom: 4px; display: block;">Ngân hàng</label>
-              <input type="text" id="profBankName" value="${bankName}" placeholder="VD: Vietcombank" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;">
-            </div>
-            <div class="form-group" style="margin-bottom: 0.5rem;">
-              <label style="font-size: 0.8rem; color: #64748b; font-weight: 500; margin-bottom: 4px; display: block;">Số tài khoản</label>
-              <input type="text" id="profBankAccount" value="${bankAccount}" placeholder="VD: 0071001234567" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; font-family: monospace;">
-            </div>
-          </div>
-        </div>
-      `;
-    }
+    const existingRequests = JSON.parse(
+      localStorage.getItem("driveshare_owner_requests") || "[]",
+    );
+    existingRequests.unshift(ownerRequest);
+    localStorage.setItem(
+      "driveshare_owner_requests",
+      JSON.stringify(existingRequests),
+    );
 
     const html = `
       <div style="font-size: 0.92rem;">
@@ -1396,148 +886,7 @@ Nhấn các nút kiểm tra ở trên để xem phản hồi thực tế từ m�
       </div>
     `;
 
-    showModal('Hồ sơ của tôi', html);
-  }
-
-  async function submitProfile(e) {
-    e.preventDefault();
-    const btn = document.getElementById('btnProfileSubmit');
-    const alertBox = document.getElementById('profileAlertBox');
-    const user = AuthService.getCurrentUser();
-    if (!user) return;
-
-    const fullName = document.getElementById('profFullName')?.value?.trim() || '';
-    const phone = document.getElementById('profPhone')?.value?.trim() || '';
-    const idCard = document.getElementById('profIdCard')?.value?.trim() || '';
-
-    btn.disabled = true;
-    btn.innerHTML = 'Đang lưu...';
-    if (alertBox) alertBox.style.display = 'none';
-
-    const token = AuthService.getAccessToken();
-    const isOwner = (user.roles || []).some(r => r.includes('OWNER'));
-
-    let endpoint = 'http://localhost:8080/api/v1/users/me/renter-profile';
-    let payload = {
-      fullName: fullName,
-      full_name: fullName,
-      phone: phone,
-      idCardNumber: idCard,
-      id_card_number: idCard
-    };
-
-    if (isOwner) {
-      endpoint = 'http://localhost:8080/api/v1/users/me/owner-profile';
-      const bankName = document.getElementById('profBankName')?.value?.trim() || '';
-      const bankAccount = document.getElementById('profBankAccount')?.value?.trim() || '';
-      payload.bankName = bankName;
-      payload.bank_name = bankName;
-      payload.bankAccountNumber = bankAccount;
-      payload.bank_account_number = bankAccount;
-    } else {
-      const licenseNum = document.getElementById('profLicenseNumber')?.value?.trim() || '';
-      if (licenseNum) {
-        payload.licenseNumber = licenseNum;
-        payload.license_number = licenseNum;
-      }
-    }
-
-    try {
-      const res = await fetch(endpoint, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-      btn.disabled = false;
-      btn.innerHTML = 'Lưu thay đổi';
-
-      if (res.ok && data.success) {
-        if (alertBox) {
-          alertBox.style.display = 'block';
-          alertBox.style.background = '#dcfce7';
-          alertBox.style.color = '#166534';
-          alertBox.style.border = '1px solid #bbf7d0';
-          alertBox.innerText = 'Cập nhật thông tin hồ sơ thành công!';
-        }
-
-        // Cập nhật trạng thái người dùng local
-        user.fullName = fullName;
-        user.phone = phone;
-        user.idCardNumber = idCard;
-        localStorage.setItem('ds_user', JSON.stringify(user));
-        AuthService.updateNavAuthUI();
-
-        // Nếu đang ở Kênh Chủ Xe thì cập nhật lại giao diện ngay
-        if (typeof OwnerService !== 'undefined' && document.getElementById('ownerSection')?.style.display === 'block') {
-          OwnerService.renderOwnerPortal();
-        }
-
-        if (typeof App !== 'undefined' && App.showToast) {
-          App.showToast('Hồ sơ của bạn đã được cập nhật thành công!', 'success');
-        }
-
-        setTimeout(() => {
-          closeModal();
-        }, 1200);
-      } else {
-        if (alertBox) {
-          alertBox.style.display = 'block';
-          alertBox.style.background = '#fee2e2';
-          alertBox.style.color = '#991b1b';
-          alertBox.style.border = '1px solid #fecaca';
-          alertBox.innerText = data.message || 'Cập nhật thất bại. Vui lòng kiểm tra lại dữ liệu.';
-        }
-      }
-    } catch (err) {
-      btn.disabled = false;
-      btn.innerHTML = 'Lưu thay đổi';
-      if (alertBox) {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#fee2e2';
-        alertBox.style.color = '#991b1b';
-        alertBox.style.border = '1px solid #fecaca';
-        alertBox.innerText = 'Lỗi kết nối máy chủ backend: ' + err.message;
-      }
-    }
-  }
-
-  return {
-    init,
-    closeModal,
-    openLogin,
-    submitLogin,
-    quickLogin,
-    openRegister,
-    switchRegisterTab,
-    onPasswordInput,
-    submitRegister,
-    openChangePassword,
-    submitChangePassword,
-    openForgotPassword,
-    submitForgotPassword,
-    openResetPassword,
-    submitResetPassword,
-    openRbacTester,
-    runRbacTest,
-    runRefreshTokenTest,
-    testInvalidToken,
-    openProfile,
-    submitProfile
-  };
-})();
-
-// Auto-init on DOM ready
-if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
-      AuthModal.init();
-    });
-  } else {
-    AuthModal.init();
-  }
-}
+    App.openModal("Hồ sơ đối tác Chủ xe", html);
+    document.getElementById("formHomeOwnerRegister").reset();
+  },
+};
