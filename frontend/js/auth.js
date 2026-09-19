@@ -262,6 +262,47 @@ const AuthService = (function () {
     }
   }
 
+  // Fetch full user profile from backend: GET /api/v1/users/me (CRP-17 / CRP-18)
+  async function fetchUserProfile() {
+    const token = getAccessToken();
+    if (!token) return null;
+    try {
+      const res = await fetch('http://localhost:8080/api/v1/users/me', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.data) {
+          const u = getCurrentUser() || {};
+          u.fullName = json.data.fullName || u.username;
+          u.phone = json.data.phone || '';
+          u.idCardNumber = json.data.idCardNumber || '';
+          if (json.data.ownerProfile) {
+            u.bankName = json.data.ownerProfile.bankName;
+            u.bankAccountNumber = json.data.ownerProfile.bankAccountNumber;
+            u.ownerVerificationStatus = json.data.ownerProfile.verificationStatus;
+          }
+          if (json.data.renterProfile) {
+            u.licenseNumber = json.data.renterProfile.licenseNumber;
+            u.licenseVerificationStatus = json.data.renterProfile.licenseVerificationStatus;
+          }
+          localStorage.setItem(KEY_USER, JSON.stringify(u));
+          updateNavAuthUI();
+          if (typeof OwnerService !== 'undefined' && document.getElementById('ownerSection')?.style.display === 'block') {
+            OwnerService.renderOwnerPortal();
+          }
+          return json.data;
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi nạp thông tin người dùng từ Backend:', e);
+    }
+    return null;
+  }
+
   // Update Top Navigation Auth UI State
   function updateNavAuthUI() {
     const user = getCurrentUser();
@@ -289,15 +330,19 @@ const AuthService = (function () {
       navAuthContainer.innerHTML = `
         <div class="auth-user-badge-wrapper" style="display: flex; align-items: center; gap: 8px;">
           ${portalBtnHtml}
-          <div class="user-avatar-chip" style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--slate-100, #f1f5f9); border-radius: 20px; font-size: 0.85rem; border: 1px solid var(--slate-200, #e2e8f0);">
+          <div class="user-avatar-chip" onclick="AuthModal.openProfile()" style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--slate-100, #f1f5f9); border-radius: 20px; font-size: 0.85rem; border: 1px solid var(--slate-200, #e2e8f0); cursor: pointer; transition: all 0.2s ease;" title="Xem & chỉnh sửa hồ sơ">
             <div style="width: 24px; height: 24px; border-radius: 50%; background: ${roleColor}; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem;">
-              ${(user.username || 'U').charAt(0).toUpperCase()}
+              ${(user.fullName || user.username || 'U').charAt(0).toUpperCase()}
             </div>
             <div style="text-align: left; line-height: 1.2;">
-              <span style="font-weight: 600; color: var(--slate-800, #1e293b);">${user.username || user.email}</span>
+              <span style="font-weight: 600; color: var(--slate-800, #1e293b);">${user.fullName || user.username || user.email}</span>
               <span style="display: block; font-size: 0.7rem; color: ${roleColor}; font-weight: 700;">${roleName}</span>
             </div>
           </div>
+          <button class="btn btn-outline btn-sm" onclick="AuthModal.openProfile()" title="Xem và cập nhật Hồ sơ của tôi (CRP-17)" style="padding: 6px 12px; font-size: 0.82rem; color: var(--slate-700, #334155); border-color: var(--slate-300, #cbd5e1); font-weight: 600; display: inline-flex; align-items: center; gap: 5px; background: white; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Hồ sơ của tôi
+          </button>
           <button class="btn btn-outline btn-sm" onclick="AuthService.handleLogout()" title="Đăng xuất khỏi hệ thống" style="padding: 6px 12px; font-size: 0.82rem; color: #ef4444; border-color: #fecaca; font-weight: 500;">
             Đăng xuất
           </button>
@@ -347,6 +392,7 @@ const AuthService = (function () {
     getPendingOwners,
     approveOwner,
     evaluatePasswordStrength,
+    fetchUserProfile,
     updateNavAuthUI
   };
 })();
@@ -1167,6 +1213,299 @@ Nhấn các nút kiểm tra ở trên để xem phản hồi thực tế từ m�
     el.innerText = output;
   }
 
+  // --- 7. Profile Modal (CRP-17 / CRP-18: Hồ sơ cá nhân) ---
+  async function openProfile() {
+    const user = AuthService.getCurrentUser();
+    if (!user) {
+      openLogin();
+      return;
+    }
+
+    // Hiển thị modal loading phong cách hiện đại
+    showModal('Hồ sơ của tôi', `
+      <div style="text-align: center; padding: 2.5rem 1rem;">
+        <div style="display: inline-block; width: 36px; height: 36px; border: 3px solid #e2e8f0; border-top-color: #0f766e; border-radius: 50%; animation: spinProfile 0.8s linear infinite;"></div>
+        <p style="margin-top: 1rem; color: #64748b; font-size: 0.9rem; font-weight: 500;">Đang nạp dữ liệu hồ sơ từ máy chủ...</p>
+      </div>
+      <style>@keyframes spinProfile { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+    `);
+
+    let profileData = {
+      username: user.username || '',
+      email: user.email || '',
+      fullName: user.fullName || user.username || '',
+      phone: user.phone || '',
+      idCardNumber: user.idCardNumber || '',
+      roles: user.roles || [],
+      renterProfile: null,
+      ownerProfile: null
+    };
+
+    // Gọi API backend lấy dữ liệu mới nhất: GET /api/v1/users/me
+    try {
+      const token = AuthService.getAccessToken();
+      const res = await fetch('http://localhost:8080/api/v1/users/me', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.data) {
+          profileData = Object.assign(profileData, json.data);
+          user.fullName = profileData.fullName;
+          user.phone = profileData.phone;
+          user.idCardNumber = profileData.idCardNumber;
+          localStorage.setItem('ds_user', JSON.stringify(user));
+          AuthService.updateNavAuthUI();
+        }
+      }
+    } catch (err) {
+      console.warn('Lỗi nạp /users/me, sử dụng dữ liệu tạm:', err);
+    }
+
+    const isRenter = (profileData.roles || []).some(r => r.includes('RENTER'));
+    const isOwner = (profileData.roles || []).some(r => r.includes('OWNER'));
+    const isAdmin = (profileData.roles || []).some(r => r.includes('ADMIN'));
+
+    let roleBadgeText = 'Khách thuê (Renter)';
+    let roleBadgeColor = '#3b82f6';
+    if (isAdmin) { roleBadgeText = 'Quản trị viên (Admin)'; roleBadgeColor = '#ef4444'; }
+    else if (isOwner) { roleBadgeText = 'Chủ xe (Owner)'; roleBadgeColor = '#f59e0b'; }
+
+    let specificFieldsHtml = '';
+
+    if (isRenter) {
+      const licenseNumber = profileData.renterProfile ? (profileData.renterProfile.licenseNumber || '') : '';
+      const licenseStatus = profileData.renterProfile ? (profileData.renterProfile.licenseVerificationStatus || 'PENDING') : 'PENDING';
+      const licenseBadgeColor = licenseStatus === 'VERIFIED' ? '#16a34a' : '#d97706';
+      const licenseBadgeBg = licenseStatus === 'VERIFIED' ? '#dcfce7' : '#fef3c7';
+      const licenseBadgeText = licenseStatus === 'VERIFIED' ? 'Đã duyệt' : 'Chờ xác thực';
+
+      specificFieldsHtml = `
+        <div style="margin-top: 1.25rem; padding-top: 1.15rem; border-top: 1px dashed #e2e8f0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <label style="font-weight: 700; color: #1e293b; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="7" y1="8" x2="17" y2="8"></line><line x1="7" y1="12" x2="17" y2="12"></line><line x1="7" y1="16" x2="11" y2="16"></line></svg>
+              Giấy phép lái xe (GPLX)
+            </label>
+            <span style="font-size: 0.75rem; font-weight: 700; color: ${licenseBadgeColor}; background: ${licenseBadgeBg}; padding: 2px 8px; border-radius: 12px;">
+              ${licenseBadgeText}
+            </span>
+          </div>
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label style="font-size: 0.8rem; color: #64748b; font-weight: 500; margin-bottom: 4px; display: block;">Số bằng lái xe (12 chữ số theo quy định)</label>
+            <input type="text" id="profLicenseNumber" value="${licenseNumber}" placeholder="VD: 790123456789" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; font-family: monospace;">
+          </div>
+        </div>
+      `;
+    } else if (isOwner) {
+      const bankName = profileData.ownerProfile ? (profileData.ownerProfile.bankName || '') : '';
+      const bankAccount = profileData.ownerProfile ? (profileData.ownerProfile.bankAccountNumber || '') : '';
+      const ownerStatus = profileData.ownerProfile ? (profileData.ownerProfile.verificationStatus || 'PENDING') : 'PENDING';
+      const ownerBadgeColor = ownerStatus === 'VERIFIED' ? '#16a34a' : '#d97706';
+      const ownerBadgeBg = ownerStatus === 'VERIFIED' ? '#dcfce7' : '#fef3c7';
+      const ownerBadgeText = ownerStatus === 'VERIFIED' ? 'Đã duyệt' : 'Chờ xét duyệt';
+
+      specificFieldsHtml = `
+        <div style="margin-top: 1.25rem; padding-top: 1.15rem; border-top: 1px dashed #e2e8f0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <label style="font-weight: 700; color: #1e293b; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+              Tài khoản nhận tiền thuê (Chủ xe)
+            </label>
+            <span style="font-size: 0.75rem; font-weight: 700; color: ${ownerBadgeColor}; background: ${ownerBadgeBg}; padding: 2px 8px; border-radius: 12px;">
+              ${ownerBadgeText}
+            </span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-group" style="margin-bottom: 0.5rem;">
+              <label style="font-size: 0.8rem; color: #64748b; font-weight: 500; margin-bottom: 4px; display: block;">Ngân hàng</label>
+              <input type="text" id="profBankName" value="${bankName}" placeholder="VD: Vietcombank" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;">
+            </div>
+            <div class="form-group" style="margin-bottom: 0.5rem;">
+              <label style="font-size: 0.8rem; color: #64748b; font-weight: 500; margin-bottom: 4px; display: block;">Số tài khoản</label>
+              <input type="text" id="profBankAccount" value="${bankAccount}" placeholder="VD: 0071001234567" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; font-family: monospace;">
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    const html = `
+      <div style="font-size: 0.92rem;">
+        <!-- Card thông tin header -->
+        <div style="display: flex; align-items: center; gap: 14px; padding: 14px; background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 1.25rem;">
+          <div style="width: 50px; height: 50px; border-radius: 50%; background: ${roleBadgeColor}; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; font-weight: 800; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+            ${(profileData.fullName || profileData.username || 'U').charAt(0).toUpperCase()}
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 700; color: #0f172a; font-size: 1.05rem;">${profileData.fullName || profileData.username}</div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 3px;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: ${roleBadgeColor}; background: white; padding: 2px 8px; border-radius: 8px; border: 1px solid #e2e8f0;">${roleBadgeText}</span>
+              <span style="font-size: 0.8rem; color: #64748b;">@${profileData.username}</span>
+            </div>
+          </div>
+        </div>
+
+        <form id="profileUpdateForm" onsubmit="AuthModal.submitProfile(event)">
+          <!-- Hộp thông báo alert -->
+          <div id="profileAlertBox" style="display: none; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+
+          <!-- Thông tin cơ bản -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
+            <div class="form-group">
+              <label style="font-size: 0.8rem; color: #475569; font-weight: 600; margin-bottom: 4px; display: block;">Họ và tên *</label>
+              <input type="text" id="profFullName" required value="${profileData.fullName || ''}" placeholder="Nhập họ và tên" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.8rem; color: #475569; font-weight: 600; margin-bottom: 4px; display: block;">Số điện thoại *</label>
+              <input type="tel" id="profPhone" required value="${profileData.phone || ''}" placeholder="VD: 0901234567" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
+            <div class="form-group">
+              <label style="font-size: 0.8rem; color: #475569; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+                <span>Email đăng nhập</span>
+                <span style="color: #94a3b8; font-size: 0.72rem; font-weight: normal;">(Cố định)</span>
+              </label>
+              <input type="email" disabled value="${profileData.email || ''}" style="width: 100%; padding: 9px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; background: #f8fafc; color: #64748b; cursor: not-allowed;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.8rem; color: #475569; font-weight: 600; margin-bottom: 4px; display: block;">Số CMND / CCCD</label>
+              <input type="text" id="profIdCard" value="${profileData.idCardNumber || ''}" placeholder="VD: 079201001234" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;">
+            </div>
+          </div>
+
+          ${specificFieldsHtml}
+
+          <!-- Nút hành động -->
+          <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f1f5f9;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="AuthModal.closeModal()" style="padding: 9px 16px; font-weight: 600; border-radius: 8px;">
+              Hủy
+            </button>
+            <button type="submit" id="btnProfileSubmit" class="btn btn-primary btn-sm" style="padding: 9px 20px; font-weight: 700; border-radius: 8px; background: #0f766e; border: none; display: inline-flex; align-items: center; gap: 6px; color: white; cursor: pointer;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              Lưu thay đổi
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    showModal('Hồ sơ của tôi', html);
+  }
+
+  async function submitProfile(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnProfileSubmit');
+    const alertBox = document.getElementById('profileAlertBox');
+    const user = AuthService.getCurrentUser();
+    if (!user) return;
+
+    const fullName = document.getElementById('profFullName')?.value?.trim() || '';
+    const phone = document.getElementById('profPhone')?.value?.trim() || '';
+    const idCard = document.getElementById('profIdCard')?.value?.trim() || '';
+
+    btn.disabled = true;
+    btn.innerHTML = 'Đang lưu...';
+    if (alertBox) alertBox.style.display = 'none';
+
+    const token = AuthService.getAccessToken();
+    const isOwner = (user.roles || []).some(r => r.includes('OWNER'));
+
+    let endpoint = 'http://localhost:8080/api/v1/users/me/renter-profile';
+    let payload = {
+      fullName: fullName,
+      full_name: fullName,
+      phone: phone,
+      idCardNumber: idCard,
+      id_card_number: idCard
+    };
+
+    if (isOwner) {
+      endpoint = 'http://localhost:8080/api/v1/users/me/owner-profile';
+      const bankName = document.getElementById('profBankName')?.value?.trim() || '';
+      const bankAccount = document.getElementById('profBankAccount')?.value?.trim() || '';
+      payload.bankName = bankName;
+      payload.bank_name = bankName;
+      payload.bankAccountNumber = bankAccount;
+      payload.bank_account_number = bankAccount;
+    } else {
+      const licenseNum = document.getElementById('profLicenseNumber')?.value?.trim() || '';
+      if (licenseNum) {
+        payload.licenseNumber = licenseNum;
+        payload.license_number = licenseNum;
+      }
+    }
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      btn.disabled = false;
+      btn.innerHTML = 'Lưu thay đổi';
+
+      if (res.ok && data.success) {
+        if (alertBox) {
+          alertBox.style.display = 'block';
+          alertBox.style.background = '#dcfce7';
+          alertBox.style.color = '#166534';
+          alertBox.style.border = '1px solid #bbf7d0';
+          alertBox.innerText = 'Cập nhật thông tin hồ sơ thành công!';
+        }
+
+        // Cập nhật trạng thái người dùng local
+        user.fullName = fullName;
+        user.phone = phone;
+        user.idCardNumber = idCard;
+        localStorage.setItem('ds_user', JSON.stringify(user));
+        AuthService.updateNavAuthUI();
+
+        // Nếu đang ở Kênh Chủ Xe thì cập nhật lại giao diện ngay
+        if (typeof OwnerService !== 'undefined' && document.getElementById('ownerSection')?.style.display === 'block') {
+          OwnerService.renderOwnerPortal();
+        }
+
+        if (typeof App !== 'undefined' && App.showToast) {
+          App.showToast('Hồ sơ của bạn đã được cập nhật thành công!', 'success');
+        }
+
+        setTimeout(() => {
+          closeModal();
+        }, 1200);
+      } else {
+        if (alertBox) {
+          alertBox.style.display = 'block';
+          alertBox.style.background = '#fee2e2';
+          alertBox.style.color = '#991b1b';
+          alertBox.style.border = '1px solid #fecaca';
+          alertBox.innerText = data.message || 'Cập nhật thất bại. Vui lòng kiểm tra lại dữ liệu.';
+        }
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = 'Lưu thay đổi';
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fee2e2';
+        alertBox.style.color = '#991b1b';
+        alertBox.style.border = '1px solid #fecaca';
+        alertBox.innerText = 'Lỗi kết nối máy chủ backend: ' + err.message;
+      }
+    }
+  }
+
   return {
     init,
     closeModal,
@@ -1186,7 +1525,9 @@ Nhấn các nút kiểm tra ở trên để xem phản hồi thực tế từ m�
     openRbacTester,
     runRbacTest,
     runRefreshTokenTest,
-    testInvalidToken
+    testInvalidToken,
+    openProfile,
+    submitProfile
   };
 })();
 
