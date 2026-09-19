@@ -58,6 +58,18 @@ class UserProfileControllerTest {
     @MockBean
     private com.driveshare.security.JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        CustomUserDetails userDetails = new CustomUserDetails(
+                1L, "duyquan", "quan@example.com", "pass",
+                EUserStatus.ACTIVE, List.of(new SimpleGrantedAuthority("ROLE_OWNER"))
+        );
+        org.springframework.security.core.Authentication auth =
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
     @Test
     @DisplayName("AC3: Given invalid values are submitted, when I save, then per-field validation errors are shown")
     void updateOwnerProfile_InvalidValues_ReturnsFieldValidationErrors() throws Exception {
@@ -131,4 +143,97 @@ class UserProfileControllerTest {
                 .andExpect(jsonPath("$.data.user_id").value(1L))
                 .andExpect(jsonPath("$.data.full_name").value("Nguyễn Duy Quân"));
     }
+
+    @Test
+    @DisplayName("GET /api/v1/users/me: Thành công trả về đúng chuẩn API Spec")
+    void getCurrentUser_Success() throws Exception {
+        CustomUserDetails userDetails = new CustomUserDetails(
+                1L, "duyquan", "quan@example.com", "pass",
+                EUserStatus.ACTIVE, List.of(new SimpleGrantedAuthority("ROLE_RENTER"))
+        );
+
+        com.driveshare.modules.user.dto.response.CurrentUserProfileResponse mockResponse =
+                com.driveshare.modules.user.dto.response.CurrentUserProfileResponse.builder()
+                        .userId(1L)
+                        .email("quan@example.com")
+                        .fullName("Nguyễn Duy Quân")
+                        .phoneNumber("0901234567")
+                        .address("TP.HCM")
+                        .role("RENTER")
+                        .status("ACTIVE")
+                        .verificationStatus("APPROVED")
+                        .lockedFields(List.of("fullName", "nationalId", "nationalIdImages"))
+                        .build();
+
+        when(userProfileService.getMyProfile(any())).thenReturn(mockResponse);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/users/me")
+                        .with(user(userDetails)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.userId").value(1L))
+                .andExpect(jsonPath("$.data.fullName").value("Nguyễn Duy Quân"))
+                .andExpect(jsonPath("$.data.verificationStatus").value("APPROVED"))
+                .andExpect(jsonPath("$.data.lockedFields[0]").value("fullName"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/users/me/avatar: Upload file avatar thành công")
+    void uploadAvatar_Success() throws Exception {
+        CustomUserDetails userDetails = new CustomUserDetails(
+                1L, "duyquan", "quan@example.com", "pass",
+                EUserStatus.ACTIVE, List.of(new SimpleGrantedAuthority("ROLE_RENTER"))
+        );
+
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
+                "file", "avatar.png", "image/png", new byte[]{1, 2, 3}
+        );
+
+        when(userProfileService.uploadAvatar(any(), any()))
+                .thenReturn(com.driveshare.modules.user.dto.response.UploadAvatarResponse.builder()
+                        .avatarUrl("https://res.cloudinary.com/driveshare/avatar.png")
+                        .build());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/v1/users/me/avatar")
+                        .file(file)
+                        .with(user(userDetails))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.avatarUrl").value("https://res.cloudinary.com/driveshare/avatar.png"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/users/me/cccd: Upload CCCD 2 mặt thành công")
+    void uploadCccd_Success() throws Exception {
+        CustomUserDetails userDetails = new CustomUserDetails(
+                1L, "duyquan", "quan@example.com", "pass",
+                EUserStatus.ACTIVE, List.of(new SimpleGrantedAuthority("ROLE_RENTER"))
+        );
+
+        org.springframework.mock.web.MockMultipartFile front = new org.springframework.mock.web.MockMultipartFile(
+                "frontImage", "front.png", "image/png", new byte[]{1, 2, 3}
+        );
+        org.springframework.mock.web.MockMultipartFile back = new org.springframework.mock.web.MockMultipartFile(
+                "backImage", "back.png", "image/png", new byte[]{4, 5, 6}
+        );
+
+        when(userProfileService.uploadCccd(any(), any(), any()))
+                .thenReturn(com.driveshare.modules.user.dto.response.UploadCccdResponse.builder()
+                        .frontImageUrl("https://res.cloudinary.com/front.png")
+                        .backImageUrl("https://res.cloudinary.com/back.png")
+                        .verificationStatus("PENDING")
+                        .build());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/v1/users/me/cccd")
+                        .file(front)
+                        .file(back)
+                        .with(user(userDetails))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("Upload CCCD thành công. Đang chờ Admin xét duyệt."))
+                .andExpect(jsonPath("$.data.verificationStatus").value("PENDING"));
+    }
 }
+

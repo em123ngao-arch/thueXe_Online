@@ -34,6 +34,11 @@ public enum ErrorCode {
     CANNOT_EDIT_OTHER_PROFILE("CANNOT_EDIT_OTHER_PROFILE", "Bạn không có quyền chỉnh sửa hồ sơ của người dùng khác", HttpStatus.FORBIDDEN),
     ID_CARD_EXISTED("ID_CARD_EXISTED", "Số CMND/CCCD đã được sử dụng", HttpStatus.CONFLICT),
     LICENSE_NUMBER_EXISTED("LICENSE_NUMBER_EXISTED", "Số giấy phép lái xe đã tồn tại trong hệ thống", HttpStatus.CONFLICT),
+    MISSING_CCCD_SIDE("MISSING_CCCD_SIDE", "MISSING_CCCD_SIDE: Phải upload đủ cả mặt trước và mặt sau", HttpStatus.BAD_REQUEST),
+    INVALID_FILE_FORMAT("INVALID_FILE_FORMAT", "Định dạng không hợp lệ. Chỉ chấp nhận JPG, PNG", HttpStatus.BAD_REQUEST),
+    FILE_SIZE_EXCEEDED("FILE_SIZE_EXCEEDED", "Kích thước file vượt quá giới hạn cho phép", HttpStatus.BAD_REQUEST),
+    FIELD_LOCKED("FIELD_LOCKED", "Thông tin định danh đã được phê duyệt, không thể chỉnh sửa. Vui lòng liên hệ Admin", HttpStatus.BAD_REQUEST),
+    ROLE_NOT_SUPPORTED("ROLE_NOT_SUPPORTED", "Chức năng này chỉ áp dụng cho vai trò Khách thuê (Renter)", HttpStatus.BAD_REQUEST),
 
     // Car Management (CRP-23, CRP-24)
     CAR_NOT_FOUND("CAR_NOT_FOUND", "Không tìm thấy thông tin xe", HttpStatus.NOT_FOUND),

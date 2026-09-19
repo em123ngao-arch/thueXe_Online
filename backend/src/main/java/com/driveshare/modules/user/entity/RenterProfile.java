@@ -47,6 +47,20 @@ public class RenterProfile extends BaseEntity {
     @Column(name = "license_back_url", length = 500)
     private String licenseBackUrl;
 
+    @Column(name = "id_card_front_url", length = 500)
+    private String idCardFrontUrl;
+
+    @Column(name = "id_card_back_url", length = 500)
+    private String idCardBackUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_status", length = 20)
+    @Builder.Default
+    private EVerificationStatus verificationStatus = EVerificationStatus.PENDING;
+
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "license_verification_status", length = 20)
     @Builder.Default

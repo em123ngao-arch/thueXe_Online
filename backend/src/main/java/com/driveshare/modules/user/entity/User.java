@@ -40,6 +40,9 @@ public class User extends BaseEntity {
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
+    @Column(name = "address", length = 255)
+    private String address;
+
     @Column(name = "id_card_number", length = 20, unique = true)
     private String idCardNumber;
 
