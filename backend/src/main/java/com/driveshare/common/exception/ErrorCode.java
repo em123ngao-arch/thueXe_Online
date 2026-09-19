@@ -26,7 +26,13 @@ public enum ErrorCode {
     USERNAME_EXISTED("USERNAME_EXISTED", "Tên đăng nhập đã tồn tại", HttpStatus.CONFLICT),
     PHONE_EXISTED("PHONE_EXISTED", "Số điện thoại đã được sử dụng", HttpStatus.CONFLICT),
     PASSWORD_NOT_MATCH("PASSWORD_NOT_MATCH", "Mật khẩu hiện tại không chính xác", HttpStatus.BAD_REQUEST),
-    ROLE_NOT_FOUND("ROLE_NOT_FOUND", "Vai trò không hợp lệ", HttpStatus.NOT_FOUND);
+    ROLE_NOT_FOUND("ROLE_NOT_FOUND", "Vai trò không hợp lệ", HttpStatus.NOT_FOUND),
+    RENTER_PROFILE_NOT_FOUND("RENTER_PROFILE_NOT_FOUND", "Không tìm thấy hồ sơ giấy tờ của khách thuê", HttpStatus.NOT_FOUND),
+
+    // Car & Vehicle Documents
+    CAR_NOT_FOUND("CAR_NOT_FOUND", "Không tìm thấy thông tin xe", HttpStatus.NOT_FOUND),
+    CAR_ALREADY_PROCESSED("CAR_ALREADY_PROCESSED", "Xe đã được xử lý thẩm định trước đó", HttpStatus.BAD_REQUEST),
+    DOCUMENT_NOT_FOUND("DOCUMENT_NOT_FOUND", "Không tìm thấy giấy tờ yêu cầu", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String message;

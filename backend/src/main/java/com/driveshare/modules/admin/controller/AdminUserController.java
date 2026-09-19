@@ -3,6 +3,7 @@ package com.driveshare.modules.admin.controller;
 import com.driveshare.common.dto.ApiResponse;
 import com.driveshare.common.dto.PageResponse;
 import com.driveshare.modules.admin.dto.request.AdminUserFilterRequest;
+import com.driveshare.modules.admin.dto.request.ApproveLicenseRequest;
 import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
 import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
 import com.driveshare.modules.admin.dto.response.UserItemResponse;
@@ -80,6 +81,28 @@ public class AdminUserController {
         String message = "verified".equalsIgnoreCase(request.getVerificationStatus())
                 ? "Phê duyệt hồ sơ chủ xe thành công"
                 : "Đã từ chối hồ sơ chủ xe";
+        return ResponseEntity.ok(ApiResponse.success(message, user));
+    }
+
+    @PatchMapping("/{userId}/approve-license")
+    @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Phê duyệt hoặc từ chối Giấy phép lái xe của Khách thuê (Renter License Verification)")
+    public ResponseEntity<ApiResponse<UserItemResponse>> approveLicense(
+            @PathVariable Long userId,
+            @Valid @RequestBody ApproveLicenseRequest request,
+            Authentication authentication
+    ) {
+        Long actorId = 6L;
+        String actorUsername = "admin_tin";
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails userDetails) {
+            actorId = userDetails.getUserId();
+            actorUsername = userDetails.getUsername();
+        }
+
+        UserItemResponse user = adminUserService.approveLicense(userId, request, actorId, actorUsername);
+        String message = "verified".equalsIgnoreCase(request.getVerificationStatus())
+                ? "Phê duyệt Giấy phép lái xe thành công"
+                : "Đã từ chối Giấy phép lái xe";
         return ResponseEntity.ok(ApiResponse.success(message, user));
     }
 

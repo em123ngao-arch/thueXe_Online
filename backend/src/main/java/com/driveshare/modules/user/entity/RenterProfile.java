@@ -57,4 +57,7 @@ public class RenterProfile extends BaseEntity {
 
     @Column(name = "license_verified_at")
     private Instant licenseVerifiedAt;
+
+    @Column(name = "license_rejection_reason", length = 500)
+    private String licenseRejectionReason;
 }

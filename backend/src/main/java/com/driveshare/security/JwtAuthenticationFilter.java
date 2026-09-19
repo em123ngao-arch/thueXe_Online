@@ -25,9 +25,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final CustomUserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@org.springframework.lang.NonNull HttpServletRequest request,
+                                    @org.springframework.lang.NonNull HttpServletResponse response,
+                                    @org.springframework.lang.NonNull FilterChain filterChain) throws ServletException, IOException {
         try {
             String jwt = getJwtFromRequest(request);
 
