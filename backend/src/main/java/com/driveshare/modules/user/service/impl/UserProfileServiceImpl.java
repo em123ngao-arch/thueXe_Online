@@ -1,13 +1,14 @@
 package com.driveshare.modules.user.service.impl;
 
+import com.driveshare.common.enums.ERole;
 import com.driveshare.common.enums.EVerificationStatus;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
+import com.driveshare.common.service.CloudinaryService;
 import com.driveshare.modules.user.dto.request.OwnerProfileUpdateRequest;
 import com.driveshare.modules.user.dto.request.RenterProfileUpdateRequest;
-import com.driveshare.modules.user.dto.response.OwnerProfileResponse;
-import com.driveshare.modules.user.dto.response.RenterProfileResponse;
-import com.driveshare.modules.user.dto.response.UserProfileResponse;
+import com.driveshare.modules.user.dto.request.UpdateMyProfileRequest;
+import com.driveshare.modules.user.dto.response.*;
 import com.driveshare.modules.user.entity.OwnerProfile;
 import com.driveshare.modules.user.entity.RenterProfile;
 import com.driveshare.modules.user.entity.User;
@@ -20,8 +21,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -32,6 +36,222 @@ public class UserProfileServiceImpl implements UserProfileService {
     private final UserRepository userRepository;
     private final OwnerProfileRepository ownerProfileRepository;
     private final RenterProfileRepository renterProfileRepository;
+    private final CloudinaryService cloudinaryService;
+
+    @Override
+    @Transactional(readOnly = true)
+    public CurrentUserProfileResponse getMyProfile(CustomUserDetails currentUser) {
+        User user = getUserOrThrow(currentUser.getUserId());
+        OwnerProfile ownerProfile = ownerProfileRepository.findById(user.getUserId()).orElse(null);
+        RenterProfile renterProfile = renterProfileRepository.findById(user.getUserId()).orElse(null);
+
+        String role = resolvePrimaryRole(user);
+        String verificationStatus = resolveVerificationStatus(role, ownerProfile, renterProfile);
+        boolean isApproved = "APPROVED".equalsIgnoreCase(verificationStatus) || "VERIFIED".equalsIgnoreCase(verificationStatus);
+
+        List<String> lockedFields = isApproved
+                ? List.of("fullName", "nationalId", "nationalIdImages")
+                : Collections.emptyList();
+
+        CurrentUserProfileResponse.SubProfileDetail subProfile = null;
+        if ("RENTER".equalsIgnoreCase(role)) {
+            subProfile = CurrentUserProfileResponse.SubProfileDetail.builder()
+                    .licenseNumber(renterProfile != null ? renterProfile.getLicenseNumber() : null)
+                    .licenseImageUrl(renterProfile != null ? renterProfile.getLicenseFrontUrl() : null)
+                    .build();
+        } else if ("OWNER".equalsIgnoreCase(role)) {
+            subProfile = CurrentUserProfileResponse.SubProfileDetail.builder()
+                    .bankName(ownerProfile != null ? ownerProfile.getBankName() : null)
+                    .bankAccountNumber(ownerProfile != null ? ownerProfile.getBankAccountNumber() : null)
+                    .build();
+        }
+
+        return CurrentUserProfileResponse.builder()
+                .userId(user.getUserId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .phoneNumber(user.getPhone())
+                .address(user.getAddress())
+                .avatarUrl(user.getAvatarUrl())
+                .role(role)
+                .status(user.getStatus() != null ? user.getStatus().name() : "ACTIVE")
+                .verificationStatus(isApproved ? "APPROVED" : verificationStatus)
+                .profile(subProfile)
+                .lockedFields(lockedFields)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public CurrentUserProfileResponse updateMyProfile(UpdateMyProfileRequest request, CustomUserDetails currentUser) {
+        User user = getUserOrThrow(currentUser.getUserId());
+        OwnerProfile ownerProfile = ownerProfileRepository.findById(user.getUserId()).orElse(null);
+        RenterProfile renterProfile = renterProfileRepository.findById(user.getUserId()).orElse(null);
+
+        String role = resolvePrimaryRole(user);
+        String verificationStatus = resolveVerificationStatus(role, ownerProfile, renterProfile);
+        boolean isApproved = "APPROVED".equalsIgnoreCase(verificationStatus) || "VERIFIED".equalsIgnoreCase(verificationStatus);
+
+        // If verified/approved, cannot change fullName
+        if (isApproved && request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
+            String currentFullName = user.getFullName() != null ? user.getFullName().trim() : "";
+            if (!request.getFullName().trim().equalsIgnoreCase(currentFullName)) {
+                throw new AppException(ErrorCode.FIELD_LOCKED);
+            }
+        } else if (!isApproved && request.getFullName() != null && !request.getFullName().isBlank()) {
+            user.setFullName(request.getFullName().trim());
+        }
+
+        String phone = request.resolvePhoneNumber();
+        if (phone != null && !phone.isBlank()) {
+            if (!phone.equals(user.getPhone()) && userRepository.existsByPhone(phone)) {
+                throw new AppException(ErrorCode.PHONE_EXISTED);
+            }
+            user.setPhone(phone);
+        }
+
+        if (request.getAddress() != null) {
+            user.setAddress(request.getAddress().trim());
+        }
+
+        userRepository.save(user);
+        log.info("[AUDIT_TRAIL] ACTION=UPDATE_MY_PROFILE, USER_ID={}, TIMESTAMP={}", user.getUserId(), Instant.now());
+
+        return getMyProfile(currentUser);
+    }
+
+    @Override
+    @Transactional
+    public UploadAvatarResponse uploadAvatar(MultipartFile file, CustomUserDetails currentUser) {
+        User user = getUserOrThrow(currentUser.getUserId());
+        String avatarUrl = cloudinaryService.uploadImage(file, "driveshare/avatars", 5 * 1024 * 1024L);
+        user.setAvatarUrl(avatarUrl);
+        userRepository.save(user);
+
+        log.info("[AUDIT_TRAIL] ACTION=UPLOAD_AVATAR, USER_ID={}, URL={}, TIMESTAMP={}",
+                user.getUserId(), avatarUrl, Instant.now());
+        return UploadAvatarResponse.builder().avatarUrl(avatarUrl).build();
+    }
+
+    @Override
+    @Transactional
+    public UploadCccdResponse uploadCccd(MultipartFile frontImage, MultipartFile backImage, CustomUserDetails currentUser) {
+        if (frontImage == null || frontImage.isEmpty() || backImage == null || backImage.isEmpty()) {
+            throw new AppException(ErrorCode.MISSING_CCCD_SIDE);
+        }
+
+        User user = getUserOrThrow(currentUser.getUserId());
+        String frontUrl = cloudinaryService.uploadImage(frontImage, "driveshare/cccd", 10 * 1024 * 1024L);
+        String backUrl = cloudinaryService.uploadImage(backImage, "driveshare/cccd", 10 * 1024 * 1024L);
+
+        // Update OwnerProfile if present
+        ownerProfileRepository.findById(user.getUserId()).ifPresent(op -> {
+            op.setIdCardFrontUrl(frontUrl);
+            op.setIdCardBackUrl(backUrl);
+            op.setVerificationStatus(EVerificationStatus.PENDING);
+            ownerProfileRepository.save(op);
+        });
+
+        // Update RenterProfile if present
+        renterProfileRepository.findById(user.getUserId()).ifPresent(rp -> {
+            rp.setIdCardFrontUrl(frontUrl);
+            rp.setIdCardBackUrl(backUrl);
+            rp.setVerificationStatus(EVerificationStatus.PENDING);
+            renterProfileRepository.save(rp);
+        });
+
+        boolean hasOwner = user.getRoles().stream().anyMatch(r -> r.getRoleName() == ERole.ROLE_OWNER);
+        boolean hasRenter = user.getRoles().stream().anyMatch(r -> r.getRoleName() == ERole.ROLE_RENTER);
+
+        if (hasOwner && !ownerProfileRepository.existsById(user.getUserId())) {
+            OwnerProfile op = OwnerProfile.builder()
+                    .user(user)
+                    .idCardFrontUrl(frontUrl)
+                    .idCardBackUrl(backUrl)
+                    .verificationStatus(EVerificationStatus.PENDING)
+                    .build();
+            ownerProfileRepository.save(op);
+        }
+        if ((hasRenter || !hasOwner) && !renterProfileRepository.existsById(user.getUserId())) {
+            RenterProfile rp = RenterProfile.builder()
+                    .user(user)
+                    .idCardFrontUrl(frontUrl)
+                    .idCardBackUrl(backUrl)
+                    .verificationStatus(EVerificationStatus.PENDING)
+                    .licenseVerificationStatus(EVerificationStatus.PENDING)
+                    .build();
+            renterProfileRepository.save(rp);
+        }
+
+        log.info("[AUDIT_TRAIL] ACTION=UPLOAD_CCCD, USER_ID={}, TIMESTAMP={}", user.getUserId(), Instant.now());
+        return UploadCccdResponse.builder()
+                .frontImageUrl(frontUrl)
+                .backImageUrl(backUrl)
+                .verificationStatus("PENDING")
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public UploadGplxResponse uploadGplx(MultipartFile licenseImage, CustomUserDetails currentUser) {
+        User user = getUserOrThrow(currentUser.getUserId());
+        boolean isRenter = user.getRoles().stream().anyMatch(r -> r.getRoleName() == ERole.ROLE_RENTER);
+        if (!isRenter) {
+            throw new AppException(ErrorCode.ROLE_NOT_SUPPORTED);
+        }
+
+        if (licenseImage == null || licenseImage.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        String licenseUrl = cloudinaryService.uploadImage(licenseImage, "driveshare/gplx", 10 * 1024 * 1024L);
+
+        RenterProfile renterProfile = renterProfileRepository.findById(user.getUserId())
+                .orElseGet(() -> RenterProfile.builder()
+                        .user(user)
+                        .verificationStatus(EVerificationStatus.PENDING)
+                        .build());
+
+        renterProfile.setLicenseFrontUrl(licenseUrl);
+        renterProfile.setLicenseVerificationStatus(EVerificationStatus.PENDING);
+        renterProfile.setVerificationStatus(EVerificationStatus.PENDING);
+        renterProfileRepository.save(renterProfile);
+
+        log.info("[AUDIT_TRAIL] ACTION=UPLOAD_GPLX, USER_ID={}, TIMESTAMP={}", user.getUserId(), Instant.now());
+        return UploadGplxResponse.builder()
+                .licenseImageUrl(licenseUrl)
+                .verificationStatus("PENDING")
+                .build();
+    }
+
+    private String resolvePrimaryRole(User user) {
+        if (user.getRoles().stream().anyMatch(r -> r.getRoleName() == ERole.ROLE_ADMIN)) {
+            return "ADMIN";
+        }
+        if (user.getRoles().stream().anyMatch(r -> r.getRoleName() == ERole.ROLE_OWNER)) {
+            return "OWNER";
+        }
+        if (user.getRoles().stream().anyMatch(r -> r.getRoleName() == ERole.ROLE_STAFF)) {
+            return "STAFF";
+        }
+        return "RENTER";
+    }
+
+    private String resolveVerificationStatus(String role, OwnerProfile ownerProfile, RenterProfile renterProfile) {
+        if ("OWNER".equalsIgnoreCase(role)) {
+            if (ownerProfile != null && ownerProfile.getVerificationStatus() != null) {
+                return ownerProfile.getVerificationStatus().name();
+            }
+        } else {
+            if (renterProfile != null && renterProfile.getVerificationStatus() != null) {
+                return renterProfile.getVerificationStatus().name();
+            }
+            if (renterProfile != null && renterProfile.getLicenseVerificationStatus() != null) {
+                return renterProfile.getLicenseVerificationStatus().name();
+            }
+        }
+        return EVerificationStatus.PENDING.name();
+    }
 
     @Override
     @Transactional
@@ -40,16 +260,13 @@ public class UserProfileServiceImpl implements UserProfileService {
 
         User user = getUserOrThrow(targetUserId);
 
-        // Validate unique phone & idCardNumber if changed
         validateUniqueUserFields(user, request.getPhone(), request.getIdCardNumber());
 
-        // Update basic user info
         if (request.getFullName() != null) user.setFullName(request.getFullName());
         if (request.getPhone() != null) user.setPhone(request.getPhone());
         if (request.getAvatarUrl() != null) user.setAvatarUrl(request.getAvatarUrl());
         if (request.getIdCardNumber() != null) user.setIdCardNumber(request.getIdCardNumber());
 
-        // Update or create owner profile
         OwnerProfile ownerProfile = ownerProfileRepository.findById(user.getUserId())
                 .orElseGet(() -> OwnerProfile.builder()
                         .user(user)
@@ -64,7 +281,6 @@ public class UserProfileServiceImpl implements UserProfileService {
         userRepository.save(user);
         OwnerProfile savedProfile = ownerProfileRepository.save(ownerProfile);
 
-        // Audit log
         log.info("[AUDIT_TRAIL] ACTION=UPDATE_OWNER_PROFILE, USER_ID={}, ACTOR_ID={}, TIMESTAMP={}",
                 user.getUserId(), currentUser.getUserId(), Instant.now());
 
@@ -78,23 +294,20 @@ public class UserProfileServiceImpl implements UserProfileService {
 
         User user = getUserOrThrow(targetUserId);
 
-        // Validate unique phone & idCardNumber if changed
         validateUniqueUserFields(user, request.getPhone(), request.getIdCardNumber());
 
-        // Update basic user info
         if (request.getFullName() != null) user.setFullName(request.getFullName());
         if (request.getPhone() != null) user.setPhone(request.getPhone());
         if (request.getAvatarUrl() != null) user.setAvatarUrl(request.getAvatarUrl());
         if (request.getIdCardNumber() != null) user.setIdCardNumber(request.getIdCardNumber());
 
-        // Update or create renter profile
         RenterProfile renterProfile = renterProfileRepository.findById(user.getUserId())
                 .orElseGet(() -> RenterProfile.builder()
                         .user(user)
                         .licenseVerificationStatus(EVerificationStatus.PENDING)
+                        .verificationStatus(EVerificationStatus.PENDING)
                         .build());
 
-        // Validate unique license number if changed
         if (request.getLicenseNumber() != null
                 && !request.getLicenseNumber().equals(renterProfile.getLicenseNumber())
                 && renterProfileRepository.existsByLicenseNumber(request.getLicenseNumber())) {
@@ -112,7 +325,6 @@ public class UserProfileServiceImpl implements UserProfileService {
         userRepository.save(user);
         RenterProfile savedProfile = renterProfileRepository.save(renterProfile);
 
-        // Audit log
         log.info("[AUDIT_TRAIL] ACTION=UPDATE_RENTER_PROFILE, USER_ID={}, ACTOR_ID={}, TIMESTAMP={}",
                 user.getUserId(), currentUser.getUserId(), Instant.now());
 
