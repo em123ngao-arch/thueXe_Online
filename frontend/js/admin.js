@@ -25,9 +25,15 @@ const AdminService = {
                 </svg>
                 Kênh Quản Trị & Thẩm Định (Staff / Admin)
               </h2>
-              <div class="portal-subtitle">Nhân viên trực hệ thống: <strong>admin_tin (ROLE_STAFF)</strong> · driveshare_admin_db</div>
+              <div class="portal-subtitle">Hệ thống giám sát vận hành, kiểm duyệt xe và thẩm định tài khoản DriveShare</div>
             </div>
-            <span class="badge badge-primary">Quyền hạn: Thẩm định & Giám sát</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="badge badge-primary">Quyền hạn: Thẩm định & Giám sát</span>
+              <button class="btn btn-outline btn-sm" onclick="App.switchRole('RENTER')" style="background: white; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;" title="Về trang Thuê xe">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                Về trang Thuê xe
+              </button>
+            </div>
           </div>
 
           <!-- Tabs -->
@@ -346,9 +352,6 @@ const AdminService = {
 
     const users = data.items || [];
     const pagination = data.pagination || { page: 1, limit: 5, totalItems: users.length, totalPages: 1, hasNext: false, hasPrev: false };
-    const sourceLabel = data.source === 'BACKEND_API' 
-      ? '<span class="badge badge-success" style="font-size: 0.72rem;">● Kết nối API Backend (8080)</span>' 
-      : '<span class="badge badge-neutral" style="font-size: 0.72rem;">○ Dữ liệu Cục bộ (Local Mock)</span>';
 
     let roleBadgeClass = (r) => {
       switch(String(r).toLowerCase()) {
@@ -369,10 +372,6 @@ const AdminService = {
     };
 
     wrapper.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1.25rem; background: var(--slate-50); border-bottom: 1px solid var(--slate-200);">
-        <span style="font-size: 0.78rem; color: var(--slate-600);">Trạng thái nguồn cấp dữ liệu:</span>
-        ${sourceLabel}
-      </div>
       <table class="custom-table">
         <thead>
           <tr>
