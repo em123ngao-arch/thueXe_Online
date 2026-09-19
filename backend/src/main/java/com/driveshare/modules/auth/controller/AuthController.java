@@ -54,11 +54,24 @@ public class AuthController {
         return ApiResponse.success("Đăng xuất thành công", null);
     }
 
-    @PostMapping("/change-password")
+    @RequestMapping(value = "/change-password", method = {RequestMethod.PUT, RequestMethod.POST})
     public ApiResponse<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request, Authentication authentication) {
         CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
         authService.changePassword(user.getUserId(), request);
         return ApiResponse.success("Đổi mật khẩu thành công. Các phiên đăng nhập khác đã bị vô hiệu hóa", null);
+    }
+
+    @PostMapping("/change-email/request")
+    public ApiResponse<Void> requestChangeEmail(@Valid @RequestBody ChangeEmailRequest request, Authentication authentication) {
+        CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
+        authService.requestChangeEmail(user.getUserId(), request);
+        return ApiResponse.success("Link xác nhận đã được gửi đến email mới (hiệu lực 15 phút)", null);
+    }
+
+    @GetMapping("/change-email/confirm")
+    public ApiResponse<Void> confirmChangeEmail(@RequestParam("token") String token) {
+        authService.confirmChangeEmail(token);
+        return ApiResponse.success("Đổi địa chỉ email thành công", null);
     }
 
     @PostMapping("/forgot-password")
