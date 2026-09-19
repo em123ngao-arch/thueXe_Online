@@ -3,9 +3,34 @@
  * Quản lý phiên làm việc người dùng, hỗ trợ Google, Facebook và LocalStorage
  */
 
-const AUTH_STORAGE_KEY = 'driveshare_current_auth_user';
+const AUTH_STORAGE_KEY = "driveshare_current_auth_user";
 
 const AuthService = {
+  // Callback chờ sau khi đăng nhập (dùng cho login-gate xem chi tiết / đặt xe)
+  _pendingCallback: null,
+
+  // ==================== LOGIN GATE ====================
+  // Kiểm tra đăng nhập trước khi thực hiện hành động.
+  // Nếu chưa đăng nhập → lưu callback rồi mở modal đăng nhập.
+  // Sau khi đăng nhập thành công → callback được gọi tự động.
+  requireLoginThen(callback) {
+    if (this.getCurrentUser()) {
+      callback();
+      return;
+    }
+    this._pendingCallback = callback;
+    this.openLoginModal();
+  },
+
+  // Gọi callback đang chờ (nếu có) sau khi đăng nhập / đăng ký thành công
+  _runPendingCallback() {
+    if (this._pendingCallback) {
+      const cb = this._pendingCallback;
+      this._pendingCallback = null;
+      setTimeout(cb, 200);
+    }
+  },
+
   // Lấy thông tin tài khoản đang đăng nhập
   getCurrentUser() {
     try {
@@ -19,16 +44,16 @@ const AuthService = {
   // Cập nhật trạng thái đăng nhập trên giao diện
   updateAuthUI() {
     const user = this.getCurrentUser();
-    const navAuthContainer = document.getElementById('navAuthContainer');
+    const navAuthContainer = document.getElementById("navAuthContainer");
     if (!navAuthContainer) return;
 
     if (user) {
       navAuthContainer.innerHTML = `
         <div class="user-profile-badge">
-          <img src="${user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}" alt="${user.name}" class="nav-avatar" />
+          <img src="${user.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"}" alt="${user.name}" class="nav-avatar" />
           <div class="nav-user-info">
             <span class="nav-user-name">${user.name}</span>
-            <span class="nav-user-role">${user.role === 'OWNER' ? 'Chủ xe' : (user.role === 'ADMIN' ? 'Quản trị' : 'Khách thuê')}</span>
+            <span class="nav-user-role">${user.role === "OWNER" ? "Chủ xe" : user.role === "ADMIN" ? "Quản trị" : "Khách thuê"}</span>
           </div>
           <button class="btn btn-ghost btn-sm" onclick="AuthService.logout()" title="Đăng xuất" style="padding: 0.3rem 0.5rem; color: var(--slate-500);">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -58,7 +83,9 @@ const AuthService = {
 
         <!-- Social Login -->
         <div class="social-login-grid">
-          <button class="social-btn google" onclick="AuthService.loginWithSocial('Google')">
+          <!-- TODO: Gán Google OAuth Client ID thật vào đây -->
+          <!-- Hướng dẫn: https://developers.google.com/identity/oauth2/web/guides/overview -->
+          <button class="social-btn google" id="btnGoogleLogin" onclick="AuthService.loginWithGoogle()">
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
               <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"/>
@@ -66,13 +93,6 @@ const AuthService = {
               <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
             </svg>
             Tiếp tục với Google
-          </button>
-          <button class="social-btn facebook" onclick="AuthService.loginWithSocial('Facebook')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-            </svg>
-            Tiếp tục với Facebook
-          </button>
         </div>
 
         <div class="auth-divider">
@@ -108,7 +128,7 @@ const AuthService = {
       </div>
     `;
 
-    App.openModal('Đăng nhập khách hàng', html);
+    App.openModal("Đăng nhập khách hàng", html);
   },
 
   // ==================== 2. MODAL ĐĂNG KÝ KHÁCH THUÊ XE ====================
@@ -122,7 +142,8 @@ const AuthService = {
 
         <!-- Social Registration -->
         <div class="social-login-grid">
-          <button class="social-btn google" onclick="AuthService.loginWithSocial('Google')">
+          <!-- TODO: Gán Google OAuth Client ID thật vào đây -->
+          <button class="social-btn google" id="btnGoogleRegister" onclick="AuthService.loginWithGoogle()">
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
               <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"/>
@@ -130,12 +151,6 @@ const AuthService = {
               <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
             </svg>
             Đăng ký bằng Google
-          </button>
-          <button class="social-btn facebook" onclick="AuthService.loginWithSocial('Facebook')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-            </svg>
-            Đăng ký bằng Facebook
           </button>
         </div>
 
@@ -186,46 +201,51 @@ const AuthService = {
       </div>
     `;
 
-    App.openModal('Đăng ký tài khoản khách thuê', html);
+    App.openModal("Đăng ký tài khoản khách thuê", html);
   },
 
   // ==================== 3. XỬ LÝ ĐĂNG NHẬP / ĐĂNG KÝ ====================
   handleLogin(e) {
     e.preventDefault();
-    const identifier = document.getElementById('loginIdentifier').value.trim();
-    const password = document.getElementById('loginPassword').value;
+    const identifier = document.getElementById("loginIdentifier").value.trim();
+    const password = document.getElementById("loginPassword").value;
 
     if (!identifier || !password) {
-      App.showToast('Vui lòng nhập đầy đủ thông tin!', 'error');
+      App.showToast("Vui lòng nhập đầy đủ thông tin!", "error");
       return;
     }
 
     // Giả lập đăng nhập thành công
     const user = {
       id: Date.now(),
-      name: identifier.includes('@') ? identifier.split('@')[0] : identifier,
-      email: identifier.includes('@') ? identifier : `${identifier}@gmail.com`,
-      phone: !identifier.includes('@') ? identifier : '0901 234 567',
-      role: 'RENTER',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'
+      name: identifier.includes("@") ? identifier.split("@")[0] : identifier,
+      email: identifier.includes("@") ? identifier : `${identifier}@gmail.com`,
+      phone: !identifier.includes("@") ? identifier : "0901 234 567",
+      role: "RENTER",
+      avatar:
+        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
     };
 
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
     this.updateAuthUI();
     App.closeModal();
-    App.showToast(`Chào mừng bạn trở lại, ${user.name}!`, 'success');
+    App.showToast(`Chào mừng bạn trở lại, ${user.name}!`, "success");
+    this._runPendingCallback();
   },
 
   handleRegister(e) {
     e.preventDefault();
-    const fullName = document.getElementById('regFullName').value.trim();
-    const phone = document.getElementById('regPhone').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const password = document.getElementById('regPassword').value;
-    const confirmPassword = document.getElementById('regConfirmPassword').value;
+    const fullName = document.getElementById("regFullName").value.trim();
+    const phone = document.getElementById("regPhone").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const password = document.getElementById("regPassword").value;
+    const confirmPassword = document.getElementById("regConfirmPassword").value;
 
     if (password !== confirmPassword) {
-      App.showToast('Mật khẩu xác thực không khớp! Vui lòng kiểm tra lại.', 'error');
+      App.showToast(
+        "Mật khẩu xác thực không khớp! Vui lòng kiểm tra lại.",
+        "error",
+      );
       return;
     }
 
@@ -234,51 +254,93 @@ const AuthService = {
       name: fullName,
       email: email,
       phone: phone,
-      role: 'RENTER',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80'
+      role: "RENTER",
+      avatar:
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
     };
 
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
     this.updateAuthUI();
     App.closeModal();
-    App.showToast(`Đăng ký thành công! Chào mừng ${fullName} gia nhập DriveShare.`, 'success');
+    App.showToast(
+      `Đăng ký thành công! Chào mừng ${fullName} gia nhập DriveShare.`,
+      "success",
+    );
+    this._runPendingCallback();
   },
 
-  loginWithSocial(provider) {
-    // Giả lập xác thực OAuth Google / Facebook
-    const socialUser = {
-      id: Date.now(),
-      name: provider === 'Google' ? 'Người dùng Google' : 'Người dùng Facebook',
-      email: provider === 'Google' ? 'user@gmail.com' : 'user@facebook.com',
-      phone: '0988 776 655',
-      role: 'RENTER',
-      avatar: provider === 'Google' 
-        ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80'
-        : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80'
-    };
+  // ==================== GOOGLE OAUTH ====================
+  // TODO: Tích hợp Google OAuth thật
+  // Bước 1: Vào https://console.cloud.google.com/ → tạo OAuth 2.0 Client ID
+  // Bước 2: Thêm <script src="https://accounts.google.com/gsi/client" async></script> vào index.html
+  // Bước 3: Thay YOUR_GOOGLE_CLIENT_ID bên dưới bằng Client ID thật
+  // Bước 4: Bỏ thuộc tính `disabled` và `style="opacity:0.5"` trên các nút Google
+  loginWithGoogle() {
+    const CLIENT_ID =
+      "297892126227-pv2j9270l1uuskn1luo2sqbd9bpe4n5c.apps.googleusercontent.com";
 
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(socialUser));
-    this.updateAuthUI();
-    App.closeModal();
-    App.showToast(`Đăng nhập thành công bằng ${provider}!`, 'success');
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: "email profile",
+      callback: (response) => {
+        if (response.error) {
+          App.showToast(
+            "Đăng nhập Google thất bại: " + response.error,
+            "error",
+          );
+          return;
+        }
+        fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${response.access_token}` },
+        })
+          .then((r) => r.json())
+          .then((profile) => {
+            const user = {
+              id: "google_" + profile.sub,
+              name: profile.name,
+              email: profile.email,
+              phone: "",
+              role: "RENTER",
+              avatar: profile.picture,
+            };
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+            this.updateAuthUI();
+            App.closeModal();
+            App.showToast(
+              `Chào mừng ${profile.name}! Đăng nhập Google thành công.`,
+              "success",
+            );
+            this._runPendingCallback();
+          })
+          .catch(() => {
+            App.showToast(
+              "Không lấy được thông tin tài khoản Google.",
+              "error",
+            );
+          });
+      },
+    });
+
+    // prompt: '' → lần đầu chọn tài khoản, lần sau dùng lại token không cần chọn lại
+    client.requestAccessToken({ prompt: "" });
   },
 
   logout() {
     localStorage.removeItem(AUTH_STORAGE_KEY);
     this.updateAuthUI();
-    App.showToast('Đã đăng xuất tài khoản thành công.', 'info');
+    App.showToast("Đã đăng xuất tài khoản thành công.", "info");
   },
 
   // ==================== 4. XỬ LÝ FORM ĐĂNG KÝ TRỞ THÀNH CHỦ XE TẠI TRANG CHỦ ====================
   handleOwnerHomeRegister(e) {
     e.preventDefault();
-    const name = document.getElementById('ownerRegName').value.trim();
-    const phone = document.getElementById('ownerRegPhone').value.trim();
-    const area = document.getElementById('ownerRegArea').value;
-    const carType = document.getElementById('ownerRegCarType').value;
+    const name = document.getElementById("ownerRegName").value.trim();
+    const phone = document.getElementById("ownerRegPhone").value.trim();
+    const area = document.getElementById("ownerRegArea").value;
+    const carType = document.getElementById("ownerRegCarType").value;
 
     if (!name || !phone || !area || !carType) {
-      App.showToast('Vui lòng điền đầy đủ các mục đăng ký chủ xe!', 'error');
+      App.showToast("Vui lòng điền đầy đủ các mục đăng ký chủ xe!", "error");
       return;
     }
 
@@ -289,13 +351,18 @@ const AuthService = {
       phone,
       area,
       carType,
-      status: 'PENDING_APPROVAL',
-      created_at: new Date().toLocaleString('vi-VN')
+      status: "PENDING_APPROVAL",
+      created_at: new Date().toLocaleString("vi-VN"),
     };
 
-    const existingRequests = JSON.parse(localStorage.getItem('driveshare_owner_requests') || '[]');
+    const existingRequests = JSON.parse(
+      localStorage.getItem("driveshare_owner_requests") || "[]",
+    );
     existingRequests.unshift(ownerRequest);
-    localStorage.setItem('driveshare_owner_requests', JSON.stringify(existingRequests));
+    localStorage.setItem(
+      "driveshare_owner_requests",
+      JSON.stringify(existingRequests),
+    );
 
     // Hiển thị thông báo chúc mừng
     const html = `
@@ -315,7 +382,7 @@ const AuthService = {
       </div>
     `;
 
-    App.openModal('Hồ sơ đối tác Chủ xe', html);
-    document.getElementById('formHomeOwnerRegister').reset();
-  }
+    App.openModal("Hồ sơ đối tác Chủ xe", html);
+    document.getElementById("formHomeOwnerRegister").reset();
+  },
 };
