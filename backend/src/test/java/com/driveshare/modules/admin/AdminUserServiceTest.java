@@ -8,6 +8,7 @@ import com.driveshare.modules.admin.dto.request.AdminUserFilterRequest;
 import com.driveshare.modules.admin.dto.response.UserItemResponse;
 import com.driveshare.modules.admin.service.impl.AdminUserServiceImpl;
 import com.driveshare.modules.user.entity.OwnerProfile;
+import com.driveshare.modules.user.entity.RenterProfile;
 import com.driveshare.modules.user.entity.Role;
 import com.driveshare.modules.user.entity.User;
 import com.driveshare.modules.user.repository.UserRepository;
@@ -23,7 +24,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -40,6 +40,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@SuppressWarnings({"unchecked", "null"})
 @ExtendWith(MockitoExtension.class)
 class AdminUserServiceTest {
 
@@ -185,6 +186,7 @@ class AdminUserServiceTest {
         UserItemResponse result = adminUserService.approveOwner(3L, request, 6L, "admin_tin");
 
         // Then
+        assertNotNull(result);
         // AC2: Account becomes ACTIVE and profile becomes VERIFIED
         assertEquals(EUserStatus.ACTIVE, pendingUser.getStatus());
         assertEquals(EVerificationStatus.VERIFIED, pendingProfile.getVerificationStatus());
@@ -227,6 +229,7 @@ class AdminUserServiceTest {
         UserItemResponse result = adminUserService.approveOwner(3L, request, 6L, "admin_tin");
 
         // Then
+        assertNotNull(result);
         // AC3: Rejection reason is required and stored
         assertEquals(EVerificationStatus.REJECTED, pendingProfile.getVerificationStatus());
         assertEquals("Ảnh chụp CCCD bị mờ, vui lòng chụp lại rõ nét", pendingProfile.getRejectionReason());
@@ -320,6 +323,7 @@ class AdminUserServiceTest {
         UserItemResponse response = adminUserService.updateUserStatus(1L, request, 6L, "admin_tin");
 
         // Then
+        assertNotNull(response);
         // AC2: Approved owner status becomes LOCKED, disabling login
         assertEquals(EUserStatus.LOCKED, approvedOwner.getStatus());
         assertEquals(EVerificationStatus.VERIFIED, approvedProfile.getVerificationStatus()); // profile stays verified, but account locked
@@ -355,5 +359,129 @@ class AdminUserServiceTest {
 
         // AC4: Audit log is saved
         verify(auditLogRepository).save(any(AuditLog.class));
+    }
+
+    @Test
+    @DisplayName("Admin Approve License - Success: License status becomes VERIFIED and audit log recorded")
+    void testApproveLicense_Success() {
+        RenterProfile renterProfile = RenterProfile.builder()
+                .userId(5L)
+                .licenseNumber("B1-790987654321")
+                .licenseVerificationStatus(EVerificationStatus.PENDING)
+                .build();
+
+        User renterUser = User.builder()
+                .userId(5L)
+                .username("mai_phuong")
+                .email("renter.mai@gmail.com")
+                .fullName("Nguyễn Phương Mai")
+                .status(EUserStatus.ACTIVE)
+                .roles(Set.of(Role.builder().roleId(4L).roleName(ERole.ROLE_RENTER).build()))
+                .renterProfile(renterProfile)
+                .build();
+
+        when(userRepository.findById(5L)).thenReturn(Optional.of(renterUser));
+        when(userRepository.save(any(User.class))).thenReturn(renterUser);
+
+        com.driveshare.modules.admin.dto.request.ApproveLicenseRequest request =
+                com.driveshare.modules.admin.dto.request.ApproveLicenseRequest.builder()
+                        .verificationStatus("verified")
+                        .build();
+
+        UserItemResponse response = adminUserService.approveLicense(5L, request, 6L, "admin_tin");
+
+        assertNotNull(response);
+        assertEquals(EVerificationStatus.VERIFIED, renterProfile.getLicenseVerificationStatus());
+        assertEquals(6L, renterProfile.getLicenseVerifiedBy());
+        assertNotNull(renterProfile.getLicenseVerifiedAt());
+        assertNull(renterProfile.getLicenseRejectionReason());
+
+        verify(auditLogRepository).save(any(AuditLog.class));
+    }
+
+    @Test
+    @DisplayName("Admin Reject License - Success: License status becomes REJECTED with reason recorded")
+    void testRejectLicense_Success() {
+        RenterProfile renterProfile = RenterProfile.builder()
+                .userId(5L)
+                .licenseNumber("B1-790987654321")
+                .licenseVerificationStatus(EVerificationStatus.PENDING)
+                .build();
+
+        User renterUser = User.builder()
+                .userId(5L)
+                .username("mai_phuong")
+                .email("renter.mai@gmail.com")
+                .fullName("Nguyễn Phương Mai")
+                .status(EUserStatus.ACTIVE)
+                .roles(Set.of(Role.builder().roleId(4L).roleName(ERole.ROLE_RENTER).build()))
+                .renterProfile(renterProfile)
+                .build();
+
+        when(userRepository.findById(5L)).thenReturn(Optional.of(renterUser));
+        when(userRepository.save(any(User.class))).thenReturn(renterUser);
+
+        com.driveshare.modules.admin.dto.request.ApproveLicenseRequest request =
+                com.driveshare.modules.admin.dto.request.ApproveLicenseRequest.builder()
+                        .verificationStatus("rejected")
+                        .rejectionReason("Ảnh chụp bằng lái bị mờ, vui lòng chụp lại")
+                        .build();
+
+        UserItemResponse response = adminUserService.approveLicense(5L, request, 6L, "admin_tin");
+
+        assertNotNull(response);
+        assertEquals(EVerificationStatus.REJECTED, renterProfile.getLicenseVerificationStatus());
+        assertEquals("Ảnh chụp bằng lái bị mờ, vui lòng chụp lại", renterProfile.getLicenseRejectionReason());
+        verify(auditLogRepository).save(any(AuditLog.class));
+    }
+
+    @Test
+    @DisplayName("Admin Reject License - Throws exception when rejection reason is missing")
+    void testRejectLicense_MissingReason_ThrowsException() {
+        RenterProfile renterProfile = RenterProfile.builder()
+                .userId(5L)
+                .licenseNumber("B1-790987654321")
+                .licenseVerificationStatus(EVerificationStatus.PENDING)
+                .build();
+
+        User renterUser = User.builder()
+                .userId(5L)
+                .username("mai_phuong")
+                .renterProfile(renterProfile)
+                .build();
+
+        when(userRepository.findById(5L)).thenReturn(Optional.of(renterUser));
+
+        com.driveshare.modules.admin.dto.request.ApproveLicenseRequest request =
+                com.driveshare.modules.admin.dto.request.ApproveLicenseRequest.builder()
+                        .verificationStatus("rejected")
+                        .rejectionReason("")
+                        .build();
+
+        AppException ex = assertThrows(AppException.class, () ->
+                adminUserService.approveLicense(5L, request, 6L, "admin_tin"));
+
+        assertEquals(ErrorCode.VALIDATION_FAILED, ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("Admin Approve License - Throws exception when user has no renter profile")
+    void testApproveLicense_NoRenterProfile_ThrowsException() {
+        User userWithoutRenter = User.builder()
+                .userId(1L)
+                .username("hung_toyota")
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(userWithoutRenter));
+
+        com.driveshare.modules.admin.dto.request.ApproveLicenseRequest request =
+                com.driveshare.modules.admin.dto.request.ApproveLicenseRequest.builder()
+                        .verificationStatus("verified")
+                        .build();
+
+        AppException ex = assertThrows(AppException.class, () ->
+                adminUserService.approveLicense(1L, request, 6L, "admin_tin"));
+
+        assertEquals(ErrorCode.RENTER_PROFILE_NOT_FOUND, ex.getErrorCode());
     }
 }

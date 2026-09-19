@@ -1,11 +1,17 @@
 package com.driveshare.modules.car.entity;
 
 import com.driveshare.common.entity.BaseEntity;
+import com.driveshare.common.enums.ECarStatus;
+import com.driveshare.common.enums.EFuelType;
+import com.driveshare.common.enums.ETransmission;
+import com.driveshare.modules.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Entity ánh xạ bảng {@code cars}.
@@ -41,9 +47,14 @@ public class Car extends BaseEntity {
     // -----------------------------------------------------------------
     // Quan hệ Owner — dùng FK thay vì @ManyToOne để tránh N+1 Query
     // khi chỉ cần ownerId mà không cần load toàn bộ User.
+    // Khiêm dùng @ManyToOne(FetchType.LAZY) cho Admin queries.
     // -----------------------------------------------------------------
     @Column(name = "owner_id", nullable = false)
     private Long ownerId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", insertable = false, updatable = false)
+    private User owner;
 
     // -----------------------------------------------------------------
     // Thông tin nhận diện xe
@@ -66,11 +77,13 @@ public class Car extends BaseEntity {
     @Column(name = "seats", nullable = false)
     private Integer seats;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "transmission", length = 20)
-    private String transmission; // AUTOMATIC | MANUAL
+    private ETransmission transmission;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "fuel_type", length = 20)
-    private String fuelType; // GASOLINE | DIESEL | ELECTRIC | HYBRID
+    private EFuelType fuelType;
 
     // -----------------------------------------------------------------
     // Giá & Địa điểm
@@ -83,6 +96,12 @@ public class Car extends BaseEntity {
 
     @Column(name = "province", length = 100)
     private String province;
+
+    @Column(name = "latitude", precision = 10, scale = 7)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 10, scale = 7)
+    private BigDecimal longitude;
 
     // -----------------------------------------------------------------
     // Mô tả & Tiện nghi
@@ -99,13 +118,21 @@ public class Car extends BaseEntity {
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
 
+    @OneToMany(mappedBy = "car", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<CarImage> images = new ArrayList<>();
+
+    @OneToMany(mappedBy = "car", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<CarDocument> documents = new ArrayList<>();
+
     // -----------------------------------------------------------------
     // Trạng thái & Soft-delete
     // -----------------------------------------------------------------
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
     @Builder.Default
-    private ECarStatus status = ECarStatus.PENDING;
+    private ECarStatus status = ECarStatus.PENDING_REVIEW;
 
     /**
      * Lý do Admin từ chối duyệt xe (điền khi status = REJECTED).

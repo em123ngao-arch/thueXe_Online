@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.driveshare.common.enums.EUserStatus;
 import com.driveshare.common.enums.EVerificationStatus;
+import com.driveshare.modules.admin.dto.request.ApproveLicenseRequest;
 import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
 import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
 import com.driveshare.modules.admin.entity.AuditLog;
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class AdminUserServiceImpl implements AdminUserService {
 
     private final UserRepository userRepository;
@@ -155,6 +157,76 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     @Transactional
+    public UserItemResponse approveLicense(Long userId, ApproveLicenseRequest request, Long actorId, String actorUsername) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        RenterProfile renterProfile = user.getRenterProfile();
+        if (renterProfile == null) {
+            throw new AppException(ErrorCode.RENTER_PROFILE_NOT_FOUND, "Người dùng này không có hồ sơ bằng lái khách thuê để phê duyệt");
+        }
+
+        String targetStatus = request.getVerificationStatus() != null ? request.getVerificationStatus().trim().toLowerCase() : "";
+
+        if ("verified".equals(targetStatus)) {
+            renterProfile.setLicenseVerificationStatus(EVerificationStatus.VERIFIED);
+            renterProfile.setLicenseVerifiedAt(Instant.now());
+            renterProfile.setLicenseVerifiedBy(actorId);
+            renterProfile.setLicenseRejectionReason(null);
+
+            AuditLog auditLog = AuditLog.builder()
+                    .action("APPROVE_RENTER_LICENSE")
+                    .actorId(actorId)
+                    .actorUsername(actorUsername != null ? actorUsername : "system_admin")
+                    .targetType("RENTER_PROFILE")
+                    .targetId(userId)
+                    .details("Phê duyệt Giấy phép lái xe (GPLX: " + renterProfile.getLicenseNumber() + ") của khách thuê @" + user.getUsername() + " thành công.")
+                    .createdAt(Instant.now())
+                    .build();
+            auditLogRepository.save(auditLog);
+
+            log.info(" [AUDIT] Admin '{}' approved driver license for user #{}, license: {}",
+                    actorUsername, userId, renterProfile.getLicenseNumber());
+            log.info("📧 [NOTIFICATION] Sent driver license approval notice to renter: {} ({})",
+                    user.getFullName(), user.getEmail());
+
+        } else if ("rejected".equals(targetStatus)) {
+            String reason = request.getRejectionReason();
+            if (reason == null || reason.trim().isEmpty()) {
+                throw new AppException(ErrorCode.VALIDATION_FAILED, "Lý do từ chối bằng lái không được để trống");
+            }
+
+            renterProfile.setLicenseVerificationStatus(EVerificationStatus.REJECTED);
+            renterProfile.setLicenseVerifiedAt(Instant.now());
+            renterProfile.setLicenseVerifiedBy(actorId);
+            renterProfile.setLicenseRejectionReason(reason.trim());
+
+            AuditLog auditLog = AuditLog.builder()
+                    .action("REJECT_RENTER_LICENSE")
+                    .actorId(actorId)
+                    .actorUsername(actorUsername != null ? actorUsername : "system_admin")
+                    .targetType("RENTER_PROFILE")
+                    .targetId(userId)
+                    .details("Từ chối Giấy phép lái xe của khách thuê @" + user.getUsername() + ". Lý do: " + reason.trim())
+                    .createdAt(Instant.now())
+                    .build();
+            auditLogRepository.save(auditLog);
+
+            log.warn("⚠️ [AUDIT] Admin '{}' rejected driver license for user #{}. Reason: {}",
+                    actorUsername, userId, reason.trim());
+            log.info("📧 [NOTIFICATION] Sent driver license rejection notice to renter: {} ({}) with reason: '{}'",
+                    user.getFullName(), user.getEmail(), reason.trim());
+
+        } else {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Trạng thái phê duyệt không hợp lệ. Chỉ chấp nhận 'verified' hoặc 'rejected'");
+        }
+
+        userRepository.save(user);
+        return mapToUserItemResponse(user);
+    }
+
+    @Override
+    @Transactional
     public UserItemResponse updateUserStatus(Long userId, UpdateUserStatusRequest request, Long actorId, String actorUsername) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -232,7 +304,16 @@ public class AdminUserServiceImpl implements AdminUserService {
         if (renterProfile != null) {
             renterProfileSummary = RenterProfileSummaryResponse.builder()
                     .licenseNumber(renterProfile.getLicenseNumber())
+                    .licenseFullName(renterProfile.getLicenseFullName())
+                    .licenseDob(renterProfile.getLicenseDob())
+                    .licenseIssueDate(renterProfile.getLicenseIssueDate())
+                    .licenseExpiryDate(renterProfile.getLicenseExpiryDate())
+                    .licenseFrontUrl(renterProfile.getLicenseFrontUrl())
+                    .licenseBackUrl(renterProfile.getLicenseBackUrl())
                     .licenseVerificationStatus(renterProfile.getLicenseVerificationStatus())
+                    .licenseVerifiedBy(renterProfile.getLicenseVerifiedBy())
+                    .licenseVerifiedAt(renterProfile.getLicenseVerifiedAt())
+                    .licenseRejectionReason(renterProfile.getLicenseRejectionReason())
                     .build();
         }
 

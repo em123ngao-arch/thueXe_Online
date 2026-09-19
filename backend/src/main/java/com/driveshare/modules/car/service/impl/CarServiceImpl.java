@@ -1,6 +1,9 @@
 package com.driveshare.modules.car.service.impl;
 
 import com.driveshare.common.dto.PageResponse;
+import com.driveshare.common.enums.ECarStatus;
+import com.driveshare.common.enums.EFuelType;
+import com.driveshare.common.enums.ETransmission;
 import com.driveshare.common.enums.EVerificationStatus;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
@@ -9,7 +12,6 @@ import com.driveshare.modules.car.dto.request.CarStatusUpdateRequest;
 import com.driveshare.modules.car.dto.request.CarUpdateRequest;
 import com.driveshare.modules.car.dto.response.CarResponse;
 import com.driveshare.modules.car.entity.Car;
-import com.driveshare.modules.car.entity.ECarStatus;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.car.service.CarService;
 import com.driveshare.modules.user.entity.OwnerProfile;
@@ -87,7 +89,7 @@ public class CarServiceImpl implements CarService {
                 .description(request.getDescription())
                 .features(request.getFeatures())
                 .thumbnailUrl(request.getThumbnailUrl())
-                .status(ECarStatus.PENDING) // Mặc định: chờ Admin duyệt
+                .status(ECarStatus.PENDING_REVIEW) // Mặc định: chờ Admin duyệt
                 .build();
 
         car = carRepository.save(car);

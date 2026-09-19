@@ -34,7 +34,10 @@ public enum ErrorCode {
     CANNOT_EDIT_OTHER_PROFILE("CANNOT_EDIT_OTHER_PROFILE", "Bạn không có quyền chỉnh sửa hồ sơ của người dùng khác", HttpStatus.FORBIDDEN),
     ID_CARD_EXISTED("ID_CARD_EXISTED", "Số CMND/CCCD đã được sử dụng", HttpStatus.CONFLICT),
     LICENSE_NUMBER_EXISTED("LICENSE_NUMBER_EXISTED", "Số giấy phép lái xe đã tồn tại trong hệ thống", HttpStatus.CONFLICT),
-    MISSING_CCCD_SIDE("MISSING_CCCD_SIDE", "MISSING_CCCD_SIDE: Phải upload đủ cả mặt trước và mặt sau", HttpStatus.BAD_REQUEST),
+    RENTER_PROFILE_NOT_FOUND("RENTER_PROFILE_NOT_FOUND", "Không tìm thấy hồ sơ giấy tờ của khách thuê", HttpStatus.NOT_FOUND),
+
+    // Upload & File Validation (BR-08)
+    MISSING_CCCD_SIDE("MISSING_CCCD_SIDE", "Phải upload đủ cả mặt trước và mặt sau CCCD", HttpStatus.BAD_REQUEST),
     INVALID_FILE_FORMAT("INVALID_FILE_FORMAT", "Định dạng không hợp lệ. Chỉ chấp nhận JPG, PNG", HttpStatus.BAD_REQUEST),
     FILE_SIZE_EXCEEDED("FILE_SIZE_EXCEEDED", "Kích thước file vượt quá giới hạn cho phép", HttpStatus.BAD_REQUEST),
     FIELD_LOCKED("FIELD_LOCKED", "Thông tin định danh đã được phê duyệt, không thể chỉnh sửa. Vui lòng liên hệ Admin", HttpStatus.BAD_REQUEST),
@@ -45,7 +48,11 @@ public enum ErrorCode {
     CAR_ACCESS_DENIED("CAR_ACCESS_DENIED", "Bạn không có quyền thao tác trên xe này", HttpStatus.FORBIDDEN),
     CAR_PLATE_DUPLICATE("CAR_PLATE_DUPLICATE", "Biển số xe đã tồn tại trong hệ thống", HttpStatus.CONFLICT),
     CAR_HAS_ACTIVE_BOOKING("CAR_HAS_ACTIVE_BOOKING", "Xe đang có chuyến đi hoạt động, không thể xóa", HttpStatus.BAD_REQUEST),
-    OWNER_NOT_APPROVED("OWNER_NOT_APPROVED", "Hồ sơ chủ xe của bạn chưa được phê duyệt để đăng xe", HttpStatus.FORBIDDEN);
+    CAR_ALREADY_PROCESSED("CAR_ALREADY_PROCESSED", "Xe đã được xử lý thẩm định trước đó", HttpStatus.BAD_REQUEST),
+    OWNER_NOT_APPROVED("OWNER_NOT_APPROVED", "Hồ sơ chủ xe của bạn chưa được phê duyệt để đăng xe", HttpStatus.FORBIDDEN),
+
+    // Document & Admin (Khiêm - feat/Backend)
+    DOCUMENT_NOT_FOUND("DOCUMENT_NOT_FOUND", "Không tìm thấy giấy tờ yêu cầu", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String message;
