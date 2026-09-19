@@ -8,8 +8,10 @@ import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.auth.dto.*;
 import com.driveshare.modules.auth.entity.AuthSession;
+import com.driveshare.modules.auth.entity.EmailChangeToken;
 import com.driveshare.modules.auth.entity.PasswordResetToken;
 import com.driveshare.modules.auth.repository.AuthSessionRepository;
+import com.driveshare.modules.auth.repository.EmailChangeTokenRepository;
 import com.driveshare.modules.auth.repository.PasswordResetTokenRepository;
 import com.driveshare.modules.user.entity.OwnerProfile;
 import com.driveshare.modules.user.entity.RenterProfile;
@@ -53,6 +55,8 @@ public class AuthService {
     private final JwtTokenProvider tokenProvider;
     private final AuthSessionRepository sessionRepository;
     private final PasswordResetTokenRepository resetTokenRepository;
+    private final EmailChangeTokenRepository emailChangeTokenRepository;
+    private static final long EMAIL_CHANGE_MINUTES = 15;
 
     @Value("${driveshare.frontend.base-url:http://127.0.0.1:5500/thueXe_Online/frontend/index.html}")
     private String frontendBaseUrl;
@@ -268,13 +272,76 @@ public class AuthService {
             throw new AppException(ErrorCode.PASSWORD_CONFIRM_MISMATCH);
         }
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+        String currentPassword = request.getOldPassword() != null ? request.getOldPassword() : request.getCurrentPassword();
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             throw new AppException(ErrorCode.PASSWORD_NOT_MATCH);
+        }
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw new AppException(ErrorCode.NEW_PASSWORD_SAME_AS_OLD);
         }
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
         sessionRepository.revokeAllByUserId(userId);
+    }
+
+    @Transactional
+    public void requestChangeEmail(Long userId, ChangeEmailRequest request) {
+        if (request == null || request.getNewEmail() == null || request.getNewEmail().isBlank()) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED);
+        }
+        String newEmail = request.getNewEmail().trim().toLowerCase();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getEmail().equalsIgnoreCase(newEmail)) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED);
+        }
+
+        if (userRepository.existsByEmail(newEmail)) {
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
+        }
+
+        String rawToken = UUID.randomUUID().toString() + UUID.randomUUID();
+        EmailChangeToken token = EmailChangeToken.builder()
+                .userId(userId)
+                .newEmail(newEmail)
+                .tokenHash(sha256(rawToken))
+                .expiresAt(Instant.now().plusSeconds(EMAIL_CHANGE_MINUTES * 60))
+                .build();
+        emailChangeTokenRepository.save(token);
+
+        String confirmationUrl = frontendBaseUrl + "#change-email=" + rawToken;
+        log.info("Email confirmation link for user {} to change to {} (development): {}", user.getEmail(), newEmail, confirmationUrl);
+    }
+
+    @Transactional
+    public void confirmChangeEmail(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) {
+            throw new AppException(ErrorCode.EMAIL_CHANGE_TOKEN_INVALID);
+        }
+        EmailChangeToken token = emailChangeTokenRepository.findByTokenHash(sha256(rawToken))
+                .orElseThrow(() -> new AppException(ErrorCode.EMAIL_CHANGE_TOKEN_INVALID));
+
+        if (!token.isUsable()) {
+            throw new AppException(ErrorCode.EMAIL_CHANGE_TOKEN_INVALID);
+        }
+
+        if (userRepository.existsByEmail(token.getNewEmail())) {
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
+        }
+
+        User user = userRepository.findById(token.getUserId())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        user.setEmail(token.getNewEmail());
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        userRepository.save(user);
+
+        token.setUsedAt(Instant.now());
+        emailChangeTokenRepository.save(token);
+
+        sessionRepository.revokeAllByUserId(user.getUserId());
     }
 
     @Transactional

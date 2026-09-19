@@ -26,10 +26,12 @@ public enum ErrorCode {
 
     // User & Profile
     USER_NOT_FOUND("USER_NOT_FOUND", "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),
-    EMAIL_EXISTED("EMAIL_EXISTED", "Địa chỉ email đã được sử dụng", HttpStatus.CONFLICT),
+    EMAIL_EXISTED("EMAIL_EXISTED", "Địa chỉ email đã được sử dụng", HttpStatus.BAD_REQUEST),
     USERNAME_EXISTED("USERNAME_EXISTED", "Tên đăng nhập đã tồn tại", HttpStatus.CONFLICT),
     PHONE_EXISTED("PHONE_EXISTED", "Số điện thoại đã được sử dụng", HttpStatus.CONFLICT),
     PASSWORD_NOT_MATCH("PASSWORD_NOT_MATCH", "Mật khẩu hiện tại không chính xác", HttpStatus.BAD_REQUEST),
+    NEW_PASSWORD_SAME_AS_OLD("NEW_PASSWORD_SAME_AS_OLD", "Mật khẩu mới không được trùng mật khẩu cũ", HttpStatus.BAD_REQUEST),
+    EMAIL_CHANGE_TOKEN_INVALID("EMAIL_CHANGE_TOKEN_INVALID", "Liên kết xác nhận đổi email không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
     ROLE_NOT_FOUND("ROLE_NOT_FOUND", "Vai trò không hợp lệ", HttpStatus.NOT_FOUND),
     CANNOT_EDIT_OTHER_PROFILE("CANNOT_EDIT_OTHER_PROFILE", "Bạn không có quyền chỉnh sửa hồ sơ của người dùng khác", HttpStatus.FORBIDDEN),
     ID_CARD_EXISTED("ID_CARD_EXISTED", "Số CMND/CCCD đã được sử dụng", HttpStatus.CONFLICT),

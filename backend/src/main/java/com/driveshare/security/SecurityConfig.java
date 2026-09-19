@@ -65,10 +65,11 @@ public class SecurityConfig {
                                 "/api/v1/auth/refresh-token",
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/reset-password",
-                                "/api/v1/auth/logout"
+                                "/api/v1/auth/logout",
+                                "/api/v1/auth/change-email/confirm"
                         ).permitAll()
+                        .requestMatchers("/api/v1/public/**").permitAll()
                         .requestMatchers("/api/v1/health/**").permitAll()
-                        .requestMatchers("/api/v1/admin/**").permitAll()
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
@@ -76,7 +77,12 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Role requirements are declared centrally here (CRP-16)
+                        // Role-based and user access control (CRP-16, BR-05)
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/owner/**").hasRole("OWNER")
+                        .requestMatchers("/api/v1/users/**").authenticated()
+
+                        // Central RBAC test endpoints
                         .requestMatchers("/api/v1/auth/renter-test").hasRole("RENTER")
                         .requestMatchers("/api/v1/auth/owner-test").hasRole("OWNER")
                         .requestMatchers("/api/v1/auth/admin-test").hasRole("ADMIN")
