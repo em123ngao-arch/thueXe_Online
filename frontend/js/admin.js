@@ -9,10 +9,13 @@ const AdminService = {
     if (!container) return;
 
     const allCars = StorageService.getCars();
-    const pendingCars = allCars.filter(c => c.status === 'PENDING_APPROVAL');
+    const pendingCars = allCars.filter(c => c.status === 'PENDING_APPROVAL' || c.status === 'PENDING');
     const allRenters = StorageService.getRenters();
     const pendingLicenses = allRenters.filter(r => r.license_status === 'PENDING');
     const allBookings = StorageService.getBookings();
+    const allUsersObj = StorageService.getUsers();
+    const allUsersList = Array.isArray(allUsersObj) ? allUsersObj : (allUsersObj?.items || []);
+    const pendingCccdCount = allUsersList.filter(u => u.verification_status === 'PENDING' || u.status === 'PENDING').length;
 
     container.innerHTML = `
       <div class="portal-header">
@@ -40,6 +43,9 @@ const AdminService = {
           <div class="portal-tabs">
             <button class="portal-tab-btn active" id="adminTabCars" onclick="AdminService.switchTab('CARS')">
               Duyệt xe mới đăng (${pendingCars.length})
+            </button>
+            <button class="portal-tab-btn" id="adminTabCccd" onclick="AdminService.switchTab('CCCD')">
+              Duyệt CMND/CCCD (${pendingCccdCount})
             </button>
             <button class="portal-tab-btn" id="adminTabLicenses" onclick="AdminService.switchTab('LICENSES')">
               Xác minh bằng lái GPLX (${pendingLicenses.length})
@@ -154,13 +160,30 @@ const AdminService = {
                         <div class="table-actions">
                           <button class="btn btn-outline btn-sm" onclick="App.openCarDetailModal(${c.id})">Chi tiết</button>
                           <button class="btn btn-primary btn-sm" onclick="AdminService.approveCar(${c.id})">Duyệt xe</button>
-                          <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="AdminService.rejectCar(${c.id})">Từ chối</button>
+                          <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="AdminService.openRejectCarModal(${c.id})">Từ chối</button>
                         </div>
                       </td>
                     </tr>
                   `).join('')}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Content: Duyệt CMND/CCCD (BR-02) -->
+        <div id="adminTabCccdContent" style="display: none;">
+          <div class="admin-table-card">
+            <div class="admin-table-header">
+              <h3>Danh sách hồ sơ CMND / CCCD chờ xét duyệt (BR-02)</h3>
+              <p style="font-size: 0.82rem; color: var(--slate-500); margin-top: 0.2rem;">
+                Xác minh thông tin định danh cá nhân 2 mặt (Mặt trước & Mặt sau) trước khi kích hoạt tài khoản
+              </p>
+            </div>
+            <div style="padding: 1.25rem;">
+              <div id="adminCccdListContainer">
+                <!-- Được render qua renderCccdList() -->
+              </div>
             </div>
           </div>
         </div>
@@ -254,6 +277,19 @@ const AdminService = {
                   Tra cứu, tìm kiếm và giám sát mọi tài khoản theo vai trò (Role) và trạng thái (Status)
                 </p>
               </div>
+            </div>
+
+            <!-- Task 14: 2 Tab Admin Khách thuê / Chủ xe -->
+            <div class="user-role-subtabs" style="display: flex; gap: 8px; margin: 0 1.25rem 1rem 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+              <button type="button" class="btn btn-sm btn-primary" id="btnSubtabAll" onclick="AdminService.setUserRoleTab('all')" style="font-weight: 600; border-radius: 8px;">
+                Tất cả người dùng
+              </button>
+              <button type="button" class="btn btn-sm btn-outline" id="btnSubtabRenter" onclick="AdminService.setUserRoleTab('renter')" style="font-weight: 600; border-radius: 8px;">
+                Khách thuê (Renter)
+              </button>
+              <button type="button" class="btn btn-sm btn-outline" id="btnSubtabOwner" onclick="AdminService.setUserRoleTab('owner')" style="font-weight: 600; border-radius: 8px;">
+                Chủ xe (Owner)
+              </button>
             </div>
 
             <!-- Filter & Search Bar -->
@@ -497,18 +533,52 @@ const AdminService = {
     `;
   },
 
+  openModal(title, contentHtml) {
+    if (typeof App !== 'undefined' && App.openModal) {
+      App.openModal(title, contentHtml);
+      return;
+    }
+    let overlay = document.getElementById('generalModalOverlay');
+    if (overlay) {
+      const titleEl = document.getElementById('generalModalTitle');
+      const bodyEl = document.getElementById('generalModalBody');
+      if (titleEl) titleEl.innerText = title;
+      if (bodyEl) bodyEl.innerHTML = contentHtml;
+      overlay.classList.add('open');
+      overlay.style.display = 'flex';
+    }
+  },
+
+  closeModal() {
+    if (typeof App !== 'undefined' && App.closeModal) {
+      App.closeModal();
+      return;
+    }
+    let overlay = document.getElementById('generalModalOverlay');
+    if (overlay) {
+      overlay.classList.remove('open');
+      overlay.style.display = 'none';
+    }
+  },
+
   switchTab(tabName) {
     document.getElementById('adminTabCars')?.classList.toggle('active', tabName === 'CARS');
+    document.getElementById('adminTabCccd')?.classList.toggle('active', tabName === 'CCCD');
     document.getElementById('adminTabLicenses')?.classList.toggle('active', tabName === 'LICENSES');
     document.getElementById('adminTabBookings')?.classList.toggle('active', tabName === 'BOOKINGS');
     document.getElementById('adminTabUsers')?.classList.toggle('active', tabName === 'USERS');
 
     const tabCars = document.getElementById('adminTabCarsContent');
+    const tabCccd = document.getElementById('adminTabCccdContent');
     const tabLicenses = document.getElementById('adminTabLicensesContent');
     const tabBookings = document.getElementById('adminTabBookingsContent');
     const tabUsers = document.getElementById('adminTabUsersContent');
 
     if (tabCars) tabCars.style.display = tabName === 'CARS' ? 'block' : 'none';
+    if (tabCccd) {
+      tabCccd.style.display = tabName === 'CCCD' ? 'block' : 'none';
+      if (tabName === 'CCCD') this.renderCccdList();
+    }
     if (tabLicenses) tabLicenses.style.display = tabName === 'LICENSES' ? 'block' : 'none';
     if (tabBookings) tabBookings.style.display = tabName === 'BOOKINGS' ? 'block' : 'none';
     if (tabUsers) {
@@ -519,16 +589,279 @@ const AdminService = {
     }
   },
 
-  approveCar(carId) {
+  async approveCar(carId) {
+    try {
+      await fetch(`http://localhost:8080/api/v1/admin/cars/${carId}/approve`, {
+        method: 'PUT',
+        headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'APPROVED' })
+      });
+    } catch (e) {
+      console.warn('API approveCar offline:', e);
+    }
     StorageService.updateCarStatus(carId, 'ACTIVE');
-    App.showToast(`Đã duyệt xe #${carId}! Xe đã xuất hiện trên trang tìm kiếm.`, 'success');
+    const msg = `Đã duyệt xe #${carId}! Xe đã xuất hiện trên trang tìm kiếm.`;
+    if (typeof showToast === 'function') showToast(msg, 'success', 2500);
+    else if (typeof App !== 'undefined' && App.showToast) App.showToast(msg, 'success');
     this.renderAdminPortal();
   },
 
-  rejectCar(carId) {
-    StorageService.updateCarStatus(carId, 'REJECTED', 'Ảnh cavet hoặc hình ảnh xe chưa đạt yêu cầu.');
-    App.showToast(`Đã từ chối xe #${carId}.`, 'error');
+  // BR-04-6: Mở modal yêu cầu nhập lý do từ chối xe
+  openRejectCarModal(carId) {
+    const html = `
+      <div style="padding: 0.5rem 0;">
+        <p style="color: #475569; font-size: 0.9rem; margin-bottom: 1rem;">
+          Bạn đang từ chối duyệt xe <strong>#${carId}</strong>. Theo quy định (BR-04-6), <strong>bắt buộc phải nhập lý do từ chối</strong> để thông báo cho chủ xe.
+        </p>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label style="display: block; font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; color: #1e293b;">
+            Lý do từ chối * (Bắt buộc)
+          </label>
+          <textarea id="carRejectReasonInput" class="form-control" rows="3" placeholder="Ví dụ: Giấy tờ cavet chưa rõ nét, hình ảnh xe thực tế không khớp với thông số..." style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 0.9rem; box-sizing: border-box;"></textarea>
+          <div id="carRejectReasonError" style="color: #ef4444; font-size: 0.8rem; font-weight: 600; margin-top: 5px; display: none;"></div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="AdminService.closeModal()">Hủy</button>
+          <button type="button" class="btn btn-primary btn-sm" style="background: #ef4444; border-color: #dc2626;" onclick="AdminService.submitRejectCar(${carId})">Xác nhận từ chối</button>
+        </div>
+      </div>
+    `;
+    this.openModal(`Từ chối duyệt xe #${carId} (BR-04-6)`, html);
+  },
+
+  // BR-04-6: Kiểm tra lý do từ chối bắt buộc
+  async submitRejectCar(carId) {
+    const reasonInput = document.getElementById('carRejectReasonInput');
+    const errorEl = document.getElementById('carRejectReasonError');
+    const reason = reasonInput ? reasonInput.value.trim() : '';
+
+    if (!reason) {
+      if (errorEl) {
+        errorEl.innerText = 'Lý do từ chối là bắt buộc khi từ chối duyệt xe!';
+        errorEl.style.display = 'block';
+      }
+      if (typeof showToast === 'function') {
+        showToast('Lý do từ chối là bắt buộc khi từ chối duyệt xe!', 'error', 2500);
+      }
+      return;
+    }
+
+    try {
+      await fetch(`http://localhost:8080/api/v1/admin/cars/${carId}/approve`, {
+        method: 'PUT',
+        headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'REJECTED', reason })
+      });
+    } catch (e) {
+      console.warn('API rejectCar offline:', e);
+    }
+
+    StorageService.updateCarStatus(carId, 'REJECTED', reason);
+    const msg = `Đã từ chối xe #${carId}. Lý do: ${reason}`;
+    if (typeof showToast === 'function') showToast(msg, 'info', 3000);
+    else if (typeof App !== 'undefined' && App.showToast) App.showToast(msg, 'info');
+
+    this.closeModal();
     this.renderAdminPortal();
+  },
+
+  // Task 15: Duyệt CMND/CCCD
+  async renderCccdList() {
+    const container = document.getElementById('adminCccdListContainer');
+    if (!container) return;
+
+    container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #64748b;">Đang tải danh sách CMND/CCCD chờ duyệt...</div>`;
+
+    let pendingList = [];
+    try {
+      const res = await fetch('http://localhost:8080/api/v1/admin/users/pending-cccd', {
+        headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {}
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data && Array.isArray(data.result)) {
+        pendingList = data.result;
+      }
+    } catch (e) {
+      console.warn('API pending-cccd offline:', e);
+    }
+
+    // Mock fallback
+    if (pendingList.length === 0) {
+      pendingList = [
+        {
+          userId: 4,
+          fullName: 'Nguyễn Văn B',
+          email: 'b@gmail.com',
+          phone: '0908889999',
+          role: 'RENTER',
+          cccdFrontUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
+          cccdBackUrl: 'https://images.unsplash.com/photo-1544717305-9e6b4e057115?auto=format&fit=crop&w=600&q=80',
+          submittedAt: '2026-09-19 10:00'
+        },
+        {
+          userId: 5,
+          fullName: 'Trần Thị Thu Thảo',
+          email: 'thao.tran@driveshare.com',
+          phone: '0933221144',
+          role: 'OWNER',
+          cccdFrontUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80',
+          cccdBackUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
+          submittedAt: '2026-09-19 11:30'
+        }
+      ];
+    }
+
+    if (pendingList.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem; color: #64748b;">
+          Hiện không có hồ sơ CMND/CCCD nào đang chờ xét duyệt.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        ${pendingList.map(u => `
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="flex: 1; min-width: 260px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <strong style="font-size: 1.05rem; color: #0f172a;">${u.fullName}</strong>
+                <span class="badge ${u.role === 'OWNER' ? 'badge-warning' : 'badge-info'}" style="font-size: 0.72rem;">${u.role === 'OWNER' ? 'Chủ xe' : 'Khách thuê'}</span>
+                <span class="badge badge-warning" style="font-size: 0.72rem;">Chờ thẩm định CCCD</span>
+              </div>
+              <div style="font-size: 0.85rem; color: #475569; margin-bottom: 3px;">Email: <strong>${u.email}</strong></div>
+              <div style="font-size: 0.85rem; color: #475569; margin-bottom: 3px;">Số điện thoại: <strong>${u.phone || '0901234567'}</strong></div>
+              <div style="font-size: 0.78rem; color: #94a3b8;">Thời gian nộp: ${u.submittedAt || 'Mới nộp'}</div>
+            </div>
+
+            <!-- Ảnh CCCD 2 mặt -->
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <div style="text-align: center;">
+                <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 4px;">Mặt trước CCCD</div>
+                <img src="${u.cccdFrontUrl}" alt="Mặt trước" style="width: 140px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer;" onclick="window.open('${u.cccdFrontUrl}', '_blank')" title="Nhấp để xem ảnh lớn" />
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 4px;">Mặt sau CCCD</div>
+                <img src="${u.cccdBackUrl}" alt="Mặt sau" style="width: 140px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer;" onclick="window.open('${u.cccdBackUrl}', '_blank')" title="Nhấp để xem ảnh lớn" />
+              </div>
+            </div>
+
+            <!-- Nút hành động -->
+            <div style="display: flex; flex-direction: column; gap: 8px; justify-content: center; min-width: 130px;">
+              <button class="btn btn-primary btn-sm" onclick="AdminService.approveCccd(${u.userId})" style="font-weight: 700;">
+                Phê duyệt CCCD
+              </button>
+              <button class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #fca5a5;" onclick="AdminService.openRejectCccdModal(${u.userId})">
+                Từ chối hồ sơ
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  },
+
+  // BR-02-5: Phê duyệt CCCD
+  async approveCccd(userId) {
+    try {
+      await fetch(`http://localhost:8080/api/v1/admin/users/${userId}/verify-cccd`, {
+        method: 'PUT',
+        headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'APPROVED' })
+      });
+    } catch (e) {
+      console.warn('Approve CCCD API offline:', e);
+    }
+
+    if (typeof showToast === 'function') {
+      showToast(`Đã phê duyệt CMND/CCCD thành công cho user #${userId}!`, 'success', 2500);
+    }
+    this.renderCccdList();
+  },
+
+  // BR-02-6: Mở modal từ chối CCCD bắt buộc lý do
+  openRejectCccdModal(userId) {
+    const html = `
+      <div style="padding: 0.5rem 0;">
+        <p style="color: #475569; font-size: 0.9rem; margin-bottom: 1rem;">
+          Từ chối hồ sơ CMND/CCCD của người dùng <strong>#${userId}</strong>. Vui lòng nhập lý do để thông báo cho người dùng tải lại ảnh.
+        </p>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label style="display: block; font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; color: #1e293b;">
+            Lý do từ chối * (Bắt buộc)
+          </label>
+          <textarea id="cccdRejectReasonInput" class="form-control" rows="3" placeholder="Ví dụ: Ảnh chụp bị mờ số CMND, ảnh mặt sau bị lóa sáng không đọc được ngày cấp..." style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 0.9rem; box-sizing: border-box;"></textarea>
+          <div id="cccdRejectReasonError" style="color: #ef4444; font-size: 0.8rem; font-weight: 600; margin-top: 5px; display: none;"></div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="AdminService.closeModal()">Hủy</button>
+          <button type="button" class="btn btn-primary btn-sm" style="background: #ef4444; border-color: #dc2626;" onclick="AdminService.submitRejectCccd(${userId})">Xác nhận từ chối</button>
+        </div>
+      </div>
+    `;
+    this.openModal(`Từ chối hồ sơ CMND/CCCD #${userId}`, html);
+  },
+
+  // BR-02-6: Bắt buộc lý do từ chối CCCD
+  async submitRejectCccd(userId) {
+    const reasonInput = document.getElementById('cccdRejectReasonInput');
+    const errorEl = document.getElementById('cccdRejectReasonError');
+    const reason = reasonInput ? reasonInput.value.trim() : '';
+
+    if (!reason) {
+      if (errorEl) {
+        errorEl.innerText = 'Lý do từ chối là bắt buộc khi từ chối CMND/CCCD!';
+        errorEl.style.display = 'block';
+      }
+      if (typeof showToast === 'function') {
+        showToast('Lý do từ chối là bắt buộc khi từ chối CMND/CCCD!', 'error', 2500);
+      }
+      return;
+    }
+
+    try {
+      await fetch(`http://localhost:8080/api/v1/admin/users/${userId}/verify-cccd`, {
+        method: 'PUT',
+        headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'REJECTED', reason })
+      });
+    } catch (e) {
+      console.warn('Reject CCCD API offline:', e);
+    }
+
+    if (typeof showToast === 'function') {
+      showToast(`Đã từ chối CMND/CCCD user #${userId}. Lý do: ${reason}`, 'info', 3000);
+    }
+    this.closeModal();
+    this.renderCccdList();
+  },
+
+  // Task 14: Chọn 2 tab Khách thuê / Chủ xe
+  setUserRoleTab(role) {
+    this.userState.role = role;
+    this.userState.page = 1;
+
+    // Cập nhật giao diện nút sub-tab
+    const btnAll = document.getElementById('btnSubtabAll');
+    const btnRenter = document.getElementById('btnSubtabRenter');
+    const btnOwner = document.getElementById('btnSubtabOwner');
+
+    if (btnAll) {
+      btnAll.className = role === 'all' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline';
+    }
+    if (btnRenter) {
+      btnRenter.className = role === 'renter' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline';
+    }
+    if (btnOwner) {
+      btnOwner.className = role === 'owner' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline';
+    }
+
+    // Cập nhật select dropdown tương ứng
+    const roleSelect = document.getElementById('adminUserRoleFilter');
+    if (roleSelect) roleSelect.value = role;
+
+    this.renderUsersTable();
   },
 
   approveLicense(renterId) {

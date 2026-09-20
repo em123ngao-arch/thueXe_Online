@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Hồ Sơ Cá Nhân — DriveShare</title>
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/portals.css" />
+    <style>
+      .profile-container {
+        max-width: 1040px;
+        margin: 2.5rem auto;
+        padding: 0 1.25rem;
+      }
+      .profile-header-card {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 1.75rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+      }
+      .avatar-wrapper {
+        position: relative;
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 3px solid #059669;
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+        cursor: pointer;
+      }
+      .avatar-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .avatar-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-size: 0.72rem;
+        font-weight: 700;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+      .avatar-wrapper:hover .avatar-overlay {
+        opacity: 1;
+      }
+      .profile-sections-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+      .profile-card {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 1.75rem;
+        box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e2e8f0;
+      }
+      .profile-card-title {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+      }
+      .form-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+      }
+      @media (max-width: 640px) {
+        .form-grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+      .input-readonly {
+        background-color: #f8fafc !important;
+        color: #64748b !important;
+        border-color: #e2e8f0 !important;
+        cursor: not-allowed !important;
+      }
+      .lock-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.72rem;
+        color: #f59e0b;
+        background: #fffbeb;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 6px;
+        cursor: help;
+      }
+      .upload-box {
+        border: 2px dashed #cbd5e1;
+        border-radius: 14px;
+        padding: 1.25rem;
+        text-align: center;
+        background: #f8fafc;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .upload-box:hover {
+        border-color: #059669;
+        background: #ecfdf5;
+      }
+      .upload-preview {
+        max-width: 100%;
+        max-height: 140px;
+        border-radius: 8px;
+        margin-top: 10px;
+        display: none;
+        object-fit: contain;
+      }
+      .badge-success {
+        background: #dcfce7;
+        color: #166534;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        font-weight: 700;
+        font-size: 0.75rem;
+      }
+      .badge-warning {
+        background: #fef3c7;
+        color: #92400e;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        font-weight: 700;
+        font-size: 0.75rem;
+      }
+      .badge-info {
+        background: #e0f2fe;
+        color: #0369a1;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        font-weight: 700;
+        font-size: 0.75rem;
+      }
+      .badge-secondary {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        font-weight: 700;
+        font-size: 0.75rem;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Site Header -->
+    <header class="site-header">
+      <div class="container nav-container">
+        <a href="index.html" class="brand-logo">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"
+            ></path>
+            <circle cx="7" cy="17" r="2"></circle>
+            <path d="M9 17h6"></path>
+            <circle cx="17" cy="17" r="2"></circle>
+          </svg>
+          <span>DriveShare</span>
+        </a>
+        <div class="nav-actions">
+          <a href="index.html" class="btn btn-outline btn-sm" style="font-weight: 600;">
+            Trang chủ
+          </a>
+          <button class="btn btn-ghost btn-sm" onclick="AuthService.logout()" style="font-weight: 600; color: #ef4444;">
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="profile-container">
+      <!-- Profile Header Summary Card -->
+      <div class="profile-header-card">
+        <div
+          class="avatar-wrapper"
+          onclick="document.getElementById('avatarFileInput').click()"
+          title="Nhấp để đổi ảnh đại diện (Max 5MB)"
+        >
+          <img
+            id="profileAvatarImg"
+            src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
+            alt="Avatar"
+          />
+          <div class="avatar-overlay">Đổi ảnh</div>
+        </div>
+        <input
+          type="file"
+          id="avatarFileInput"
+          accept="image/png, image/jpeg, image/jpg"
+          style="display: none;"
+        />
+
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap;">
+            <h2 id="profileHeaderName" style="font-size: 1.45rem; font-weight: 800; color: #0f172a; margin: 0;">
+              Nguyễn Văn A
+            </h2>
+            <span id="profileRoleBadge" class="badge badge-info">Khách thuê</span>
+            <span id="profileVerifyBadge" class="badge badge-success">Đã xác thực</span>
+          </div>
+          <div id="profileHeaderEmail" style="color: #64748b; font-size: 0.9rem;">
+            user@driveshare.com
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-sections-grid">
+        <!-- 1. Thông tin cá nhân cơ bản -->
+        <div class="profile-card">
+          <div class="profile-card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span>Thông tin cá nhân</span>
+          </div>
+
+          <form id="formProfileInfo">
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">
+                  Họ và tên
+                  <!-- BR-09-5: Tooltip khi bị khóa -->
+                  <span
+                    id="nameLockIcon"
+                    class="lock-badge"
+                    title="Liên hệ Admin để thay đổi thông tin định danh"
+                    style="display: none;"
+                  >
+                    🔒 Đã duyệt (Cố định)
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  id="profFullName"
+                  class="form-control"
+                  title="Liên hệ Admin để thay đổi"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  Số CMND / CCCD
+                  <!-- BR-09-5: Tooltip khi bị khóa -->
+                  <span
+                    id="cccdLockIcon"
+                    class="lock-badge"
+                    title="Liên hệ Admin để thay đổi thông tin định danh"
+                    style="display: none;"
+                  >
+                    🔒 Đã duyệt (Cố định)
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  id="profNationalId"
+                  class="form-control"
+                  title="Liên hệ Admin để thay đổi"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Số điện thoại * (Luôn sửa được)</label>
+                <input type="tel" id="profPhone" class="form-control" required />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Địa chỉ nơi ở * (Luôn sửa được)</label>
+                <input type="text" id="profAddress" class="form-control" required />
+              </div>
+            </div>
+
+            <!-- BR-09-4: Khu vực Ngân hàng dành riêng cho OWNER -->
+            <div id="ownerBankSection" style="display: none; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px dashed #e2e8f0;">
+              <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem;">
+                Thông tin Tài khoản Ngân hàng (Dành cho Chủ xe nhận tiền thuê)
+              </h4>
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label class="form-label">Tên Ngân hàng</label>
+                  <input type="text" id="profBankName" class="form-control" placeholder="VD: Techcombank, Vietcombank" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Số Tài khoản Ngân hàng</label>
+                  <input type="text" id="profBankAccount" class="form-control" placeholder="VD: 1903..." />
+                </div>
+              </div>
+            </div>
+
+            <!-- BR-09-3: Khu vực GPLX dành riêng cho RENTER -->
+            <div id="renterGplxSection" style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px dashed #e2e8f0;">
+              <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem;">
+                Giấy phép lái xe (GPLX)
+              </h4>
+              <div class="form-group" style="max-width: 480px;">
+                <label class="form-label">
+                  Số Giấy phép lái xe
+                  <span
+                    id="gplxLockIcon"
+                    class="lock-badge"
+                    title="Liên hệ Admin để thay đổi"
+                    style="display: none;"
+                  >
+                    🔒 Đã duyệt
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  id="profLicenseNumber"
+                  class="form-control"
+                  placeholder="VD: B2-12345678"
+                  title="Liên hệ Admin để thay đổi"
+                />
+              </div>
+            </div>
+
+            <button type="submit" id="btnSaveProfile" class="btn btn-primary" style="margin-top: 1.5rem; font-weight: 700;">
+              Lưu thông tin cá nhân
+            </button>
+          </form>
+        </div>
+
+        <!-- 2. BR-02: Upload Giấy tờ Xác minh (CMND 2 mặt & GPLX) -->
+        <div class="profile-card">
+          <div class="profile-card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>Xác minh Giấy tờ định danh (BR-02)</span>
+          </div>
+
+          <!-- Form CCCD 2 mặt -->
+          <form id="formUploadCccd" style="margin-bottom: 2rem;">
+            <p style="font-size: 0.88rem; color: #64748b; margin-bottom: 1rem;">
+              Yêu cầu upload <strong>đầy đủ cả 2 mặt</strong> (Mặt trước & Mặt sau) của CMND/CCCD. Định dạng JPG/PNG, tối đa 10MB mỗi mặt.
+            </p>
+            <div class="form-grid-2">
+              <div class="upload-box" onclick="document.getElementById('cccdFrontFile').click()">
+                <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">Mặt trước CMND/CCCD *</div>
+                <div style="font-size: 0.78rem; color: #94a3b8;">Bấm để chọn file ảnh</div>
+                <img id="cccdFrontPreview" class="upload-preview" />
+                <input type="file" id="cccdFrontFile" accept="image/png, image/jpeg" style="display: none;" />
+              </div>
+
+              <div class="upload-box" onclick="document.getElementById('cccdBackFile').click()">
+                <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">Mặt sau CMND/CCCD *</div>
+                <div style="font-size: 0.78rem; color: #94a3b8;">Bấm để chọn file ảnh</div>
+                <img id="cccdBackPreview" class="upload-preview" />
+                <input type="file" id="cccdBackFile" accept="image/png, image/jpeg" style="display: none;" />
+              </div>
+            </div>
+
+            <button type="submit" id="btnUploadCccd" class="btn btn-primary" style="margin-top: 1.25rem; font-weight: 700;">
+              Tải lên xác minh CMND / CCCD
+            </button>
+          </form>
+
+          <!-- Form Upload GPLX (chỉ hiển thị cho Khách thuê Renter) -->
+          <form id="formUploadGplx" style="padding-top: 1.5rem; border-top: 1px solid #f1f5f9;">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem;">
+              Ảnh chụp Giấy phép lái xe (GPLX)
+            </h4>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+              Chỉ áp dụng đối với khách thuê xe. Ảnh chụp rõ nét bằng lái B1/B2/C...
+            </p>
+            <div class="upload-box" onclick="document.getElementById('gplxFile').click()" style="max-width: 480px;">
+              <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">Ảnh chụp mặt trước GPLX *</div>
+              <div style="font-size: 0.78rem; color: #94a3b8;">Bấm để chọn file ảnh</div>
+              <img id="gplxPreview" class="upload-preview" />
+              <input type="file" id="gplxFile" accept="image/png, image/jpeg" style="display: none;" />
+            </div>
+
+            <button type="submit" id="btnUploadGplx" class="btn btn-outline" style="margin-top: 1.25rem; font-weight: 700;">
+              Tải lên xác minh GPLX
+            </button>
+          </form>
+        </div>
+
+        <!-- 3. BR-06: Đổi Mật Khẩu -->
+        <div class="profile-card">
+          <div class="profile-card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span>Đổi mật khẩu tài khoản (BR-06)</span>
+          </div>
+
+          <form id="formChangePassword" style="max-width: 520px;">
+            <div class="form-group">
+              <label class="form-label">Mật khẩu hiện tại *</label>
+              <input type="password" id="oldPassword" class="form-control" required placeholder="Nhập mật khẩu cũ" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Mật khẩu mới *</label>
+              <input type="password" id="newPassword" class="form-control" required placeholder="Tối thiểu 8 ký tự, chữ hoa, số & ký tự đặc biệt" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Xác nhận mật khẩu mới *</label>
+              <input type="password" id="confirmNewPassword" class="form-control" required placeholder="Nhập lại mật khẩu mới" />
+            </div>
+
+            <button type="submit" id="btnChangePassword" class="btn btn-primary" style="font-weight: 700;">
+              Cập nhật mật khẩu
+            </button>
+          </form>
+        </div>
+
+        <!-- 4. BR-07: Đổi Email -->
+        <div class="profile-card">
+          <div class="profile-card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+            <span>Yêu cầu đổi địa chỉ Email (BR-07)</span>
+          </div>
+
+          <form id="formChangeEmail" style="max-width: 520px;">
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+              Hệ thống sẽ gửi link xác nhận có hiệu lực trong 15 phút đến email mới. Email cũ vẫn có hiệu lực cho đến khi bạn bấm xác nhận.
+            </p>
+            <div class="form-group">
+              <label class="form-label">Địa chỉ Email mới *</label>
+              <input type="email" id="newEmail" class="form-control" required placeholder="email.moi@domain.com" />
+            </div>
+
+            <button type="submit" id="btnChangeEmail" class="btn btn-outline" style="font-weight: 700;">
+              Gửi yêu cầu đổi Email
+            </button>
+          </form>
+        </div>
+      </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="js/toast.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/profile.js"></script>
+  </body>
+</html>
