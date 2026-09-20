@@ -213,7 +213,7 @@ const StorageService = {
     const startIndex = (page - 1) * limit;
     const items = users.slice(startIndex, startIndex + limit);
 
-    return {
+    const result = {
       items,
       pagination: {
         page,
@@ -222,8 +222,14 @@ const StorageService = {
         totalPages,
         hasNext: page < totalPages,
         hasPrev: page > 1
-      }
+      },
+      length: items.length,
+      filter: (fn) => items.filter(fn),
+      map: (fn) => items.map(fn),
+      forEach: (fn) => items.forEach(fn)
     };
+
+    return result;
   },
 
   // Lấy chi tiết một người dùng theo ID

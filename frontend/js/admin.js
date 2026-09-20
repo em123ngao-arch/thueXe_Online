@@ -9,10 +9,13 @@ const AdminService = {
     if (!container) return;
 
     const allCars = StorageService.getCars();
-    const pendingCars = allCars.filter(c => c.status === 'PENDING_APPROVAL');
+    const pendingCars = allCars.filter(c => c.status === 'PENDING_APPROVAL' || c.status === 'PENDING');
     const allRenters = StorageService.getRenters();
     const pendingLicenses = allRenters.filter(r => r.license_status === 'PENDING');
     const allBookings = StorageService.getBookings();
+    const allUsersObj = StorageService.getUsers();
+    const allUsersList = Array.isArray(allUsersObj) ? allUsersObj : (allUsersObj?.items || []);
+    const pendingCccdCount = allUsersList.filter(u => u.verification_status === 'PENDING' || u.status === 'PENDING').length;
 
     container.innerHTML = `
       <div class="portal-header">
@@ -42,7 +45,7 @@ const AdminService = {
               Duyệt xe mới đăng (${pendingCars.length})
             </button>
             <button class="portal-tab-btn" id="adminTabCccd" onclick="AdminService.switchTab('CCCD')">
-              Duyệt CMND/CCCD (${StorageService.getUsers().filter(u => u.verification_status === 'PENDING' || u.status === 'PENDING').length})
+              Duyệt CMND/CCCD (${pendingCccdCount})
             </button>
             <button class="portal-tab-btn" id="adminTabLicenses" onclick="AdminService.switchTab('LICENSES')">
               Xác minh bằng lái GPLX (${pendingLicenses.length})
