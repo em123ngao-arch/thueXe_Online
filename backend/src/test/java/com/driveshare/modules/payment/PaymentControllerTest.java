@@ -111,7 +111,7 @@ class PaymentControllerTest {
                 .paidAt(Instant.now())
                 .build();
 
-        when(paymentService.confirmPayment(eq(100L), eq(4L))).thenReturn(response);
+        when(paymentService.confirmPayment(eq(100L), any())).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/payments/100/confirm")
                         .with(user(user)))

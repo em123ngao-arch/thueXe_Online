@@ -164,6 +164,36 @@ const CarAPI = {
    */
   deleteCar(carId) {
     return apiCall(`/cars/${carId}`, 'DELETE');
+  },
+
+  /**
+   * GET /api/v1/public/cars/{carId} — Xem chi tiết thông tin xe công khai (CRP-37)
+   */
+  getPublicCarDetail(carId) {
+    return apiCall(`/public/cars/${carId}`, 'GET');
+  },
+
+  /**
+   * GET /api/v1/public/cars/search — Tìm kiếm và lọc danh sách xe (CRP-39)
+   */
+  searchCars(params = {}) {
+    const query = new URLSearchParams();
+    if (params.location) query.append('location', params.location);
+    if (params.province) query.append('province', params.province);
+    if (params.startDate) query.append('startDate', params.startDate);
+    if (params.endDate) query.append('endDate', params.endDate);
+    if (params.minPrice) query.append('minPrice', params.minPrice);
+    if (params.maxPrice) query.append('maxPrice', params.maxPrice);
+    if (params.brand) query.append('brand', params.brand);
+    if (params.seats) query.append('seats', params.seats);
+    if (params.transmission) query.append('transmission', params.transmission);
+    if (params.fuelType) query.append('fuelType', params.fuelType);
+    if (params.sortBy) query.append('sortBy', params.sortBy);
+    if (params.page !== undefined) query.append('page', params.page);
+    if (params.size !== undefined) query.append('size', params.size);
+
+    const queryString = query.toString();
+    return apiCall(`/public/cars/search${queryString ? '?' + queryString : ''}`, 'GET');
   }
 };
 
