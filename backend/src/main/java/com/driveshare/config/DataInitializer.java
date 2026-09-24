@@ -22,6 +22,18 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.driveshare.common.enums.ECarStatus;
+import com.driveshare.common.enums.EFuelType;
+import com.driveshare.common.enums.ERentalStatus;
+import com.driveshare.common.enums.ETransmission;
+import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.repository.CarRepository;
+import com.driveshare.modules.rental.entity.Rental;
+import com.driveshare.modules.rental.repository.RentalRepository;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -31,6 +43,8 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final OwnerProfileRepository ownerProfileRepository;
     private final RenterProfileRepository renterProfileRepository;
+    private final CarRepository carRepository;
+    private final RentalRepository rentalRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -40,6 +54,7 @@ public class DataInitializer implements CommandLineRunner {
         initDefaultAdmin();
         initDefaultOwner();
         initDefaultRenter();
+        initDefaultCarsAndRentals();
     }
 
     private void initRoles() {
@@ -130,6 +145,92 @@ public class DataInitializer implements CommandLineRunner {
 
             renterProfileRepository.save(profile);
             log.info("Initialized default renter user: renter@driveshare.com (Password: Renter123@)");
+        }
+    }
+
+    private void initDefaultCarsAndRentals() {
+        User owner = userRepository.findByEmail("owner@driveshare.com").orElse(null);
+        User renter = userRepository.findByEmail("renter@driveshare.com").orElse(null);
+
+        if (owner == null) {
+            return;
+        }
+
+        Car car1 = null;
+        if (!carRepository.existsByPlateNumberAndDeletedAtIsNull("51K-12345")) {
+            car1 = Car.builder()
+                    .ownerId(owner.getUserId())
+                    .plateNumber("51K-12345")
+                    .brand("VinFast")
+                    .model("VF8")
+                    .year(2023)
+                    .color("Đen")
+                    .seats(5)
+                    .transmission(ETransmission.AUTOMATIC)
+                    .fuelType(EFuelType.ELECTRIC)
+                    .pricePerDay(new BigDecimal("1200000.00"))
+                    .address("123 Nguyễn Huệ, Phường Bến Nghé, Quận 1")
+                    .province("Hồ Chí Minh")
+                    .description("Xe điện thông minh VinFast VF8, nội thất da cao cấp, pin khỏe, trợ lái ADAS.")
+                    .features("GPS,Bluetooth,Camera360,Sunroof,AppleCarPlay")
+                    .thumbnailUrl("https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80")
+                    .status(ECarStatus.ACTIVE)
+                    .build();
+            car1 = carRepository.save(car1);
+            log.info("Initialized default car 1: VinFast VF8 (Plate: 51K-12345, Status: ACTIVE)");
+        } else {
+            car1 = carRepository.findAll().stream()
+                    .filter(c -> "51K-12345".equals(c.getPlateNumber()))
+                    .findFirst().orElse(null);
+        }
+
+        if (!carRepository.existsByPlateNumberAndDeletedAtIsNull("30H-67890")) {
+            Car car2 = Car.builder()
+                    .ownerId(owner.getUserId())
+                    .plateNumber("30H-67890")
+                    .brand("Mazda")
+                    .model("CX-5")
+                    .year(2022)
+                    .color("Trắng")
+                    .seats(5)
+                    .transmission(ETransmission.AUTOMATIC)
+                    .fuelType(EFuelType.GASOLINE)
+                    .pricePerDay(new BigDecimal("900000.00"))
+                    .address("456 Cầu Giấy, Phường Dịch Vọng, Quận Cầu Giấy")
+                    .province("Hà Nội")
+                    .description("Xe SUV gia đình 5 chỗ gầm cao Mazda CX-5, êm ái, máy xăng tiết kiệm.")
+                    .features("GPS,Bluetooth,BackCamera,CruiseControl")
+                    .thumbnailUrl("https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=800&q=80")
+                    .status(ECarStatus.ACTIVE)
+                    .build();
+            carRepository.save(car2);
+            log.info("Initialized default car 2: Mazda CX-5 (Plate: 30H-67890, Status: ACTIVE)");
+        }
+
+        // Tạo 1 đơn thuê mẫu PENDING để Khiêm test duyệt (CRP-47/48) và Quân test lọc ngày (CRP-38)
+        if (rentalRepository.count() == 0 && car1 != null && renter != null) {
+            LocalDate start = LocalDate.now().plusDays(3);
+            LocalDate end = LocalDate.now().plusDays(5);
+            BigDecimal pricePerDay = car1.getPricePerDay();
+            BigDecimal totalPrice = pricePerDay.multiply(BigDecimal.valueOf(2));
+            BigDecimal deposit = totalPrice.multiply(new BigDecimal("0.30"));
+
+            Rental sampleRental = Rental.builder()
+                    .carId(car1.getCarId())
+                    .renterId(renter.getUserId())
+                    .startDate(start)
+                    .endDate(end)
+                    .totalDays(2)
+                    .pricePerDay(pricePerDay)
+                    .totalPrice(totalPrice)
+                    .depositAmount(deposit)
+                    .status(ERentalStatus.PENDING)
+                    .note("Đơn đặt xe mẫu tự động phục vụ test chức năng Sprint 2 (CRP-47, CRP-48, CRP-38)")
+                    .build();
+
+            rentalRepository.save(sampleRental);
+            log.info("Initialized sample rental: ID={}, CarId={}, Status=PENDING, Dates={} to {}",
+                    sampleRental.getRentalId(), car1.getCarId(), start, end);
         }
     }
 }

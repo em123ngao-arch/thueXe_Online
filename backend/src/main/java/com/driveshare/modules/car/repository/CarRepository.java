@@ -39,16 +39,19 @@ public interface CarRepository extends JpaRepository<Car, Long>, JpaSpecificatio
     Page<Car> findByStatusAndDeletedAtIsNull(ECarStatus status, Pageable pageable);
 
     /**
-     * Kiểm tra xe có đơn đặt xe đang hoạt động không.
-     * Tạm thời dùng native query — khi module Booking tạo sẽ chuyển sang JPQL.
+     * Kiểm tra xe có đơn đặt xe đang hoạt động không (PENDING, APPROVED, CONFIRMED).
+     * Dùng khi Owner muốn xóa xe — CRP-24.
      */
-    @Query(value = """
-            SELECT CASE WHEN COUNT(b.booking_id) > 0 THEN TRUE ELSE FALSE END
-            FROM bookings b
-            WHERE b.car_id = :carId
-              AND b.status IN ('PENDING', 'CONFIRMED', 'DEPOSIT_PAID', 'IN_PROGRESS')
-              AND b.deleted_at IS NULL
-            """, nativeQuery = true)
+    @Query("""
+            SELECT CASE WHEN COUNT(r) > 0 THEN TRUE ELSE FALSE END
+            FROM com.driveshare.modules.rental.entity.Rental r
+            WHERE r.carId = :carId
+              AND r.status IN (
+                  com.driveshare.common.enums.ERentalStatus.PENDING,
+                  com.driveshare.common.enums.ERentalStatus.APPROVED,
+                  com.driveshare.common.enums.ERentalStatus.CONFIRMED
+              )
+            """)
     boolean hasActiveBooking(@Param("carId") Long carId);
 
     /**
