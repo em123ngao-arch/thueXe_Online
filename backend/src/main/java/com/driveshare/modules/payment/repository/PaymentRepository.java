@@ -27,4 +27,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             @Param("rentalIds") List<Long> rentalIds,
             @Param("status") EPaymentStatus status
     );
+
+    List<Payment> findByRentalIdInOrderByCreatedAtDesc(List<Long> rentalIds);
 }

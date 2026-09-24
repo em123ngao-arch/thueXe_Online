@@ -388,3 +388,171 @@ const ApiService = {
     }
   }
 };
+
+// ─────────────────────────────────────────────────────────────
+// PAYMENT API SERVICE (Chí Tín: CRP-51, CRP-52, CRP-53, CRP-54)
+// ─────────────────────────────────────────────────────────────
+
+const PaymentAPI = {
+  getAuthHeaders() {
+    const token = TokenService.getToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+  },
+
+  /**
+   * CRP-51: Khởi tạo thanh toán đặt cọc 30% VietQR cho đơn thuê đã duyệt
+   * POST /api/v1/rentals/{rentalId}/payment
+   */
+  async createDepositPayment(rentalId, data = {}) {
+    const url = `${API_CONFIG.BASE_URL}/rentals/${rentalId}/payment`;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(data)
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể tạo thanh toán cọc' };
+      }
+      return { success: true, data: json.data || json };
+    } catch (err) {
+      console.warn('[PaymentAPI] createDepositPayment offline/error:', err);
+      return { success: false, message: 'Lỗi kết nối máy chủ thanh toán' };
+    }
+  },
+
+  /**
+   * CRP-52 & CRP-53: Xác nhận thanh toán cọc thành công -> chuyển đơn sang CONFIRMED
+   * POST /api/v1/payments/{paymentId}/confirm
+   */
+  async confirmPayment(paymentId) {
+    const url = `${API_CONFIG.BASE_URL}/payments/${paymentId}/confirm`;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể xác nhận thanh toán' };
+      }
+      return { success: true, data: json.data || json };
+    } catch (err) {
+      console.warn('[PaymentAPI] confirmPayment offline/error:', err);
+      return { success: false, message: 'Lỗi kết nối máy chủ khi xác nhận thanh toán' };
+    }
+  },
+
+  /**
+   * CRP-52: Đánh dấu thanh toán thất bại
+   * POST /api/v1/payments/{paymentId}/fail
+   */
+  async failPayment(paymentId, note = '') {
+    const url = `${API_CONFIG.BASE_URL}/payments/${paymentId}/fail`;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ note })
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể cập nhật trạng thái thất bại' };
+      }
+      return { success: true, data: json.data || json };
+    } catch (err) {
+      return { success: false, message: 'Lỗi kết nối máy chủ' };
+    }
+  },
+
+  /**
+   * CRP-52: Hủy giao dịch thanh toán
+   * POST /api/v1/payments/{paymentId}/cancel
+   */
+  async cancelPayment(paymentId, note = '') {
+    const url = `${API_CONFIG.BASE_URL}/payments/${paymentId}/cancel`;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ note })
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể hủy giao dịch' };
+      }
+      return { success: true, data: json.data || json };
+    } catch (err) {
+      return { success: false, message: 'Lỗi kết nối máy chủ' };
+    }
+  },
+
+  /**
+   * Tra cứu chi tiết giao dịch thanh toán
+   * GET /api/v1/payments/{paymentId}
+   */
+  async getPayment(paymentId) {
+    const url = `${API_CONFIG.BASE_URL}/payments/${paymentId}`;
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message };
+      }
+      return { success: true, data: json.data || json };
+    } catch (err) {
+      return { success: false, message: 'Lỗi kết nối máy chủ' };
+    }
+  },
+
+  /**
+   * Tra cứu thanh toán theo rental_id
+   * GET /api/v1/payments/rental/{rentalId}
+   */
+  async getPaymentByRental(rentalId) {
+    const url = `${API_CONFIG.BASE_URL}/payments/rental/${rentalId}`;
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message };
+      }
+      return { success: true, data: json.data || json };
+    } catch (err) {
+      return { success: false, message: 'Lỗi kết nối máy chủ' };
+    }
+  },
+
+  /**
+   * CRP-54: Chủ xe xem thống kê doanh thu và lịch sử giao dịch
+   * GET /api/v1/owner/earnings
+   */
+  async getOwnerEarnings() {
+    const url = `${API_CONFIG.BASE_URL}/owner/earnings`;
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể lấy dữ liệu doanh thu' };
+      }
+      return { success: true, data: json.data || json };
+    } catch (err) {
+      console.warn('[PaymentAPI] getOwnerEarnings offline/error:', err);
+      return { success: false, message: 'Lỗi kết nối máy chủ khi lấy thống kê doanh thu' };
+    }
+  }
+};
+
