@@ -22,23 +22,24 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationEntryPoint unauthorizedHandler;
     private final JwtAccessDeniedHandler accessDeniedHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final com.driveshare.modules.oauth2.handler.OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final PasswordEncoder passwordEncoder;
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.security.oauth2.client.registration.ClientRegistrationRepository clientRegistrationRepository;
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
+        authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
     }
 
@@ -56,6 +57,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(unauthorizedHandler)
                         .accessDeniedHandler(accessDeniedHandler)
                 )
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
@@ -65,18 +67,26 @@ public class SecurityConfig {
                                 "/api/v1/auth/refresh-token",
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/reset-password",
-                                "/api/v1/auth/logout"
+                                "/api/v1/auth/logout",
+                                "/api/v1/auth/change-email/confirm"
                         ).permitAll()
+                        .requestMatchers("/api/v1/public/**").permitAll()
+                        .requestMatchers("/api/v1/oauth2/**").permitAll()
                         .requestMatchers("/api/v1/health/**").permitAll()
-                        .requestMatchers("/api/v1/admin/**").permitAll()
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html"
+                                "/swagger-ui.html",
+                                "/h2-console/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Role requirements are declared centrally here (CRP-16)
+                        // Role-based and user access control (CRP-16, BR-05)
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/owner/**").hasRole("OWNER")
+                        .requestMatchers("/api/v1/users/**").authenticated()
+
+                        // Central RBAC test endpoints
                         .requestMatchers("/api/v1/auth/renter-test").hasRole("RENTER")
                         .requestMatchers("/api/v1/auth/owner-test").hasRole("OWNER")
                         .requestMatchers("/api/v1/auth/admin-test").hasRole("ADMIN")
@@ -85,6 +95,24 @@ public class SecurityConfig {
 
                         .anyRequest().authenticated()
                 );
+
+        if (clientRegistrationRepository != null) {
+            org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver authorizationRequestResolver =
+                    new org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver(
+                            clientRegistrationRepository, "/oauth2/authorization"
+                    );
+            authorizationRequestResolver.setAuthorizationRequestCustomizer(customizer ->
+                    customizer.additionalParameters(params -> params.put("prompt", "select_account")));
+
+            http.oauth2Login(oauth2 -> oauth2
+                    .authorizationEndpoint(auth -> auth.authorizationRequestResolver(authorizationRequestResolver))
+                    .successHandler(oAuth2SuccessHandler)
+            );
+        } else {
+            http.oauth2Login(oauth2 -> oauth2
+                    .successHandler(oAuth2SuccessHandler)
+            );
+        }
 
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

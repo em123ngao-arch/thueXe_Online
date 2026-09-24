@@ -5,7 +5,7 @@
 
 const RenderService = {
   // 1. Render danh sách xe trong Catalogue
-  renderCarGrid(cars, containerId = 'carGridContainer') {
+  renderCarGrid(cars, containerId = "carGridContainer") {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -26,12 +26,19 @@ const RenderService = {
       return;
     }
 
-    container.innerHTML = cars.map(car => {
-      const depositAmount = Math.round(car.price_per_day * 0.3);
-      const fuelText = car.fuel_type === 'ELECTRIC' ? 'Xe điện (EV)' : (car.fuel_type === 'DIESEL' ? 'Dầu Diesel' : 'Xăng');
-      const transText = car.transmission === 'AUTOMATIC' ? 'Tự động' : 'Số sàn';
+    container.innerHTML = cars
+      .map((car) => {
+        const depositAmount = Math.round(car.price_per_day * 0.3);
+        const fuelText =
+          car.fuel_type === "ELECTRIC"
+            ? "Xe điện (EV)"
+            : car.fuel_type === "DIESEL"
+              ? "Dầu Diesel"
+              : "Xăng";
+        const transText =
+          car.transmission === "AUTOMATIC" ? "Tự động" : "Số sàn";
 
-      return `
+        return `
         <div class="car-card animate-fade-in" data-id="${car.id}">
           <div class="car-card-img-wrapper">
             <img class="car-card-img" src="${car.image_url}" alt="${car.brand} ${car.model}" loading="lazy" />
@@ -94,27 +101,32 @@ const RenderService = {
                 <span class="car-price-deposit">Cọc 30%: ${StorageService.formatCurrency(depositAmount)}</span>
               </div>
               <div class="car-card-actions">
-                <button class="btn btn-outline btn-sm" onclick="App.openCarDetailModal(${car.id})">Chi tiết</button>
-                <button class="btn btn-primary btn-sm" onclick="BookingService.startBookingFlow(${car.id})">Đặt xe</button>
+                <button class="btn btn-outline btn-sm" onclick="AuthService.requireLoginThen(() => App.openCarDetailModal(${car.id}))">Chi tiết</button>
+                <button class="btn btn-primary btn-sm" onclick="AuthService.requireLoginThen(() => BookingService.startBookingFlow(${car.id}))">Đặt xe</button>
               </div>
             </div>
           </div>
         </div>
       `;
-    }).join('');
+      })
+      .join("");
   },
 
   // 2. Render Modal Chi tiết xe
   renderCarDetail(car) {
     const depositAmount = Math.round(car.price_per_day * 0.3);
-    const amenitiesHtml = (car.amenities || []).map(a => `
+    const amenitiesHtml = (car.amenities || [])
+      .map(
+        (a) => `
       <span class="amenity-chip">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" color="#0f766e">
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
         ${a}
       </span>
-    `).join('');
+    `,
+      )
+      .join("");
 
     return `
       <div class="detail-gallery">
@@ -126,7 +138,7 @@ const RenderService = {
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
             <div>
               <h2 style="font-size: 1.35rem; color: var(--slate-900);">${car.brand} ${car.model} (${car.year})</h2>
-              <p style="color: var(--slate-500); font-size: 0.88rem; margin-top: 0.2rem;">Biển số: <strong>${car.license_plate}</strong> · Đăng ký tại ${car.city || 'TP.HCM'}</p>
+              <p style="color: var(--slate-500); font-size: 0.88rem; margin-top: 0.2rem;">Biển số: <strong>${car.license_plate}</strong> · Đăng ký tại ${car.city || "TP.HCM"}</p>
             </div>
             <span class="badge badge-success">Sẵn sàng đón khách</span>
           </div>
@@ -218,7 +230,7 @@ const RenderService = {
               <span>${StorageService.formatCurrency(depositAmount)}</span>
             </div>
             <div style="margin-top: 1.15rem;">
-              <button class="btn btn-primary" style="width: 100%;" onclick="App.closeCarDetailModal(); BookingService.startBookingFlow(${car.id})">
+              <button class="btn btn-primary" style="width: 100%;" onclick="App.closeCarDetailModal(); AuthService.requireLoginThen(() => BookingService.startBookingFlow(${car.id}))">
                 Tiến hành Đặt xe ngay
               </button>
             </div>
@@ -229,7 +241,7 @@ const RenderService = {
   },
 
   // 3. Render Danh sách đơn thuê của tôi (Khách thuê)
-  renderMyBookings(bookings, containerId = 'myBookingsListContainer') {
+  renderMyBookings(bookings, containerId = "myBookingsListContainer") {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -252,21 +264,24 @@ const RenderService = {
       return;
     }
 
-    container.innerHTML = bookings.map(bk => {
-      let statusBadge = '';
-      if (bk.status === 'DEPOSIT_PAID') {
-        statusBadge = '<span class="badge badge-success">Đã cọc 30%</span>';
-      } else if (bk.status === 'COMPLETED') {
-        statusBadge = '<span class="badge badge-neutral">Đã hoàn thành</span>';
-      } else if (bk.status === 'PENDING') {
-        statusBadge = '<span class="badge badge-warning">Chờ chủ xe duyệt</span>';
-      } else if (bk.status === 'CANCELLED') {
-        statusBadge = '<span class="badge badge-danger">Đã hủy đơn</span>';
-      } else {
-        statusBadge = `<span class="badge badge-info">${bk.status}</span>`;
-      }
+    container.innerHTML = bookings
+      .map((bk) => {
+        let statusBadge = "";
+        if (bk.status === "DEPOSIT_PAID") {
+          statusBadge = '<span class="badge badge-success">Đã cọc 30%</span>';
+        } else if (bk.status === "COMPLETED") {
+          statusBadge =
+            '<span class="badge badge-neutral">Đã hoàn thành</span>';
+        } else if (bk.status === "PENDING") {
+          statusBadge =
+            '<span class="badge badge-warning">Chờ chủ xe duyệt</span>';
+        } else if (bk.status === "CANCELLED") {
+          statusBadge = '<span class="badge badge-danger">Đã hủy đơn</span>';
+        } else {
+          statusBadge = `<span class="badge badge-info">${bk.status}</span>`;
+        }
 
-      return `
+        return `
         <div class="booking-item-card animate-fade-in">
           <div class="booking-car-thumb">
             <img src="${bk.car_image}" alt="${bk.car_name}" />
@@ -318,24 +333,33 @@ const RenderService = {
               </div>
 
               <div class="booking-actions">
-                ${bk.status === 'DEPOSIT_PAID' ? `
+                ${
+                  bk.status === "DEPOSIT_PAID"
+                    ? `
                   <button class="btn btn-outline btn-sm" onclick="App.showHandoverInfo('${bk.id}')">
                     Biên bản giao xe
                   </button>
                   <button class="btn btn-primary btn-sm" onclick="App.showContactOwner('${bk.id}')">
                     Liên hệ Chủ xe
                   </button>
-                ` : ''}
-                ${bk.status === 'COMPLETED' ? `
+                `
+                    : ""
+                }
+                ${
+                  bk.status === "COMPLETED"
+                    ? `
                   <button class="btn btn-outline btn-sm" onclick="App.showReviewPrompt('${bk.id}')">
                     Đánh giá chuyến đi
                   </button>
-                ` : ''}
+                `
+                    : ""
+                }
               </div>
             </div>
           </div>
         </div>
       `;
-    }).join('');
-  }
+      })
+      .join("");
+  },
 };

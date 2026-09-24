@@ -26,21 +26,50 @@ public enum ErrorCode {
 
     // User & Profile
     USER_NOT_FOUND("USER_NOT_FOUND", "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),
-    EMAIL_EXISTED("EMAIL_EXISTED", "Địa chỉ email đã được sử dụng", HttpStatus.CONFLICT),
+    EMAIL_EXISTED("EMAIL_EXISTED", "Địa chỉ email đã được sử dụng", HttpStatus.BAD_REQUEST),
     USERNAME_EXISTED("USERNAME_EXISTED", "Tên đăng nhập đã tồn tại", HttpStatus.CONFLICT),
     PHONE_EXISTED("PHONE_EXISTED", "Số điện thoại đã được sử dụng", HttpStatus.CONFLICT),
     PASSWORD_NOT_MATCH("PASSWORD_NOT_MATCH", "Mật khẩu hiện tại không chính xác", HttpStatus.BAD_REQUEST),
+    NEW_PASSWORD_SAME_AS_OLD("NEW_PASSWORD_SAME_AS_OLD", "Mật khẩu mới không được trùng mật khẩu cũ", HttpStatus.BAD_REQUEST),
+    EMAIL_CHANGE_TOKEN_INVALID("EMAIL_CHANGE_TOKEN_INVALID", "Liên kết xác nhận đổi email không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
     ROLE_NOT_FOUND("ROLE_NOT_FOUND", "Vai trò không hợp lệ", HttpStatus.NOT_FOUND),
     CANNOT_EDIT_OTHER_PROFILE("CANNOT_EDIT_OTHER_PROFILE", "Bạn không có quyền chỉnh sửa hồ sơ của người dùng khác", HttpStatus.FORBIDDEN),
     ID_CARD_EXISTED("ID_CARD_EXISTED", "Số CMND/CCCD đã được sử dụng", HttpStatus.CONFLICT),
     LICENSE_NUMBER_EXISTED("LICENSE_NUMBER_EXISTED", "Số giấy phép lái xe đã tồn tại trong hệ thống", HttpStatus.CONFLICT),
+    RENTER_PROFILE_NOT_FOUND("RENTER_PROFILE_NOT_FOUND", "Không tìm thấy hồ sơ giấy tờ của khách thuê", HttpStatus.NOT_FOUND),
+
+    // Upload & File Validation (BR-08)
+    MISSING_CCCD_SIDE("MISSING_CCCD_SIDE", "Phải upload đủ cả mặt trước và mặt sau CCCD", HttpStatus.BAD_REQUEST),
+    INVALID_FILE_FORMAT("INVALID_FILE_FORMAT", "Định dạng không hợp lệ. Chỉ chấp nhận JPG, PNG", HttpStatus.BAD_REQUEST),
+    FILE_SIZE_EXCEEDED("FILE_SIZE_EXCEEDED", "Kích thước file vượt quá giới hạn cho phép", HttpStatus.BAD_REQUEST),
+    FIELD_LOCKED("FIELD_LOCKED", "Thông tin định danh đã được phê duyệt, không thể chỉnh sửa. Vui lòng liên hệ Admin", HttpStatus.BAD_REQUEST),
+    ROLE_NOT_SUPPORTED("ROLE_NOT_SUPPORTED", "Chức năng này chỉ áp dụng cho vai trò Khách thuê (Renter)", HttpStatus.BAD_REQUEST),
 
     // Car Management (CRP-23, CRP-24)
     CAR_NOT_FOUND("CAR_NOT_FOUND", "Không tìm thấy thông tin xe", HttpStatus.NOT_FOUND),
     CAR_ACCESS_DENIED("CAR_ACCESS_DENIED", "Bạn không có quyền thao tác trên xe này", HttpStatus.FORBIDDEN),
     CAR_PLATE_DUPLICATE("CAR_PLATE_DUPLICATE", "Biển số xe đã tồn tại trong hệ thống", HttpStatus.CONFLICT),
     CAR_HAS_ACTIVE_BOOKING("CAR_HAS_ACTIVE_BOOKING", "Xe đang có chuyến đi hoạt động, không thể xóa", HttpStatus.BAD_REQUEST),
-    OWNER_NOT_APPROVED("OWNER_NOT_APPROVED", "Hồ sơ chủ xe của bạn chưa được phê duyệt để đăng xe", HttpStatus.FORBIDDEN);
+    CAR_ALREADY_PROCESSED("CAR_ALREADY_PROCESSED", "Xe đã được xử lý thẩm định trước đó", HttpStatus.BAD_REQUEST),
+    OWNER_NOT_APPROVED("OWNER_NOT_APPROVED", "Hồ sơ chủ xe của bạn chưa được phê duyệt để đăng xe", HttpStatus.FORBIDDEN),
+
+    // Document & Admin (Khiêm - feat/Backend)
+    DOCUMENT_NOT_FOUND("DOCUMENT_NOT_FOUND", "Không tìm thấy giấy tờ yêu cầu", HttpStatus.NOT_FOUND),
+
+    // Rental & Booking (Sprint 2 - Vĩ, Khiêm, Quân)
+    RENTAL_NOT_FOUND("RENTAL_NOT_FOUND", "Không tìm thấy yêu cầu thuê xe", HttpStatus.NOT_FOUND),
+    MAX_PENDING_RENTALS_EXCEEDED("MAX_PENDING_RENTALS_EXCEEDED", "Bạn chỉ có thể gửi tối đa 3 yêu cầu thuê xe cùng một lúc", HttpStatus.BAD_REQUEST),
+    RENTAL_CANNOT_BE_CANCELLED("RENTAL_CANNOT_BE_CANCELLED", "Yêu cầu thuê xe không thể hủy ở trạng thái hiện tại", HttpStatus.BAD_REQUEST),
+    RENTAL_ALREADY_PROCESSED("RENTAL_ALREADY_PROCESSED", "Yêu cầu thuê xe đã được xử lý", HttpStatus.BAD_REQUEST),
+    INVALID_RENTAL_DATES("INVALID_RENTAL_DATES", "Ngày kết thúc thuê phải sau ngày bắt đầu thuê", HttpStatus.BAD_REQUEST),
+    CAR_ALREADY_RENTED("CAR_ALREADY_RENTED", "Xe đã có người thuê trong khoảng thời gian này", HttpStatus.CONFLICT),
+    REJECT_REASON_REQUIRED("REJECT_REASON_REQUIRED", "Vui lòng cung cấp lý do từ chối yêu cầu thuê xe", HttpStatus.BAD_REQUEST),
+
+    // Payment (Sprint 2 - Chí Tín)
+    PAYMENT_NOT_FOUND("PAYMENT_NOT_FOUND", "Không tìm thấy thông tin giao dịch thanh toán", HttpStatus.NOT_FOUND),
+    RENTAL_NOT_APPROVED("RENTAL_NOT_APPROVED", "Chuyến đi chưa được phê duyệt để thanh toán cọc", HttpStatus.BAD_REQUEST),
+    PAYMENT_ALREADY_COMPLETED("PAYMENT_ALREADY_COMPLETED", "Giao dịch thanh toán đã được hoàn tất trước đó", HttpStatus.BAD_REQUEST),
+    INVALID_PAYMENT_AMOUNT("INVALID_PAYMENT_AMOUNT", "Số tiền thanh toán không khớp với số tiền cọc yêu cầu", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;

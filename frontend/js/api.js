@@ -173,7 +173,7 @@ const CarAPI = {
 
 const AuthAPI = {
   async login(username, password) {
-    const data = await apiCall('/auth/login', 'POST', { username, password });
+    const data = await apiCall('/auth/login', 'POST', { identifier: username, username, password });
     if (data.data?.accessToken || data.data?.access_token) {
       TokenService.setToken(data.data.accessToken || data.data.access_token);
       BackendStatus.invalidate();

@@ -61,4 +61,13 @@ public interface CarService {
      * @return danh sách xe phân trang
      */
     PageResponse<CarResponse> getMyCarsPaged(int page, int size);
+
+    /**
+     * BR-04-2 — Lấy danh sách xe công khai có trạng thái ACTIVE (dành cho khách thuê xem trang chủ).
+     *
+     * @param page trang hiện tại (0-based)
+     * @param size số bản ghi mỗi trang
+     * @return danh sách xe ACTIVE phân trang
+     */
+    PageResponse<CarResponse> getPublicActiveCars(int page, int size);
 }

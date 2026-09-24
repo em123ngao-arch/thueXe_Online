@@ -133,3 +133,88 @@ git push -u origin feature/CRP-10-owner-registration
 1. 🚫 **KHÔNG BAO GIỜ dùng `git push --force`** lên các nhánh chung (`main`, `develop`).
 2. 🚫 **KHÔNG commit file rác / file bí mật:** Mật khẩu DB cá nhân, token bí mật, thư mục `target/`, thư mục `.idea/`, `node_modules/`. Luôn kiểm tra `.gitignore` trước khi commit.
 3. 🚫 **KHÔNG ôm nhánh cá nhân quá lâu:** Mỗi task làm từ 1–3 ngày phải hoàn thành và tạo PR ngay, tránh để 2 tuần mới gộp code.
+
+---
+
+## 7. 🚀 QUY ĐỊNH ĐẨY CODE — SPRINT 1 FIX & BỔ SUNG
+
+> **Áp dụng từ:** 19/09/2026. Tuân thủ bắt buộc cho toàn bộ nhánh fix của Sprint 1.
+
+### 7.1 Tên nhánh bắt buộc cho Sprint 1 Fix
+
+| Thành viên | Tên nhánh bắt buộc | Lý do |
+|---|---|---|
+| **Vĩ** | `fix/CRP-auth-security` | Auth + Security fixes |
+| **Duy Quân** | `fix/CRP-profile-upload` | Profile + Upload fixes |
+| **Phát** | `feature/google-oauth2` | Tính năng mới + Car fixes |
+| **Chí Tín** | `fix/FE-sprint1` | Toàn bộ FE fixes |
+| **Nguyễn Bảo** | `fix/DB-migration` | DB migration |
+| **Lộc Khiêm** | `fix/CRP-admin-extend` | Admin extension |
+
+### 7.2 Thứ tự MERGE vào `develop` (BẮT BUỘC theo thứ tự)
+
+```
+Bước 1 (song song — không phụ thuộc nhau):
+  fix/CRP-auth-security     ← Vĩ
+  fix/CRP-profile-upload    ← Duy Quân
+  feature/google-oauth2     ← Phát
+        ↓
+Bước 2 (sau khi Quân merge xong):
+  fix/CRP-admin-extend      ← Khiêm (cần verification_status từ Quân)
+        ↓
+Bước 3 (sau khi tất cả BE merge xong):
+  fix/FE-sprint1            ← Chí Tín (kết nối API mới)
+        ↓
+Bước 4 (cuối cùng):
+  fix/DB-migration          ← Bảo (migration + review toàn bộ)
+```
+
+> ⚠️ **Nếu merge sai thứ tự:** Khiêm merge trước Quân → thiếu cột `verification_status` → code Khiêm sẽ fail.
+
+### 7.3 Checklist TRƯỚC KHI tạo Pull Request
+
+Tác giả phải tự kiểm tra trước, **không tạo PR nếu chưa xong**:
+
+```
+[ ] Đã pull develop mới nhất vào nhánh của mình (git merge origin/develop)
+[ ] Code build thành công (mvn clean compile - không có lỗi)
+[ ] Đã test thủ công TẤT CẢ Acceptance Criteria trong NHIEM_VU_THANH_VIEN.md
+[ ] Commit message đúng chuẩn (feat/fix/docs + mô tả + mã task)
+[ ] Không có file bí mật trong commit (.env, application-secret.properties)
+[ ] Không commit thư mục target/, node_modules/, .idea/
+```
+
+### 7.4 Tiêu đề PR chuẩn cho Sprint 1 Fix
+
+```bash
+# Ví dụ tiêu đề PR:
+[fix] Auth: check email trùng + auth guard RBAC + đổi mật khẩu
+[fix] Profile: upload avatar, CMND, GPLX lên Cloudinary
+[feat] Google OAuth2 Login + Car PENDING filter
+[fix] Admin: duyệt CMND + filter xe pending
+[fix] FE: toast đăng ký, 2 tab admin, auth guard
+[chore] DB: migration google_id + multipart config
+```
+
+### 7.5 Quy định COMMIT khi đang làm fix
+
+```bash
+# Commit theo từng AC hoàn thành, không dồn tất cả vào 1 commit:
+git commit -m "fix(auth): validate email trùng trả lỗi EMAIL_EXISTED BR-01-1"
+git commit -m "fix(security): bật route /api/v1/users/** yêu cầu authenticated BR-05-2"
+git commit -m "fix(auth): hoàn thiện change-password API 3 ô + logout session BR-06"
+
+# KHÔNG commit như này:
+git commit -m "fix bug"        ❌
+git commit -m "update auth"   ❌
+git commit -m "xong rồi"      ❌
+```
+
+### 7.6 Điều kiện Bảo MERGE PR
+
+Bảo chỉ merge khi:
+1. ✅ Tất cả Acceptance Criteria trong **NHIEM_VU_THANH_VIEN.md** được tick đủ
+2. ✅ Code build không lỗi
+3. ✅ Đúng thứ tự merge (xem 7.2)
+4. ✅ Không có `System.out.println()` hay `console.log()` debug còn sót lại
+

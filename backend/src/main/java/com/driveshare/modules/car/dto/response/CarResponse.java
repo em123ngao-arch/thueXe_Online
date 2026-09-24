@@ -1,7 +1,9 @@
 package com.driveshare.modules.car.dto.response;
 
+import com.driveshare.common.enums.ECarStatus;
+import com.driveshare.common.enums.EFuelType;
+import com.driveshare.common.enums.ETransmission;
 import com.driveshare.modules.car.entity.Car;
-import com.driveshare.modules.car.entity.ECarStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -26,8 +28,8 @@ public class CarResponse {
     private Integer year;
     private String color;
     private Integer seats;
-    private String transmission;
-    private String fuelType;
+    private ETransmission transmission;
+    private EFuelType fuelType;
 
     // Giá & Địa điểm
     private BigDecimal pricePerDay;

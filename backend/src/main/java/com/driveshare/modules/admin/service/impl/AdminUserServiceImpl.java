@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.driveshare.common.enums.EUserStatus;
 import com.driveshare.common.enums.EVerificationStatus;
+import com.driveshare.modules.admin.dto.request.ApproveLicenseRequest;
 import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
 import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
 import com.driveshare.modules.admin.entity.AuditLog;
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class AdminUserServiceImpl implements AdminUserService {
 
     private final UserRepository userRepository;
@@ -155,6 +157,76 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     @Transactional
+    public UserItemResponse approveLicense(Long userId, ApproveLicenseRequest request, Long actorId, String actorUsername) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        RenterProfile renterProfile = user.getRenterProfile();
+        if (renterProfile == null) {
+            throw new AppException(ErrorCode.RENTER_PROFILE_NOT_FOUND, "Người dùng này không có hồ sơ bằng lái khách thuê để phê duyệt");
+        }
+
+        String targetStatus = request.getVerificationStatus() != null ? request.getVerificationStatus().trim().toLowerCase() : "";
+
+        if ("verified".equals(targetStatus)) {
+            renterProfile.setLicenseVerificationStatus(EVerificationStatus.VERIFIED);
+            renterProfile.setLicenseVerifiedAt(Instant.now());
+            renterProfile.setLicenseVerifiedBy(actorId);
+            renterProfile.setLicenseRejectionReason(null);
+
+            AuditLog auditLog = AuditLog.builder()
+                    .action("APPROVE_RENTER_LICENSE")
+                    .actorId(actorId)
+                    .actorUsername(actorUsername != null ? actorUsername : "system_admin")
+                    .targetType("RENTER_PROFILE")
+                    .targetId(userId)
+                    .details("Phê duyệt Giấy phép lái xe (GPLX: " + renterProfile.getLicenseNumber() + ") của khách thuê @" + user.getUsername() + " thành công.")
+                    .createdAt(Instant.now())
+                    .build();
+            auditLogRepository.save(auditLog);
+
+            log.info(" [AUDIT] Admin '{}' approved driver license for user #{}, license: {}",
+                    actorUsername, userId, renterProfile.getLicenseNumber());
+            log.info("📧 [NOTIFICATION] Sent driver license approval notice to renter: {} ({})",
+                    user.getFullName(), user.getEmail());
+
+        } else if ("rejected".equals(targetStatus)) {
+            String reason = request.getRejectionReason();
+            if (reason == null || reason.trim().isEmpty()) {
+                throw new AppException(ErrorCode.VALIDATION_FAILED, "Lý do từ chối bằng lái không được để trống");
+            }
+
+            renterProfile.setLicenseVerificationStatus(EVerificationStatus.REJECTED);
+            renterProfile.setLicenseVerifiedAt(Instant.now());
+            renterProfile.setLicenseVerifiedBy(actorId);
+            renterProfile.setLicenseRejectionReason(reason.trim());
+
+            AuditLog auditLog = AuditLog.builder()
+                    .action("REJECT_RENTER_LICENSE")
+                    .actorId(actorId)
+                    .actorUsername(actorUsername != null ? actorUsername : "system_admin")
+                    .targetType("RENTER_PROFILE")
+                    .targetId(userId)
+                    .details("Từ chối Giấy phép lái xe của khách thuê @" + user.getUsername() + ". Lý do: " + reason.trim())
+                    .createdAt(Instant.now())
+                    .build();
+            auditLogRepository.save(auditLog);
+
+            log.warn("⚠️ [AUDIT] Admin '{}' rejected driver license for user #{}. Reason: {}",
+                    actorUsername, userId, reason.trim());
+            log.info("📧 [NOTIFICATION] Sent driver license rejection notice to renter: {} ({}) with reason: '{}'",
+                    user.getFullName(), user.getEmail(), reason.trim());
+
+        } else {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Trạng thái phê duyệt không hợp lệ. Chỉ chấp nhận 'verified' hoặc 'rejected'");
+        }
+
+        userRepository.save(user);
+        return mapToUserItemResponse(user);
+    }
+
+    @Override
+    @Transactional
     public UserItemResponse updateUserStatus(Long userId, UpdateUserStatusRequest request, Long actorId, String actorUsername) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -232,7 +304,16 @@ public class AdminUserServiceImpl implements AdminUserService {
         if (renterProfile != null) {
             renterProfileSummary = RenterProfileSummaryResponse.builder()
                     .licenseNumber(renterProfile.getLicenseNumber())
+                    .licenseFullName(renterProfile.getLicenseFullName())
+                    .licenseDob(renterProfile.getLicenseDob())
+                    .licenseIssueDate(renterProfile.getLicenseIssueDate())
+                    .licenseExpiryDate(renterProfile.getLicenseExpiryDate())
+                    .licenseFrontUrl(renterProfile.getLicenseFrontUrl())
+                    .licenseBackUrl(renterProfile.getLicenseBackUrl())
                     .licenseVerificationStatus(renterProfile.getLicenseVerificationStatus())
+                    .licenseVerifiedBy(renterProfile.getLicenseVerifiedBy())
+                    .licenseVerifiedAt(renterProfile.getLicenseVerifiedAt())
+                    .licenseRejectionReason(renterProfile.getLicenseRejectionReason())
                     .build();
         }
 
@@ -250,5 +331,91 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .ownerProfile(ownerProfileSummary)
                 .renterProfile(renterProfileSummary)
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<com.driveshare.modules.admin.dto.response.PendingCccdResponse> getPendingCccdUsers() {
+        java.util.List<User> users = userRepository.findAll();
+        java.util.List<com.driveshare.modules.admin.dto.response.PendingCccdResponse> result = new java.util.ArrayList<>();
+        for (User u : users) {
+            boolean isPendingOwner = u.getOwnerProfile() != null && u.getOwnerProfile().getVerificationStatus() == EVerificationStatus.PENDING;
+            boolean isPendingRenter = u.getRenterProfile() != null && u.getRenterProfile().getVerificationStatus() == EVerificationStatus.PENDING;
+            if (isPendingOwner) {
+                result.add(com.driveshare.modules.admin.dto.response.PendingCccdResponse.builder()
+                        .userId(u.getUserId())
+                        .fullName(u.getFullName())
+                        .email(u.getEmail())
+                        .phone(u.getPhone())
+                        .role("OWNER")
+                        .cccdFrontUrl(u.getOwnerProfile().getIdCardFrontUrl())
+                        .cccdBackUrl(u.getOwnerProfile().getIdCardBackUrl())
+                        .submittedAt(u.getOwnerProfile().getUpdatedAt() != null ? u.getOwnerProfile().getUpdatedAt() : u.getCreatedAt())
+                        .build());
+            } else if (isPendingRenter) {
+                result.add(com.driveshare.modules.admin.dto.response.PendingCccdResponse.builder()
+                        .userId(u.getUserId())
+                        .fullName(u.getFullName())
+                        .email(u.getEmail())
+                        .phone(u.getPhone())
+                        .role("RENTER")
+                        .cccdFrontUrl(u.getRenterProfile().getIdCardFrontUrl())
+                        .cccdBackUrl(u.getRenterProfile().getIdCardBackUrl())
+                        .submittedAt(u.getRenterProfile().getUpdatedAt() != null ? u.getRenterProfile().getUpdatedAt() : u.getCreatedAt())
+                        .build());
+            }
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void verifyCccd(Long userId, String status, String reason, Long actorId, String actorUsername) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        boolean isApproved = "APPROVED".equalsIgnoreCase(status);
+        boolean isRejected = "REJECTED".equalsIgnoreCase(status);
+
+        if (!isApproved && !isRejected) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Trạng thái chỉ có thể là APPROVED hoặc REJECTED");
+        }
+
+        if (isRejected && (reason == null || reason.trim().isEmpty())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Lý do từ chối là bắt buộc khi REJECTED");
+        }
+
+        EVerificationStatus targetStatus = isApproved ? EVerificationStatus.VERIFIED : EVerificationStatus.REJECTED;
+
+        if (user.getOwnerProfile() != null) {
+            user.getOwnerProfile().setVerificationStatus(targetStatus);
+            if (isApproved) {
+                user.getOwnerProfile().setVerifiedAt(Instant.now());
+                user.getOwnerProfile().setVerifiedBy(actorId);
+                user.setStatus(EUserStatus.ACTIVE);
+            } else {
+                user.getOwnerProfile().setRejectionReason(reason.trim());
+            }
+        }
+
+        if (user.getRenterProfile() != null) {
+            user.getRenterProfile().setVerificationStatus(targetStatus);
+            if (!isApproved) {
+                user.getRenterProfile().setRejectionReason(reason.trim());
+            }
+        }
+
+        userRepository.save(user);
+
+        AuditLog logEntry = AuditLog.builder()
+                .actorId(actorId)
+                .actorUsername(actorUsername)
+                .targetType("USER_CCCD")
+                .targetId(userId)
+                .action(isApproved ? "APPROVE_CCCD" : "REJECT_CCCD")
+                .details(isApproved ? "Duyệt hồ sơ CCCD" : "Từ chối hồ sơ CCCD: " + reason.trim())
+                .createdAt(Instant.now())
+                .build();
+        auditLogRepository.save(logEntry);
     }
 }

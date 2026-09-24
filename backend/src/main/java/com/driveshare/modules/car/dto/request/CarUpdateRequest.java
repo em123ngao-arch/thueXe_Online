@@ -1,5 +1,7 @@
 package com.driveshare.modules.car.dto.request;
 
+import com.driveshare.common.enums.EFuelType;
+import com.driveshare.common.enums.ETransmission;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -32,17 +34,9 @@ public class CarUpdateRequest {
     @Max(value = 16, message = "Số chỗ ngồi tối đa là 16")
     private Integer seats;
 
-    @Pattern(
-            regexp = "AUTOMATIC|MANUAL",
-            message = "Hộp số phải là AUTOMATIC hoặc MANUAL"
-    )
-    private String transmission;
+    private ETransmission transmission;
 
-    @Pattern(
-            regexp = "GASOLINE|DIESEL|ELECTRIC|HYBRID",
-            message = "Loại nhiên liệu phải là GASOLINE, DIESEL, ELECTRIC hoặc HYBRID"
-    )
-    private String fuelType;
+    private EFuelType fuelType;
 
     @DecimalMin(value = "100000", message = "Giá thuê tối thiểu là 100.000 VNĐ/ngày")
     @DecimalMax(value = "10000000", message = "Giá thuê tối đa là 10.000.000 VNĐ/ngày")

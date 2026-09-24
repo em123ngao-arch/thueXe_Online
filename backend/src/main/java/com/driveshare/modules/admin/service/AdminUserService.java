@@ -14,5 +14,11 @@ public interface AdminUserService {
 
     UserItemResponse approveOwner(Long userId, ApproveOwnerRequest request, Long actorId, String actorUsername);
 
+    UserItemResponse approveLicense(Long userId, com.driveshare.modules.admin.dto.request.ApproveLicenseRequest request, Long actorId, String actorUsername);
+
     UserItemResponse updateUserStatus(Long userId, UpdateUserStatusRequest request, Long actorId, String actorUsername);
+
+    java.util.List<com.driveshare.modules.admin.dto.response.PendingCccdResponse> getPendingCccdUsers();
+
+    void verifyCccd(Long userId, String status, String reason, Long actorId, String actorUsername);
 }

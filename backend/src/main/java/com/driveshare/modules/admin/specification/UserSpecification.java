@@ -44,7 +44,9 @@ public class UserSpecification {
                     ERole targetRole = ERole.fromString(role);
                     Join<User, Role> roleJoin = root.join("roles", JoinType.INNER);
                     predicates.add(cb.equal(roleJoin.get("roleName"), targetRole));
-                    query.distinct(true);
+                    if (query != null) {
+                        query.distinct(true);
+                    }
                 } catch (IllegalArgumentException ignored) {
                 }
             }

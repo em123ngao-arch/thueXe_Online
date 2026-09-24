@@ -10,6 +10,6 @@ import java.util.Optional;
 
 public interface AuthSessionRepository extends JpaRepository<AuthSession, Long> {
     Optional<AuthSession> findByJti(String jti);
-    @Modifying @Query("update AuthSession s set s.revokedAt = CURRENT_TIMESTAMP where s.userId = :userId and s.revokedAt is null")
+    @Modifying @Query("update AuthSession s set s.revokedAt = CURRENT_INSTANT where s.userId = :userId and s.revokedAt is null")
     int revokeAllByUserId(@Param("userId") Long userId);
 }

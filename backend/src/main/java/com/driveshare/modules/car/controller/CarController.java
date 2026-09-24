@@ -53,7 +53,7 @@ public class CarController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Tài khoản chủ xe chưa được duyệt")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Biển số xe đã tồn tại")
     @PostMapping
-    @PreAuthorize("hasRole('ROLE_OWNER')")
+    @PreAuthorize("hasAnyRole('OWNER', 'ROLE_OWNER')")
     public ResponseEntity<ApiResponse<CarResponse>> createCar(
             @Valid @RequestBody CarCreateRequest request) {
 
@@ -79,7 +79,7 @@ public class CarController {
                     "Sắp xếp theo ngày tạo mới nhất."
     )
     @GetMapping("/my-cars")
-    @PreAuthorize("hasRole('ROLE_OWNER')")
+    @PreAuthorize("hasAnyRole('OWNER', 'ROLE_OWNER')")
     public ResponseEntity<ApiResponse<PageResponse<CarResponse>>> getMyCars(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -108,7 +108,7 @@ public class CarController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Không có quyền chỉnh sửa xe này")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Không tìm thấy xe")
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_OWNER')")
+    @PreAuthorize("hasAnyRole('OWNER', 'ROLE_OWNER')")
     public ResponseEntity<ApiResponse<CarResponse>> updateCar(
             @PathVariable Long id,
             @Valid @RequestBody CarUpdateRequest request) {
@@ -138,7 +138,7 @@ public class CarController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Không có quyền thao tác xe này")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Không tìm thấy xe")
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('ROLE_OWNER')")
+    @PreAuthorize("hasAnyRole('OWNER', 'ROLE_OWNER')")
     public ResponseEntity<ApiResponse<CarResponse>> updateCarStatus(
             @PathVariable Long id,
             @Valid @RequestBody CarStatusUpdateRequest request) {
@@ -168,7 +168,7 @@ public class CarController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Không có quyền xóa xe này")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Không tìm thấy xe")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_OWNER')")
+    @PreAuthorize("hasAnyRole('OWNER', 'ROLE_OWNER')")
     public ResponseEntity<ApiResponse<Void>> deleteCar(@PathVariable Long id) {
         carService.deleteCar(id);
 

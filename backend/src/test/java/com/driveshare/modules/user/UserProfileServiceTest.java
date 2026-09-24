@@ -48,6 +48,9 @@ class UserProfileServiceTest {
     @Mock
     private RenterProfileRepository renterProfileRepository;
 
+    @Mock
+    private com.driveshare.common.service.CloudinaryService cloudinaryService;
+
     @InjectMocks
     private UserProfileServiceImpl userProfileService;
 
@@ -185,4 +188,166 @@ class UserProfileServiceTest {
         assertEquals(ErrorCode.PHONE_EXISTED, exception.getErrorCode());
         verify(ownerProfileRepository, never()).save(any());
     }
+
+    @Test
+    @DisplayName("GET /me: Khi tài khoản chưa duyệt (PENDING), lockedFields rỗng")
+    void getMyProfile_WhenPending_ReturnsEmptyLockedFields() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
+        when(ownerProfileRepository.findById(1L)).thenReturn(Optional.of(
+                OwnerProfile.builder().user(sampleUser).verificationStatus(EVerificationStatus.PENDING).build()
+        ));
+
+        com.driveshare.modules.user.dto.response.CurrentUserProfileResponse response = userProfileService.getMyProfile(currentUser);
+
+        assertNotNull(response);
+        assertEquals("PENDING", response.getVerificationStatus());
+        assertTrue(response.getLockedFields().isEmpty());
+    }
+
+    @Test
+    @DisplayName("GET /me: Khi tài khoản đã duyệt (APPROVED/VERIFIED), lockedFields chứa thông tin định danh")
+    void getMyProfile_WhenApproved_ReturnsLockedFields() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
+        when(ownerProfileRepository.findById(1L)).thenReturn(Optional.of(
+                OwnerProfile.builder().user(sampleUser).verificationStatus(EVerificationStatus.VERIFIED).build()
+        ));
+
+        com.driveshare.modules.user.dto.response.CurrentUserProfileResponse response = userProfileService.getMyProfile(currentUser);
+
+        assertNotNull(response);
+        assertEquals("APPROVED", response.getVerificationStatus());
+        assertFalse(response.getLockedFields().isEmpty());
+        assertTrue(response.getLockedFields().contains("fullName"));
+        assertTrue(response.getLockedFields().contains("nationalId"));
+    }
+
+    @Test
+    @DisplayName("PUT /me: Khi đã duyệt, sửa fullName sẽ ném lỗi FIELD_LOCKED")
+    void updateMyProfile_WhenApproved_ThrowsFieldLockedIfFullNameModified() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
+        when(ownerProfileRepository.findById(1L)).thenReturn(Optional.of(
+                OwnerProfile.builder().user(sampleUser).verificationStatus(EVerificationStatus.VERIFIED).build()
+        ));
+
+        com.driveshare.modules.user.dto.request.UpdateMyProfileRequest request = com.driveshare.modules.user.dto.request.UpdateMyProfileRequest.builder()
+                .fullName("Tên Mới Không Thể Đổi")
+                .build();
+
+        AppException exception = assertThrows(AppException.class, () ->
+                userProfileService.updateMyProfile(request, currentUser)
+        );
+
+        assertEquals(ErrorCode.FIELD_LOCKED, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("PUT /me: Cập nhật SĐT và địa chỉ thành công")
+    void updateMyProfile_Success() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
+        when(ownerProfileRepository.findById(1L)).thenReturn(Optional.of(
+                OwnerProfile.builder().user(sampleUser).verificationStatus(EVerificationStatus.PENDING).build()
+        ));
+        when(userRepository.existsByPhone("0911223344")).thenReturn(false);
+
+        com.driveshare.modules.user.dto.request.UpdateMyProfileRequest request = com.driveshare.modules.user.dto.request.UpdateMyProfileRequest.builder()
+                .phoneNumber("0911223344")
+                .address("123 Nguyễn Huệ, Q1")
+                .build();
+
+        com.driveshare.modules.user.dto.response.CurrentUserProfileResponse response = userProfileService.updateMyProfile(request, currentUser);
+
+        assertNotNull(response);
+        assertEquals("0911223344", response.getPhoneNumber());
+        assertEquals("123 Nguyễn Huệ, Q1", response.getAddress());
+        verify(userRepository, times(1)).save(sampleUser);
+    }
+
+    @Test
+    @DisplayName("POST /me/cccd: Thiếu 1 trong 2 mặt ném lỗi MISSING_CCCD_SIDE")
+    void uploadCccd_MissingOneSide_ThrowsMissingCccdSide() {
+        org.springframework.mock.web.MockMultipartFile front = new org.springframework.mock.web.MockMultipartFile(
+                "frontImage", "front.jpg", "image/jpeg", new byte[]{1, 2, 3}
+        );
+
+        AppException exception = assertThrows(AppException.class, () ->
+                userProfileService.uploadCccd(front, null, currentUser)
+        );
+
+        assertEquals(ErrorCode.MISSING_CCCD_SIDE, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("POST /me/cccd: Upload đủ 2 mặt thành công, trạng thái PENDING")
+    void uploadCccd_Success() {
+        org.springframework.mock.web.MockMultipartFile front = new org.springframework.mock.web.MockMultipartFile(
+                "frontImage", "front.jpg", "image/jpeg", new byte[]{1, 2, 3}
+        );
+        org.springframework.mock.web.MockMultipartFile back = new org.springframework.mock.web.MockMultipartFile(
+                "backImage", "back.jpg", "image/jpeg", new byte[]{4, 5, 6}
+        );
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
+        when(cloudinaryService.uploadImage(eq(front), anyString(), anyLong())).thenReturn("https://cloudinary/front.jpg");
+        when(cloudinaryService.uploadImage(eq(back), anyString(), anyLong())).thenReturn("https://cloudinary/back.jpg");
+        when(ownerProfileRepository.findById(1L)).thenReturn(Optional.of(
+                OwnerProfile.builder().user(sampleUser).build()
+        ));
+
+        com.driveshare.modules.user.dto.response.UploadCccdResponse response = userProfileService.uploadCccd(front, back, currentUser);
+
+        assertNotNull(response);
+        assertEquals("https://cloudinary/front.jpg", response.getFrontImageUrl());
+        assertEquals("https://cloudinary/back.jpg", response.getBackImageUrl());
+        assertEquals("PENDING", response.getVerificationStatus());
+    }
+
+    @Test
+    @DisplayName("POST /me/gplx: Người dùng không phải Renter bị từ chối ROLE_NOT_SUPPORTED")
+    void uploadGplx_WhenNotRenter_ThrowsRoleNotSupported() {
+        org.springframework.mock.web.MockMultipartFile license = new org.springframework.mock.web.MockMultipartFile(
+                "licenseImage", "license.jpg", "image/jpeg", new byte[]{1, 2, 3}
+        );
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser)); // sampleUser has ROLE_OWNER only
+
+        AppException exception = assertThrows(AppException.class, () ->
+                userProfileService.uploadGplx(license, currentUser)
+        );
+
+        assertEquals(ErrorCode.ROLE_NOT_SUPPORTED, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("POST /me/gplx: Renter upload thành công, trạng thái PENDING")
+    void uploadGplx_WhenRenter_Success() {
+        Role renterRole = Role.builder().roleId(4L).roleName(ERole.ROLE_RENTER).build();
+        User renterUser = User.builder()
+                .userId(4L)
+                .username("nam_renter")
+                .email("renter@example.com")
+                .roles(Set.of(renterRole))
+                .status(EUserStatus.ACTIVE)
+                .build();
+        CustomUserDetails renterDetails = new CustomUserDetails(
+                4L, "nam_renter", "renter@example.com", "hash", EUserStatus.ACTIVE,
+                List.of(new SimpleGrantedAuthority("ROLE_RENTER"))
+        );
+
+        org.springframework.mock.web.MockMultipartFile license = new org.springframework.mock.web.MockMultipartFile(
+                "licenseImage", "license.jpg", "image/jpeg", new byte[]{1, 2, 3}
+        );
+
+        when(userRepository.findById(4L)).thenReturn(Optional.of(renterUser));
+        when(cloudinaryService.uploadImage(eq(license), anyString(), anyLong())).thenReturn("https://cloudinary/license.jpg");
+        when(renterProfileRepository.findById(4L)).thenReturn(Optional.of(
+                RenterProfile.builder().user(renterUser).build()
+        ));
+
+        com.driveshare.modules.user.dto.response.UploadGplxResponse response = userProfileService.uploadGplx(license, renterDetails);
+
+        assertNotNull(response);
+        assertEquals("https://cloudinary/license.jpg", response.getLicenseImageUrl());
+        assertEquals("PENDING", response.getVerificationStatus());
+    }
 }
+

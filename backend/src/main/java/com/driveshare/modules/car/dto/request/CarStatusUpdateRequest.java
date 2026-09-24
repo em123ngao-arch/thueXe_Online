@@ -1,6 +1,6 @@
 package com.driveshare.modules.car.dto.request;
 
-import com.driveshare.modules.car.entity.ECarStatus;
+import com.driveshare.common.enums.ECarStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 

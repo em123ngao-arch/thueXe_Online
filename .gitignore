@@ -27,8 +27,10 @@ buildNumber.properties
 .mvn/wrapper/maven-wrapper.jar
 
 # Gradle
-.gradle
+.gradle/
 build/
+**/build/
+!src/**/build/
 
 # IDE files
 .idea/
@@ -39,6 +41,8 @@ build/
 .classpath
 .project
 .settings/
+bin/
+**/bin/
 
 # Node / Frontend
 node_modules/
@@ -56,3 +60,4 @@ desktop.ini
 # Local Scratch / Temporary
 scratch/
 *.tmp
+.agents/memory/
