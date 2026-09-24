@@ -31,6 +31,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.Set;
 
+import com.driveshare.modules.car.repository.CarImageRepository;
+import com.driveshare.modules.user.repository.UserRepository;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -38,6 +43,8 @@ public class CarServiceImpl implements CarService {
 
     private final CarRepository carRepository;
     private final OwnerProfileRepository ownerProfileRepository;
+    private final CarImageRepository carImageRepository;
+    private final UserRepository userRepository;
 
     /**
      * Tập trạng thái được phép khi Owner tự đổi trạng thái xe.
@@ -108,6 +115,12 @@ public class CarServiceImpl implements CarService {
         Long currentUserId = getCurrentUserId();
         Car car = getCarAndVerifyOwnership(carId, currentUserId);
 
+        // Kiểm tra business rule: xe đang có đơn đặt xe hoạt động thì không cho sửa
+        if (carRepository.hasActiveBooking(carId)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST,
+                    "Xe đang có đơn đặt xe hoạt động, không thể cập nhật thông tin");
+        }
+
         // Chỉ cập nhật trường nào được gửi lên (not null) — Partial Update
         if (request.getBrand() != null)        car.setBrand(request.getBrand());
         if (request.getModel() != null)        car.setModel(request.getModel());
@@ -153,11 +166,25 @@ public class CarServiceImpl implements CarService {
                     "Xe đang ở trạng thái " + car.getStatus() + ", không thể tự đổi trạng thái");
         }
 
+        // Nếu chuyển sang INACTIVE, phải kiểm tra xem xe có active booking không
+        if (newStatus == ECarStatus.INACTIVE && carRepository.hasActiveBooking(carId)) {
+            throw new AppException(ErrorCode.CAR_HAS_ACTIVE_BOOKING,
+                    "Xe đang có chuyến đi hoặc đơn đặt xe hoạt động, không thể ẩn xe");
+        }
+
         car.setStatus(newStatus);
         car = carRepository.save(car);
         log.info("Owner {} đã đổi trạng thái xe carId={} sang {}", currentUserId, carId, newStatus);
 
         return CarResponse.fromEntity(car);
+    }
+
+    @Override
+    @Transactional
+    public CarResponse deactivateCar(Long carId) {
+        CarStatusUpdateRequest request = new CarStatusUpdateRequest();
+        request.setStatus(ECarStatus.INACTIVE);
+        return updateCarStatus(carId, request);
     }
 
     // =====================================================================
@@ -188,13 +215,19 @@ public class CarServiceImpl implements CarService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<CarResponse> getMyCarsPaged(int page, int size) {
+    public PageResponse<CarResponse> getMyCarsPaged(ECarStatus status, int page, int size) {
         Long currentUserId = getCurrentUserId();
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<CarResponse> resultPage = carRepository
-                .findByOwnerIdAndDeletedAtIsNull(currentUserId, pageable)
-                .map(CarResponse::fromEntity);
+        Page<Car> carPage;
+
+        if (status != null) {
+            carPage = carRepository.findByOwnerIdAndStatusAndDeletedAtIsNull(currentUserId, status, pageable);
+        } else {
+            carPage = carRepository.findByOwnerIdAndDeletedAtIsNull(currentUserId, pageable);
+        }
+
+        Page<CarResponse> resultPage = carPage.map(CarResponse::fromEntity);
 
         return PageResponse.from(resultPage);
     }
@@ -209,6 +242,104 @@ public class CarServiceImpl implements CarService {
 
         return PageResponse.from(resultPage);
     }
+
+    // =====================================================================
+    // CRP-37 — Xem chi tiết thông tin xe (Vehicle Detail Page)
+    // =====================================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public com.driveshare.modules.car.dto.response.CarDetailResponse getPublicCarDetail(Long carId) {
+        Car car = carRepository.findByCarIdAndDeletedAtIsNull(carId)
+                .orElseThrow(() -> new AppException(ErrorCode.CAR_NOT_FOUND));
+
+        // 1. Mask biển số xe khi hiển thị công khai (VD: 51A-12345 -> 51A-123.XX)
+        String maskedPlate = maskPlateNumber(car.getPlateNumber());
+
+        // 2. Lấy bộ sưu tập ảnh xe
+        List<com.driveshare.modules.car.dto.response.CarImageResponse> images = carImageRepository
+                .findByCar_CarId(carId).stream()
+                .map(com.driveshare.modules.car.dto.response.CarImageResponse::fromEntity)
+                .collect(Collectors.toList());
+
+        // 3. Lấy thông tin chủ xe
+        com.driveshare.modules.car.dto.response.CarDetailResponse.OwnerInfo ownerInfo = null;
+        if (car.getOwnerId() != null) {
+            var ownerUser = userRepository.findById(car.getOwnerId()).orElse(null);
+            long totalCars = carRepository.countByOwnerIdAndStatusAndDeletedAtIsNull(car.getOwnerId(), ECarStatus.ACTIVE);
+
+            if (ownerUser != null) {
+                ownerInfo = com.driveshare.modules.car.dto.response.CarDetailResponse.OwnerInfo.builder()
+                        .ownerId(ownerUser.getUserId())
+                        .fullName(ownerUser.getFullName() != null ? ownerUser.getFullName() : ownerUser.getUsername())
+                        .avatarUrl(ownerUser.getAvatarUrl())
+                        .rating(5.0) // Mặc định 5.0 sao
+                        .totalCars(totalCars)
+                        .build();
+            }
+        }
+
+        log.info("Lấy thông tin chi tiết xe công khai: carId={}, brand={}", carId, car.getBrand());
+
+        return com.driveshare.modules.car.dto.response.CarDetailResponse.builder()
+                .carId(car.getCarId())
+                .plateNumberMasked(maskedPlate)
+                .brand(car.getBrand())
+                .model(car.getModel())
+                .year(car.getYear())
+                .color(car.getColor())
+                .seats(car.getSeats())
+                .transmission(car.getTransmission())
+                .fuelType(car.getFuelType())
+                .pricePerDay(car.getPricePerDay())
+                .address(car.getAddress())
+                .province(car.getProvince())
+                .description(car.getDescription())
+                .features(car.getFeatures())
+                .thumbnailUrl(car.getThumbnailUrl())
+                .status(car.getStatus())
+                .images(images)
+                .owner(ownerInfo)
+                .unavailableDates(new java.util.ArrayList<>())
+                .build();
+    }
+
+    private String maskPlateNumber(String plate) {
+        if (plate == null || plate.length() < 4) return plate;
+        int len = plate.length();
+        return plate.substring(0, len - 2) + "XX";
+    }
+
+    // =====================================================================
+    // CRP-39 — Tìm kiếm và lọc xe linh hoạt
+    // =====================================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<CarResponse> searchCars(com.driveshare.modules.car.dto.request.CarSearchRequest request) {
+        // Xử lý tiêu chí Sắp xếp (Sort)
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt"); // Mặc định: mới nhất
+        if ("price_asc".equalsIgnoreCase(request.getSortBy())) {
+            sort = Sort.by(Sort.Direction.ASC, "pricePerDay");
+        } else if ("price_desc".equalsIgnoreCase(request.getSortBy())) {
+            sort = Sort.by(Sort.Direction.DESC, "pricePerDay");
+        }
+
+        Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), sort);
+
+        // Tạo Specification từ tiêu chí lọc truyền vào
+        org.springframework.data.jpa.domain.Specification<Car> spec = 
+                com.driveshare.modules.car.repository.specification.CarSpecification.filterCars(request);
+
+        Page<CarResponse> resultPage = carRepository.findAll(spec, pageable)
+                .map(CarResponse::fromEntity);
+
+        log.info("Tìm kiếm xe với query parameters: brand={}, province={}, minPrice={}, maxPrice={}, kết quả={}",
+                request.getBrand(), request.getProvince(), request.getMinPrice(), request.getMaxPrice(), resultPage.getTotalElements());
+
+        return PageResponse.from(resultPage);
+    }
+
 
     // =====================================================================
     // Helper methods

@@ -34,6 +34,12 @@ public interface CarRepository extends JpaRepository<Car, Long>, JpaSpecificatio
     Page<Car> findByOwnerIdAndDeletedAtIsNull(Long ownerId, Pageable pageable);
 
     /**
+     * Lấy danh sách xe của một Owner theo trạng thái, bỏ qua xe đã xóa mềm, có phân trang.
+     * Dùng cho API GET /api/v1/cars/my-cars?status=... (CRP-31).
+     */
+    Page<Car> findByOwnerIdAndStatusAndDeletedAtIsNull(Long ownerId, ECarStatus status, Pageable pageable);
+
+    /**
      * Lấy danh sách xe PENDING chờ Admin duyệt — Admin module (Khiêm - feat/Backend).
      */
     Page<Car> findByStatusAndDeletedAtIsNull(ECarStatus status, Pageable pageable);

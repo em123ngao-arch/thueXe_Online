@@ -75,16 +75,17 @@ public class CarController {
 
     @Operation(
             summary = "Lấy danh sách xe của tôi",
-            description = "Owner lấy tất cả xe của mình (chưa bị xóa), có phân trang. " +
+            description = "Owner lấy tất cả xe của mình (chưa bị xóa), có hỗ trợ lọc theo trạng thái và phân trang. " +
                     "Sắp xếp theo ngày tạo mới nhất."
     )
     @GetMapping("/my-cars")
     @PreAuthorize("hasAnyRole('OWNER', 'ROLE_OWNER')")
     public ResponseEntity<ApiResponse<PageResponse<CarResponse>>> getMyCars(
+            @RequestParam(required = false) com.driveshare.common.enums.ECarStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        PageResponse<CarResponse> pageData = carService.getMyCarsPaged(page, size);
+        PageResponse<CarResponse> pageData = carService.getMyCarsPaged(status, page, size);
 
         return ResponseEntity.ok(
                 ApiResponse.<PageResponse<CarResponse>>builder()
@@ -149,6 +150,28 @@ public class CarController {
                 ApiResponse.<CarResponse>builder()
                         .success(true)
                         .message("Cập nhật trạng thái xe thành công")
+                        .data(response)
+                        .build()
+        );
+    }
+
+    // =====================================================================
+    // CRP-32 — PATCH /api/v1/cars/{id}/deactivate
+    // =====================================================================
+
+    @Operation(
+            summary = "Ẩn xe (Deactivate)",
+            description = "Owner chuyển trạng thái xe sang INACTIVE để ẩn khỏi kết quả tìm kiếm của khách."
+    )
+    @PatchMapping("/{id}/deactivate")
+    @PreAuthorize("hasAnyRole('OWNER', 'ROLE_OWNER')")
+    public ResponseEntity<ApiResponse<CarResponse>> deactivateCar(@PathVariable Long id) {
+        CarResponse response = carService.deactivateCar(id);
+
+        return ResponseEntity.ok(
+                ApiResponse.<CarResponse>builder()
+                        .success(true)
+                        .message("Ẩn xe (Deactivate) thành công")
                         .data(response)
                         .build()
         );

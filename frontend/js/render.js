@@ -112,10 +112,33 @@ const RenderService = {
       .join("");
   },
 
-  // 2. Render Modal Chi tiết xe
+  // 2. Render Modal Chi tiết xe (CRP-37)
   renderCarDetail(car) {
-    const depositAmount = Math.round(car.price_per_day * 0.3);
-    const amenitiesHtml = (car.amenities || [])
+    const carId = car.carId || car.id;
+    const pricePerDay = car.pricePerDay || car.price_per_day || 0;
+    const depositAmount = Math.round(pricePerDay * 0.3);
+    const plateNumber = car.plateNumberMasked || car.license_plate || car.plate_number || "51A-XXX.XX";
+    const city = car.province || car.city || "TP.HCM";
+    const pickupAddress = car.address || car.pickup_address || "Địa điểm nhận xe";
+    const imageUrl = car.thumbnailUrl || car.image_url || (car.images && car.images.length > 0 ? car.images[0].imageUrl : '');
+
+    // Owner info resolution
+    const ownerName = car.owner?.fullName || car.owner_name || "Chủ xe uy tín";
+    const ownerAvatar = car.owner?.avatarUrl || car.owner_avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80";
+    const ownerRating = car.owner?.rating || car.rating || 5.0;
+    const totalCars = car.owner?.totalCars || 1;
+
+    // Amenities list resolution
+    let amenitiesList = [];
+    if (Array.isArray(car.amenities)) {
+      amenitiesList = car.amenities;
+    } else if (typeof car.features === 'string' && car.features.trim()) {
+      amenitiesList = car.features.split(',').map(s => s.trim()).filter(Boolean);
+    } else {
+      amenitiesList = ["GPS", "Bluetooth", "Camera lùi", "Cảm biến va chạm"];
+    }
+
+    const amenitiesHtml = amenitiesList
       .map(
         (a) => `
       <span class="amenity-chip">
@@ -128,9 +151,23 @@ const RenderService = {
       )
       .join("");
 
+    // Gallery images rendering
+    let galleryHtml = `<img src="${imageUrl}" alt="${car.brand} ${car.model}" />`;
+    if (car.images && car.images.length > 1) {
+      const thumbs = car.images.map(img => `<img src="${img.imageUrl}" alt="Gallery image" style="height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer;" onclick="document.querySelector('.detail-gallery > img').src='${img.imageUrl}'" />`).join('');
+      galleryHtml = `
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <img src="${imageUrl}" alt="${car.brand} ${car.model}" style="width: 100%; height: 260px; object-fit: cover; border-radius: 8px;" />
+          <div style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.3rem;">
+            ${thumbs}
+          </div>
+        </div>
+      `;
+    }
+
     return `
       <div class="detail-gallery">
-        <img src="${car.image_url}" alt="${car.brand} ${car.model}" />
+        ${galleryHtml}
       </div>
 
       <div class="detail-columns">
@@ -138,7 +175,7 @@ const RenderService = {
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
             <div>
               <h2 style="font-size: 1.35rem; color: var(--slate-900);">${car.brand} ${car.model} (${car.year})</h2>
-              <p style="color: var(--slate-500); font-size: 0.88rem; margin-top: 0.2rem;">Biển số: <strong>${car.license_plate}</strong> · Đăng ký tại ${car.city || "TP.HCM"}</p>
+              <p style="color: var(--slate-500); font-size: 0.88rem; margin-top: 0.2rem;">Biển số: <strong>${plateNumber}</strong> · Đăng ký tại ${city}</p>
             </div>
             <span class="badge badge-success">Sẵn sàng đón khách</span>
           </div>
@@ -152,7 +189,7 @@ const RenderService = {
               Địa điểm nhận & trả xe
             </h4>
             <p style="font-size: 0.88rem; color: var(--slate-700); background: var(--slate-50); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--slate-200);">
-              ${car.pickup_address} (Có hỗ trợ giao nhận tận nơi bán kính 10km)
+              ${pickupAddress} (Có hỗ trợ giao nhận tận nơi bán kính 10km)
             </p>
           </div>
 
@@ -171,7 +208,7 @@ const RenderService = {
 
           <div style="margin-bottom: 1.15rem;">
             <h4 class="detail-section-title">Mô tả từ chủ xe</h4>
-            <p style="font-size: 0.88rem; color: var(--slate-600); line-height: 1.6;">${car.description}</p>
+            <p style="font-size: 0.88rem; color: var(--slate-600); line-height: 1.6;">${car.description || 'Không có mô tả bổ sung.'}</p>
           </div>
 
           <div class="rental-rules-box">
@@ -199,13 +236,13 @@ const RenderService = {
         <div>
           <!-- Chủ xe info -->
           <div style="background: var(--white); border: 1px solid var(--slate-200); border-radius: var(--radius-lg); padding: 0.95rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem;">
-            <img src="${car.owner_avatar}" alt="${car.owner_name}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover;" />
+            <img src="${ownerAvatar}" alt="${ownerName}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover;" />
             <div>
               <div style="font-size: 0.72rem; color: var(--slate-500); font-weight: 700; text-transform: uppercase;">Chủ xe uy tín</div>
-              <div style="font-size: 0.92rem; font-weight: 700; color: var(--slate-900);">${car.owner_name}</div>
+              <div style="font-size: 0.92rem; font-weight: 700; color: var(--slate-900);">${ownerName}</div>
               <div style="font-size: 0.78rem; color: var(--primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="#ea580c" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                5.0 (Tỷ lệ phản hồi: 100%)
+                ${Number(ownerRating).toFixed(1)} (${totalCars} xe đang quản lý)
               </div>
             </div>
           </div>
@@ -215,7 +252,7 @@ const RenderService = {
             <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.75rem;">Bảng giá tham khảo</h4>
             <div class="calc-row">
               <span>Đơn giá ngày:</span>
-              <span style="font-weight: 700;">${StorageService.formatCurrency(car.price_per_day)}</span>
+              <span style="font-weight: 700;">${StorageService.formatCurrency(pricePerDay)}</span>
             </div>
             <div class="calc-row">
               <span>Bảo hiểm chuyến đi MIC:</span>
@@ -230,7 +267,7 @@ const RenderService = {
               <span>${StorageService.formatCurrency(depositAmount)}</span>
             </div>
             <div style="margin-top: 1.15rem;">
-              <button class="btn btn-primary" style="width: 100%;" onclick="App.closeCarDetailModal(); AuthService.requireLoginThen(() => BookingService.startBookingFlow(${car.id}))">
+              <button class="btn btn-primary" style="width: 100%;" onclick="App.closeCarDetailModal(); AuthService.requireLoginThen(() => BookingService.startBookingFlow(${carId}))">
                 Tiến hành Đặt xe ngay
               </button>
             </div>
