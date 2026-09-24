@@ -253,5 +253,209 @@ const ApiService = {
         message: 'Lỗi cập nhật trạng thái người dùng'
       };
     }
+  },
+
+  /**
+   * API: Phê duyệt hoặc từ chối Giấy phép lái xe của Khách thuê (Admin)
+   * PATCH /api/v1/admin/users/{userId}/approve-license
+   */
+  async approveLicense(userId, data = {}) {
+    const url = `${API_CONFIG.BASE_URL}/admin/users/${userId}/approve-license`;
+
+    try {
+      const res = await this.fetchWithTimeout(url, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          verification_status: data.verification_status,
+          rejection_reason: data.rejection_reason
+        })
+      });
+
+      if (res.status === 403) {
+        return {
+          success: false,
+          status: 403,
+          errorCode: 'FORBIDDEN',
+          message: 'Bạn không có quyền thực hiện thao tác này (403 Forbidden)'
+        };
+      }
+
+      if (res.status === 400) {
+        let errJson = null;
+        try { errJson = await res.json(); } catch(e) {}
+        return {
+          success: false,
+          status: 400,
+          errorCode: errJson?.errorCode || 'VALIDATION_FAILED',
+          message: errJson?.message || 'Dữ liệu không hợp lệ hoặc thiếu lý do từ chối'
+        };
+      }
+
+      if (res.ok) {
+        const json = await res.json();
+        return {
+          success: true,
+          source: 'BACKEND_API',
+          message: json.message || 'Cập nhật trạng thái bằng lái thành công',
+          data: json.data
+        };
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (error) {
+      console.warn(`⚠️ DriveShare: Không thể kết nối Backend API khi duyệt GPLX user #${userId}, cập nhật Local Storage:`, error.message);
+      const status = data.verification_status === 'verified' ? 'APPROVED' : 'REJECTED';
+      StorageService.updateRenterLicense(userId, status);
+      return {
+        success: true,
+        source: 'LOCAL_STORAGE',
+        message: data.verification_status === 'verified'
+          ? 'Đã xác minh GPLX hợp lệ (Local Storage)'
+          : 'Đã từ chối GPLX (Local Storage)'
+      };
+    }
+  },
+
+  /**
+   * API: Lấy danh sách xe trong hệ thống (Admin)
+   * GET /api/v1/admin/cars
+   */
+  async getAdminCars(params = {}) {
+    const query = new URLSearchParams({
+      page: params.page || 1,
+      limit: params.limit || 10,
+      search: params.search || '',
+      status: params.status || 'all',
+      sortBy: params.sortBy || 'created_at',
+      sortDir: params.sortDir || 'desc'
+    }).toString();
+
+    const url = `${API_CONFIG.BASE_URL}/admin/cars?${query}`;
+
+    try {
+      const res = await this.fetchWithTimeout(url, { method: 'GET' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.success && json.data) {
+          return {
+            success: true,
+            source: 'BACKEND_API',
+            data: json.data
+          };
+        }
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (error) {
+      console.warn('⚠️ DriveShare: Không thể kết nối Backend API khi lấy danh sách xe, sử dụng Local Storage:', error.message);
+      const allCars = StorageService.getCars();
+      let filtered = allCars;
+      if (params.status && params.status !== 'all') {
+        const st = params.status.toUpperCase();
+        filtered = allCars.filter(c => c.status === st || (st === 'PENDING_REVIEW' && c.status === 'PENDING_APPROVAL'));
+      }
+      return {
+        success: true,
+        source: 'LOCAL_STORAGE',
+        data: {
+          items: filtered,
+          total_elements: filtered.length,
+          total_pages: 1,
+          current_page: 1,
+          has_next: false,
+          has_previous: false
+        }
+      };
+    }
+  },
+
+  /**
+   * API: Xem chi tiết 1 xe (Admin)
+   * GET /api/v1/admin/cars/{carId}
+   */
+  async getAdminCarDetail(carId) {
+    const url = `${API_CONFIG.BASE_URL}/admin/cars/${carId}`;
+    try {
+      const res = await this.fetchWithTimeout(url, { method: 'GET' });
+      if (res.ok) {
+        const json = await res.json();
+        return {
+          success: true,
+          source: 'BACKEND_API',
+          data: json.data
+        };
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (error) {
+      console.warn(`⚠️ DriveShare: Fallback Local Storage cho chi tiết xe #${carId}:`, error.message);
+      const car = StorageService.getCarById(carId);
+      if (car) return { success: true, source: 'LOCAL_STORAGE', data: car };
+      return { success: false, message: 'Không tìm thấy thông tin xe' };
+    }
+  },
+
+  /**
+   * API: Phê duyệt xe mới đăng (Admin)
+   * PATCH /api/v1/admin/cars/{carId}/approve
+   */
+  async approveCar(carId) {
+    const url = `${API_CONFIG.BASE_URL}/admin/cars/${carId}/approve`;
+
+    try {
+      const res = await this.fetchWithTimeout(url, { method: 'PATCH' });
+      if (res.ok) {
+        const json = await res.json();
+        return {
+          success: true,
+          source: 'BACKEND_API',
+          message: json.message || 'Phê duyệt xe thành công',
+          data: json.data
+        };
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (error) {
+      console.warn(`⚠️ DriveShare: Fallback Local Storage duyệt xe #${carId}:`, error.message);
+      StorageService.updateCarStatus(carId, 'ACTIVE');
+      return {
+        success: true,
+        source: 'LOCAL_STORAGE',
+        message: `Đã duyệt xe #${carId} (Local Storage)`
+      };
+    }
+  },
+
+  /**
+   * API: Từ chối xe mới đăng (Admin)
+   * PATCH /api/v1/admin/cars/{carId}/reject
+   */
+  async rejectCar(carId, rejectionReason = '') {
+    const url = `${API_CONFIG.BASE_URL}/admin/cars/${carId}/reject`;
+
+    try {
+      const res = await this.fetchWithTimeout(url, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: 'rejected',
+          rejection_reason: rejectionReason
+        })
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        return {
+          success: true,
+          source: 'BACKEND_API',
+          message: json.message || 'Đã từ chối xe',
+          data: json.data
+        };
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (error) {
+      console.warn(`⚠️ DriveShare: Fallback Local Storage từ chối xe #${carId}:`, error.message);
+      StorageService.updateCarStatus(carId, 'REJECTED', rejectionReason);
+      return {
+        success: true,
+        source: 'LOCAL_STORAGE',
+        message: `Đã từ chối xe #${carId} (Local Storage)`
+      };
+    }
   }
 };

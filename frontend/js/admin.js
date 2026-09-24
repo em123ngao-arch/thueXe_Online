@@ -520,28 +520,59 @@ const AdminService = {
     }
   },
 
-  approveCar(carId) {
-    StorageService.updateCarStatus(carId, 'ACTIVE');
-    App.showToast(`Đã duyệt xe #${carId}! Xe đã xuất hiện trên trang tìm kiếm.`, 'success');
+  async approveCar(carId) {
+    const res = await ApiService.approveCar(carId);
+    if (res.success) {
+      App.showToast(res.message || `Đã duyệt xe #${carId}! Xe đã xuất hiện trên trang tìm kiếm.`, 'success');
+    } else {
+      App.showToast(res.message || `Không thể phê duyệt xe #${carId}`, 'error');
+    }
     this.renderAdminPortal();
   },
 
-  rejectCar(carId) {
-    StorageService.updateCarStatus(carId, 'REJECTED', 'Ảnh cavet hoặc hình ảnh xe chưa đạt yêu cầu.');
-    App.showToast(`Đã từ chối xe #${carId}.`, 'error');
+  async rejectCar(carId) {
+    const reason = prompt('Nhập lý do từ chối kiểm duyệt xe này:', 'Ảnh chụp giấy tờ hoặc xe chưa đạt tiêu chuẩn kiểm duyệt.');
+    if (!reason || !reason.trim()) {
+      App.showToast('Bạn đã hủy thao tác từ chối xe', 'info');
+      return;
+    }
+
+    const res = await ApiService.rejectCar(carId, reason.trim());
+    if (res.success) {
+      App.showToast(res.message || `Đã từ chối xe #${carId}.`, 'error');
+    } else {
+      App.showToast(res.message || `Lỗi khi từ chối xe #${carId}`, 'error');
+    }
     this.renderAdminPortal();
   },
 
-  approveLicense(renterId) {
-    StorageService.updateRenterLicense(renterId, 'APPROVED');
-    App.showToast(`Đã xác minh GPLX hợp lệ cho khách thuê #${renterId}!`, 'success');
+  async approveLicense(renterId) {
+    const res = await ApiService.approveLicense(renterId, { verification_status: 'verified' });
+    if (res.success) {
+      App.showToast(res.message || `Đã xác minh GPLX hợp lệ cho khách thuê #${renterId}!`, 'success');
+    } else {
+      App.showToast(res.message || `Không thể xác minh GPLX cho khách thuê #${renterId}`, 'error');
+    }
     this.renderAdminPortal();
     this.switchTab('LICENSES');
   },
 
-  rejectLicense(renterId) {
-    StorageService.updateRenterLicense(renterId, 'REJECTED');
-    App.showToast(`Đã yêu cầu khách thuê #${renterId} chụp lại GPLX.`, 'error');
+  async rejectLicense(renterId) {
+    const reason = prompt('Nhập lý do từ chối hoặc yêu cầu chụp lại GPLX:', 'Ảnh chụp GPLX bị mờ hoặc không rõ số seri. Vui lòng chụp lại hai mặt rõ nét.');
+    if (!reason || !reason.trim()) {
+      App.showToast('Bạn đã hủy thao tác từ chối GPLX', 'info');
+      return;
+    }
+
+    const res = await ApiService.approveLicense(renterId, {
+      verification_status: 'rejected',
+      rejection_reason: reason.trim()
+    });
+    if (res.success) {
+      App.showToast(res.message || `Đã yêu cầu khách thuê #${renterId} chụp lại GPLX.`, 'error');
+    } else {
+      App.showToast(res.message || `Lỗi khi từ chối GPLX`, 'error');
+    }
     this.renderAdminPortal();
     this.switchTab('LICENSES');
   },
