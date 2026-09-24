@@ -55,7 +55,7 @@ public class AdminUserController {
     }
 
     @GetMapping("/{userId}")
-    @PreAuthorize("permitAll()")
+    @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
     @Operation(summary = "Xem chi tiết một người dùng")
     public ResponseEntity<ApiResponse<UserItemResponse>> getUserById(@PathVariable Long userId) {
         UserItemResponse user = adminUserService.getUserById(userId);

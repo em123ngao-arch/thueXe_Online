@@ -20,6 +20,7 @@ public class UserItemResponse {
     private String phone;
     private String fullName;
     private String avatarUrl;
+    private String address;
     private String idCardNumber;
     private EUserStatus status;
     private Set<String> roles;

@@ -724,6 +724,12 @@ const AdminService = {
                 ${u.id_card_number || u.idCardNumber || 'Chưa định danh'}
               </div>
             </div>
+            <div>
+              <div style="font-size: 0.76rem; color: var(--slate-500);">Địa chỉ thường trú / Nơi ở</div>
+              <div style="font-size: 0.9rem; font-weight: 600; color: var(--slate-800);">
+                ${u.address || 'Chưa cập nhật'}
+              </div>
+            </div>
           </div>
         </div>
 

@@ -233,6 +233,10 @@ public class AdminUserServiceImpl implements AdminUserService {
 
         String targetStatus = request.getStatus() != null ? request.getStatus().trim().toLowerCase() : "";
 
+        if (actorId != null && actorId.equals(userId) && "locked".equals(targetStatus)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Quản trị viên không thể tự khóa tài khoản của chính mình");
+        }
+
         if ("locked".equals(targetStatus)) {
             // AC1 & AC2: Khóa tài khoản (LOCKED) -> chặn đăng nhập
             user.setStatus(EUserStatus.LOCKED);
@@ -324,6 +328,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .phone(user.getPhone())
                 .fullName(user.getFullName())
                 .avatarUrl(user.getAvatarUrl())
+                .address(user.getAddress())
                 .idCardNumber(user.getIdCardNumber())
                 .status(user.getStatus())
                 .roles(roles)

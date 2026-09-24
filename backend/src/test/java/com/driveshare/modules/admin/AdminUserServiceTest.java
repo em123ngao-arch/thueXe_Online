@@ -72,6 +72,7 @@ class AdminUserServiceTest {
                 .phone("0901234567")
                 .passwordHash("$2a$10$SensitivePasswordHashDoNotExpose")
                 .fullName("Nguyễn Văn Hùng")
+                .address("123 Nguyễn Huệ, Quận 1, TP.HCM")
                 .status(EUserStatus.ACTIVE)
                 .roles(Set.of(ownerRole))
                 .ownerProfile(ownerProfile)
@@ -128,6 +129,7 @@ class AdminUserServiceTest {
         assertEquals("Nguyễn Văn Hùng", response.getFullName());
         assertEquals("owner.hung@gmail.com", response.getEmail());
         assertEquals("0901234567", response.getPhone());
+        assertEquals("123 Nguyễn Huệ, Quận 1, TP.HCM", response.getAddress());
         
         // Roles & Account status
         assertTrue(response.getRoles().contains("owner"));
@@ -359,6 +361,30 @@ class AdminUserServiceTest {
 
         // AC4: Audit log is saved
         verify(auditLogRepository).save(any(AuditLog.class));
+    }
+
+    @Test
+    @DisplayName("Admin Block User - Constraint: Admin cannot block their own account")
+    void testBlockUser_SelfBlock_ThrowsInvalidRequest() {
+        User adminUser = User.builder()
+                .userId(6L)
+                .username("admin_tin")
+                .status(EUserStatus.ACTIVE)
+                .build();
+
+        when(userRepository.findById(6L)).thenReturn(Optional.of(adminUser));
+
+        UpdateUserStatusRequest request = UpdateUserStatusRequest.builder()
+                .status("locked")
+                .reason("Tự khóa")
+                .build();
+
+        AppException ex = assertThrows(AppException.class, () -> {
+            adminUserService.updateUserStatus(6L, request, 6L, "admin_tin");
+        });
+
+        assertEquals(ErrorCode.INVALID_REQUEST, ex.getErrorCode());
+        assertTrue(ex.getMessage().contains("không thể tự khóa tài khoản"));
     }
 
     @Test
