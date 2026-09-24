@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -32,6 +33,12 @@ public interface CarRepository extends JpaRepository<Car, Long>, JpaSpecificatio
      * Dùng cho API GET /api/v1/cars/my-cars.
      */
     Page<Car> findByOwnerIdAndDeletedAtIsNull(Long ownerId, Pageable pageable);
+
+    /**
+     * Lấy toàn bộ danh sách xe của một Owner chưa xóa mềm (CRP-46).
+     */
+    List<Car> findByOwnerIdAndDeletedAtIsNull(Long ownerId);
+
 
     /**
      * Lấy danh sách xe PENDING chờ Admin duyệt — Admin module (Khiêm - feat/Backend).
