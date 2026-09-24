@@ -17,16 +17,17 @@ import org.springframework.web.bind.annotation.*;
 public class PublicCarController {
 
     private final CarService carService;
+    private final com.driveshare.modules.car.service.CarSearchService carSearchService;
 
     @GetMapping
-    @Operation(summary = "Xem danh sách xe công khai", description = "Chỉ trả về các xe có trạng thái ACTIVE (BR-04-2)")
+    @Operation(summary = "Xem và tìm kiếm danh sách xe công khai", description = "Chỉ trả về các xe ACTIVE, hỗ trợ lọc theo hãng, giá, chỗ ngồi, ngày trống (CRP-35, 36, 38)")
     public ResponseEntity<ApiResponse<PageResponse<CarResponse>>> getPublicCars(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @jakarta.validation.Valid @ModelAttribute com.driveshare.modules.car.dto.request.CarSearchFilterRequest request
     ) {
-        PageResponse<CarResponse> pageData = carService.getPublicActiveCars(page, size);
+        PageResponse<CarResponse> pageData = carSearchService.searchPublicCars(request);
         return ResponseEntity.ok(
                 ApiResponse.<PageResponse<CarResponse>>builder()
+                        .code(200)
                         .success(true)
                         .message("Lấy danh sách xe thành công")
                         .data(pageData)
@@ -34,3 +35,4 @@ public class PublicCarController {
         );
     }
 }
+
