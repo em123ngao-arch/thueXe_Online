@@ -68,6 +68,7 @@ public class UserProfileServiceImpl implements UserProfileService {
 
         return CurrentUserProfileResponse.builder()
                 .userId(user.getUserId())
+                .username(user.getUsername())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .phoneNumber(user.getPhone())

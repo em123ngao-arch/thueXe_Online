@@ -371,3 +371,175 @@ Bước 4:
 2. **Tên nhánh:** Bắt buộc có mã task (VD: `feature/CRP-12-login`).
 3. **Không push thẳng `develop`:** Luôn tạo **Pull Request** trên GitHub và nhờ Lead Bảo duyệt.
 4. **Response chuẩn:** Mọi API thành công phải bọc trong `ApiResponse<T>`, mọi lỗi ném `AppException(ErrorCode.XYZ)`.
+
+---
+
+# 🚀 SPRINT 2: BẢNG PHÂN CÔNG NHIỆM VỤ JIRA CHÍNH THỨC (CẬP NHẬT MỚI)
+
+> **Mô hình phân công:**  
+> - **TẤT CẢ THÀNH VIÊN LÀM BACKEND (BE)** tập trung xây dựng toàn bộ API cốt lõi của Sprint 2.
+> - **Chi Tin Nguyen (Chí Tín)**: Đảm nhận trọn gói module **Thanh toán (Payment)** (Backend + Giao diện VietQR).
+> - **Nguyễn Duy Bảo (Bảo)**: Phụ trách **`CRP-55`** (Hoàn thành review Sprint 1, pass 13/13 test cases), kiến tạo Database Migration (`rentals`, `payments`) và Review PR toàn nhóm.
+> - **Tổng khối lượng:** 17 Jira Issues — 73 Story Points, chia đều và cân bằng cho 6 thành viên.
+
+---
+
+### 📋 BẢNG GÁN TÀI KHOẢN JIRA 1:1 CHÍNH THỨC (PHỦ KÍN 28 WORK ITEMS)
+
+| Mã Vé Jira | Tên Story / Nhiệm vụ | Điểm (SP) | Người Phụ Trách (Jira Assignee) | Phạm Vi Backend API Cụ Thể |
+| :---: | :--- | :---: | :--- | :--- |
+| **`CRP-55`** | Complete Sprint 0 / 1 Reviews | **3** | **Nguyễn Duy Bảo** (`NB`) | BE: Fix `CurrentUserProfileResponse` pass 13/13 tests, Viết Migration DB `rentals` & `payments`, Review PR |
+| **`CRP-24`** | Manage Own Vehicle Listings (CRUD) | **5** | **Đỗ Ngọc Phát** | BE: API `GET/PUT/DELETE /api/v1/owner/cars/{id}`, validate 403 chủ xe, chặn xóa xe đang có đơn thuê |
+| **`CRP-29`** | Owner Create Vehicle Listing | **5** | **Đỗ Ngọc Phát** | BE: API `POST /api/v1/owner/cars` tạo xe mới ở trạng thái `PENDING` |
+| **`CRP-30`** | Owner Update Vehicle Listing | **3** | **Đỗ Ngọc Phát** | BE: API `PUT /api/v1/owner/cars/{id}` sửa thông tin, giá thuê, tiện ích |
+| **`CRP-31`** | Owner View My Vehicle List | **3** | **Đỗ Ngọc Phát** | BE: API `GET /api/v1/owner/cars` xem danh sách xe của chính mình |
+| **`CRP-32`** | Owner Delete or Deactivate Vehicle | **3** | **Đỗ Ngọc Phát** | BE: API `DELETE /api/v1/owner/cars/{id}` và đổi trạng thái `INACTIVE` |
+| **`CRP-33`** | Owner Upload and Manage Vehicle Photos | **3** | **Đỗ Ngọc Phát** | BE: Upload ảnh xe lên Cloudinary, lưu danh sách URL vào bảng `car_images` |
+| **`CRP-37`** | Vehicle Detail Page / API | **3** | **Đỗ Ngọc Phát** | BE: API `GET /api/v1/public/cars/{id}` trả chi tiết thông số, tiện ích, ảnh xe, điều khoản, thông tin chủ xe |
+| **`CRP-39`** | Define Vehicle Filter Set and Search API Contract | **3** | **Đỗ Ngọc Phát** | BE: Chuẩn hóa DTO Request/Response bộ lọc kiểu Mioto (`brand`, `priceMin/Max`, `seats`, `transmission`, `fuelType`) |
+| **`CRP-35`** | Public Vehicle Search with Multi-Filter | **8** | **Quân Nguyễn Duy** (`QD`) | BE: Hiện thực tìm kiếm đa tiêu chí (`CarSpecification` JPA), chỉ trả xe `ACTIVE` |
+| **`CRP-36`** | Vehicle List Pagination and Sorting | **3** | **Quân Nguyễn Duy** (`QD`) | BE: Phân trang `page`, `size` và sắp xếp theo giá tăng/giảm, năm sản xuất |
+| **`CRP-38`** | Filter Vehicles by Availability Date Range | **5** | **Quân Nguyễn Duy** (`QD`) | BE: Lọc xe trống lịch theo ngày (`startDate`, `endDate`), truy vấn `NOT EXISTS` loại trừ xe bận |
+| **`CRP-44`** | Renter View and Cancel Own Requests | **3** | **Quân Nguyễn Duy** (`QD`) | BE: API `GET /api/v1/rentals/me` (danh sách đơn của khách) và `PUT /api/v1/rentals/{id}/cancel` (khách tự hủy) |
+| **`CRP-46`** | Owner View Incoming Rental Requests | **3** | **Quân Nguyễn Duy** (`QD`) | BE: API `GET /api/v1/owner/rentals` (danh sách các yêu cầu thuê gửi đến chủ xe kèm lọc theo trạng thái) |
+| **`CRP-41`** | Renter Submit Rental Request | **8** | **Vĩ Lâm** (`VL`) | BE: API `POST /api/v1/rentals` tạo yêu cầu thuê, validate ngày hợp lệ, tính tổng tiền dự kiến, trạng thái `PENDING` |
+| **`CRP-42`** | Enforce Max 3 Pending Requests per User | **3** | **Vĩ Lâm** (`VL`) | BE: Nghiệp vụ đếm số đơn `PENDING` của khách, nếu `>= 3` ném lỗi `MAX_PENDING_RENTALS_EXCEEDED` (HTTP 400) |
+| **`CRP-43`** | Auto-Expire Pending Request after 60 Minutes | **5** | **Vĩ Lâm** (`VL`) | BE: Spring `@Scheduled` quét ngầm định kỳ, quét các đơn `PENDING` quá 60 phút tự động chuyển sang `EXPIRED` |
+| **`CRP-47`** | Owner Approve Rental Request | **5** | **Khiêm Tấn** (`KT`) | BE: API `PUT /api/v1/owner/rentals/{id}/approve` cho chủ xe duyệt 1 đơn thuê sang trạng thái `APPROVED` |
+| **`CRP-48`** | Owner Reject Rental Request | **3** | **Khiêm Tấn** (`KT`) | BE: API `PUT /api/v1/owner/rentals/{id}/reject` từ chối đơn thuê, bắt buộc truyền lý do từ chối |
+| **`CRP-49`** | Auto-Reject Competing Requests on Approval | **5** | **Khiêm Tấn** (`KT`) | BE: Thuật toán tự động tìm và chuyển tất cả các đơn `PENDING` khác bị trùng khung giờ sang `REJECTED` |
+| **`CRP-51`** | Renter Pay for Approved Booking | **8** | **Chi Tin Nguyen** (`CN`) | Fullstack Pay: API tính tiền cọc 30%, tích hợp sinh VietQR động / Mock Gateway, UI thanh toán |
+| **`CRP-52`** | Handle Payment Result States | **5** | **Chi Tin Nguyen** (`CN`) | Fullstack Pay: Xử lý trạng thái kết quả thanh toán `SUCCESS`, `FAILED`, `CANCELLED` |
+| **`CRP-53`** | Booking Status Lifecycle after Payment | **3** | **Chi Tin Nguyen** (`CN`) | Fullstack Pay: Chuyển đơn sang `CONFIRMED` / `DEPOSIT_PAID`, cập nhật trạng thái xe |
+| **`CRP-54`** | Owner View Earnings and Payment History | **3** | **Chi Tin Nguyen** (`CN`) | Fullstack Pay: API & UI tổng hợp doanh thu, lịch sử dòng tiền của chủ xe |
+
+---
+
+### 👥 CHI TIẾT NHIỆM VỤ, RANH GIỚI FILE & KỊCH BẢN TỰ TEST (CHO THÀNH VIÊN & AI)
+
+#### 1. 🛡️ Nguyễn Duy Bảo (`NB` - Lead & Architect) — CRP-55 (3 SP) + DB Migration & Review
+* **Nhánh Git:** `feature/CRP-55-sprint1-review-and-migration`
+* **Ranh giới File:**
+  - ✅ Sửa: `CurrentUserProfileResponse.java`, `UserProfileServiceImpl.java`, `ErrorCode.java`.
+  - ✅ Tạo: `backend/src/main/resources/db/migration/V3__create_rentals_and_payments.sql`.
+* **Trạng thái thực tế:** ĐÃ HOÀN TẤT. Backend test `45/45` bài test pass 100%.
+
+---
+
+#### 2. 🚗 Đỗ Ngọc Phát — CRP-24, 29, 30, 31, 32, 33, 37, 39
+* **Nhánh Git:** `feature/car-management-be`
+* **Ranh giới File (Strict Boundary for AI):**
+  - ✅ ĐƯỢC PHÉP làm việc trong: `backend/src/main/java/com/driveshare/modules/car/`
+  - ⛔ CẤM sửa các package: `auth`, `user`, `admin`, `rental`, `payment`.
+* **Quy tắc & Mã lỗi:**
+  - Sửa/Xóa xe không phải của mình ➔ `403 FORBIDDEN` (`CAR_ACCESS_DENIED`).
+  - Xóa xe đang có đơn thuê active (`APPROVED`/`CONFIRMED`) ➔ `400 BAD_REQUEST` (`CAR_HAS_ACTIVE_BOOKING`).
+* **Kịch bản tự test bằng PowerShell (AI/Phát chạy trên máy mình):**
+```powershell
+$token = (Invoke-RestMethod -Uri "http://localhost:8080/api/v1/auth/login" -Method POST -ContentType "application/json" -Body '{"identifier":"owner_demo","password":"Owner123@"}').data.access_token
+$headers = @{Authorization="Bearer $token"}
+# 1. Xem danh sach xe cua toi
+$myCars = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/owner/cars" -Method GET -Headers $headers
+Write-Host "Xe cua toi: $($myCars.data.Count)"
+# 2. Xem chi tiet xe public
+$detail = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/public/cars/1" -Method GET
+Write-Host "Xe 1: $($detail.data.brand) $($detail.data.model)"
+```
+
+---
+
+#### 3. 🔍 Quân Nguyễn Duy (`QD`) — CRP-35, 36, 38, 44, 46
+* **Nhánh Git:** `feature/rental-query-and-search-be`
+* **Ranh giới File (Strict Boundary for AI):**
+  - ✅ ĐƯỢC PHÉP làm việc trong: `backend/src/main/java/com/driveshare/modules/car/service/CarSearchService*`, các query controller của xe & rental.
+  - ⛔ CẤM sửa logic tạo đơn của Vĩ hoặc duyệt đơn của Khiêm.
+* **Quy tắc & Mã lỗi:**
+  - Lọc ngày trống: Dùng SQL `NOT EXISTS` loại trừ các xe đã có cuốc thuê `APPROVED` hoặc `CONFIRMED` giao nhau với `[startDate, endDate]`.
+  - Khách chỉ hủy được đơn của chính mình khi `status == 'PENDING'`. Nếu không ➔ `400 BAD_REQUEST` (`RENTAL_CANNOT_BE_CANCELLED`).
+* **Kịch bản tự test bằng PowerShell (AI/Quân chạy trên máy mình):**
+```powershell
+# 1. Tim xe theo khoang ngay
+$search = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/public/cars?startDate=2026-10-01&endDate=2026-10-03" -Method GET
+Write-Host "Tim thay: $($search.data.Count) xe"
+# 2. Khach xem don cua minh
+$renterToken = (Invoke-RestMethod -Uri "http://localhost:8080/api/v1/auth/login" -Method POST -ContentType "application/json" -Body '{"identifier":"renter_demo","password":"Renter123@"}').data.access_token
+$myRentals = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/rentals/me" -Method GET -Headers @{Authorization="Bearer $renterToken"}
+Write-Host "Don cua toi: $($myRentals.data.Count)"
+```
+
+---
+
+#### 4. ⚙️ Vĩ Lâm (`VL`) — CRP-41, 42, 43
+* **Nhánh Git:** `feature/rental-request-be`
+* **Ranh giới File (Strict Boundary for AI):**
+  - ✅ ĐƯỢC PHÉP làm việc trong: `backend/src/main/java/com/driveshare/modules/rental/` (phần tạo đơn & scheduler).
+  - ⛔ CẤM sửa các package khác.
+* **Quy tắc & Mã lỗi:**
+  - Nếu khách đang có `>= 3` đơn `PENDING` ➔ Ném lỗi `400 BAD_REQUEST` (`MAX_PENDING_RENTALS_EXCEEDED`).
+  - Viết `@Scheduled(cron = "0 */5 * * * *")` quét các đơn `PENDING` tạo quá 60 phút đổi sang `EXPIRED`.
+* **Kịch bản tự test bằng PowerShell (AI/Vĩ chạy trên máy mình):**
+```powershell
+$token = (Invoke-RestMethod -Uri "http://localhost:8080/api/v1/auth/login" -Method POST -ContentType "application/json" -Body '{"identifier":"renter_demo","password":"Renter123@"}').data.access_token
+$headers = @{Authorization="Bearer $token"}
+# Thu tao 4 don, don thu 4 phai bi chan
+try {
+    for ($i=1; $i -le 4; $i++) {
+        $body = @{ car_id = 1; start_date = "2026-11-0$i"; end_date = "2026-11-0$($i+1)" } | ConvertTo-Json
+        Invoke-RestMethod -Uri "http://localhost:8080/api/v1/rentals" -Method POST -Headers $headers -ContentType "application/json" -Body $body
+        Write-Host "Tao don $i thanh cong"
+    }
+} catch {
+    Write-Host "Da chan thanh cong o don vuot gioi han voi ma: $($_.Exception.Response.StatusCode.value__)"
+}
+```
+
+---
+
+#### 5. ✍️ Khiêm Tấn (`KT`) — CRP-47, 48, 49
+* **Nhánh Git:** `feature/booking-approval-be`
+* **Ranh giới File (Strict Boundary for AI):**
+  - ✅ ĐƯỢC PHÉP làm việc trong: `backend/src/main/java/com/driveshare/modules/rental/` (phần duyệt & từ chối đơn).
+  - ⛔ CẤM sửa module `payment` hay `car`.
+* **Quy tắc & Mã lỗi:**
+  - Từ chối thiếu lý do ➔ Ném lỗi `400 BAD_REQUEST` (`REJECT_REASON_REQUIRED`).
+  - Duyệt đơn ➔ Tự động tìm tất cả các đơn `PENDING` khác của chiếc xe đó bị trùng khoảng thời gian thuê, đổi thành `REJECTED` (lý do: "Xe đã được duyệt cho khách khác").
+* **Kịch bản tự test bằng PowerShell (AI/Khiêm chạy trên máy mình):**
+```powershell
+$token = (Invoke-RestMethod -Uri "http://localhost:8080/api/v1/auth/login" -Method POST -ContentType "application/json" -Body '{"identifier":"owner_demo","password":"Owner123@"}').data.access_token
+$headers = @{Authorization="Bearer $token"}
+# 1. Test tu choi thieu ly do
+try {
+    Invoke-RestMethod -Uri "http://localhost:8080/api/v1/owner/rentals/1/reject" -Method PUT -Headers $headers -ContentType "application/json" -Body '{}'
+} catch {
+    Write-Host "Chan tu choi thieu ly do dung: $($_.Exception.Response.StatusCode.value__)"
+}
+# 2. Duyet don thanh cong
+$res = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/owner/rentals/1/approve" -Method PUT -Headers $headers
+Write-Host "Duyet thanh cong don sang status: $($res.data.status)"
+```
+
+---
+
+#### 6. 💳 Chi Tin Nguyen (`CN`) — CRP-51, 52, 53, 54
+* **Nhánh Git:** `feature/payment-fullstack`
+* **Ranh giới File (Strict Boundary for AI):**
+  - ✅ ĐƯỢC PHÉP làm việc trong: `backend/src/main/java/com/driveshare/modules/payment/` và các trang thanh toán FE (`payment.html`, `owner-earnings.html`).
+  - ⛔ CẤM sửa các controller hay entity của module khác.
+* **Quy tắc & Mã lỗi:**
+  - Chỉ đơn `status == 'APPROVED'` mới được thanh toán cọc. Nếu không ➔ Ném `400 BAD_REQUEST` (`RENTAL_NOT_APPROVED`).
+  - Tiền cọc = 30% tổng tiền. Sinh mã QR VietQR tự động.
+  - Xác nhận thanh toán thành công ➔ Đơn chuyển `CONFIRMED`.
+* **Kịch bản tự test bằng PowerShell (AI/Tín chạy trên máy mình):**
+```powershell
+$token = (Invoke-RestMethod -Uri "http://localhost:8080/api/v1/auth/login" -Method POST -ContentType "application/json" -Body '{"identifier":"renter_demo","password":"Renter123@"}').data.access_token
+$headers = @{Authorization="Bearer $token"}
+# 1. Tao thanh toan coc
+$pay = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/rentals/1/payment" -Method POST -Headers $headers
+Write-Host "Coc: $($pay.data.deposit_amount) VND - QR: $($pay.data.qr_code_url)"
+# 2. Xac nhan coc thanh cong
+$confirm = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/payments/$($pay.data.payment_id)/confirm" -Method POST -Headers $headers
+Write-Host "Ket qua thanh toan: $($confirm.data.payment_status) - Status don: $($confirm.data.rental_status)"
+```
+
+
+

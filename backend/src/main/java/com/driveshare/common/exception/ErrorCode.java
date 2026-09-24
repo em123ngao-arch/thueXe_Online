@@ -54,7 +54,22 @@ public enum ErrorCode {
     OWNER_NOT_APPROVED("OWNER_NOT_APPROVED", "Hồ sơ chủ xe của bạn chưa được phê duyệt để đăng xe", HttpStatus.FORBIDDEN),
 
     // Document & Admin (Khiêm - feat/Backend)
-    DOCUMENT_NOT_FOUND("DOCUMENT_NOT_FOUND", "Không tìm thấy giấy tờ yêu cầu", HttpStatus.NOT_FOUND);
+    DOCUMENT_NOT_FOUND("DOCUMENT_NOT_FOUND", "Không tìm thấy giấy tờ yêu cầu", HttpStatus.NOT_FOUND),
+
+    // Rental & Booking (Sprint 2 - Vĩ, Khiêm, Quân)
+    RENTAL_NOT_FOUND("RENTAL_NOT_FOUND", "Không tìm thấy yêu cầu thuê xe", HttpStatus.NOT_FOUND),
+    MAX_PENDING_RENTALS_EXCEEDED("MAX_PENDING_RENTALS_EXCEEDED", "Bạn chỉ có thể gửi tối đa 3 yêu cầu thuê xe cùng một lúc", HttpStatus.BAD_REQUEST),
+    RENTAL_CANNOT_BE_CANCELLED("RENTAL_CANNOT_BE_CANCELLED", "Yêu cầu thuê xe không thể hủy ở trạng thái hiện tại", HttpStatus.BAD_REQUEST),
+    RENTAL_ALREADY_PROCESSED("RENTAL_ALREADY_PROCESSED", "Yêu cầu thuê xe đã được xử lý", HttpStatus.BAD_REQUEST),
+    INVALID_RENTAL_DATES("INVALID_RENTAL_DATES", "Ngày kết thúc thuê phải sau ngày bắt đầu thuê", HttpStatus.BAD_REQUEST),
+    CAR_ALREADY_RENTED("CAR_ALREADY_RENTED", "Xe đã có người thuê trong khoảng thời gian này", HttpStatus.CONFLICT),
+    REJECT_REASON_REQUIRED("REJECT_REASON_REQUIRED", "Vui lòng cung cấp lý do từ chối yêu cầu thuê xe", HttpStatus.BAD_REQUEST),
+
+    // Payment (Sprint 2 - Chí Tín)
+    PAYMENT_NOT_FOUND("PAYMENT_NOT_FOUND", "Không tìm thấy thông tin giao dịch thanh toán", HttpStatus.NOT_FOUND),
+    RENTAL_NOT_APPROVED("RENTAL_NOT_APPROVED", "Chuyến đi chưa được phê duyệt để thanh toán cọc", HttpStatus.BAD_REQUEST),
+    PAYMENT_ALREADY_COMPLETED("PAYMENT_ALREADY_COMPLETED", "Giao dịch thanh toán đã được hoàn tất trước đó", HttpStatus.BAD_REQUEST),
+    INVALID_PAYMENT_AMOUNT("INVALID_PAYMENT_AMOUNT", "Số tiền thanh toán không khớp với số tiền cọc yêu cầu", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;
