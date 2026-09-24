@@ -165,6 +165,8 @@ function clearSession() {
   localStorage.removeItem(KEY_USER);
   localStorage.removeItem("ds_user");
   localStorage.removeItem(AUTH_STORAGE_KEY);
+  localStorage.removeItem("driveshare_current_role");
+  localStorage.removeItem("driveshare_mock_users");
 
   if (typeof AuthService !== "undefined" && AuthService.updateAuthUI) {
     AuthService.updateAuthUI();

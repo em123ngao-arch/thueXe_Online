@@ -309,7 +309,7 @@
 
             <!-- Nút Google Login (BR-03-1) -->
             <a
-              href="/oauth2/authorization/google"
+              href="http://localhost:8080/oauth2/authorization/google"
               class="btn-google"
               id="btnGoogleAuth"
               onclick="handleGoogleClick(event)"
@@ -430,17 +430,16 @@
     <script src="js/register.js"></script>
     <script>
       function handleGoogleClick(e) {
-        // Kiểm tra nếu đang chạy local mà chưa có Spring Security OAuth2 thật
-        // Cho phép chuyển hướng trực tiếp nếu BE đang có, nếu offline mô phỏng callback
-        fetch('http://localhost:8080/oauth2/authorization/google', { method: 'HEAD' })
-          .then(r => {
-            window.location.href = 'http://localhost:8080/oauth2/authorization/google';
-          })
-          .catch(() => {
-            // Backend offline: mô phỏng redirect sang oauth2-callback.html với tham số first-time user
-            window.location.href = 'oauth2-callback.html?token=mock_google_jwt_sample&isNewUser=true&needRole=true';
-          });
         e.preventDefault();
+        // Tự động xóa hoàn toàn session cũ để không bao giờ bị lưu tài khoản cũ/mẫu
+        try {
+          if (typeof clearSession === 'function') clearSession();
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch (err) {
+          console.warn('Lỗi khi xóa session cũ:', err);
+        }
+        window.location.href = 'http://localhost:8080/oauth2/authorization/google';
       }
     </script>
   </body>

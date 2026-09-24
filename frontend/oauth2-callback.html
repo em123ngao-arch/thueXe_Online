@@ -154,67 +154,187 @@
     <script>
       let tempGoogleToken = "";
 
+      function parseJwt(token) {
+        try {
+          if (!token || typeof token !== "string" || !token.includes(".")) return null;
+          const base64Url = token.split(".")[1];
+          if (!base64Url) return null;
+          const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+          const jsonPayload = decodeURIComponent(
+            atob(base64)
+              .split("")
+              .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+              .join("")
+          );
+          return JSON.parse(jsonPayload);
+        } catch (e) {
+          console.warn("[OAuth2] parseJwt failed:", e);
+          return null;
+        }
+      }
+
       document.addEventListener("DOMContentLoaded", () => {
+        // Tự động xóa sạch toàn bộ session cũ để không bao giờ bị dính tài khoản cũ/mock
+        try {
+          if (typeof clearSession === "function") clearSession();
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch (err) {
+          console.warn("[OAuth2] Lỗi khi dọn session cũ:", err);
+        }
+
         const params = new URLSearchParams(window.location.search);
         const token = params.get("token");
         const isNewUser = params.get("isNewUser") === "true";
         const needRole = params.get("needRole") === "true";
 
-        tempGoogleToken = token || "mock_google_token_" + Date.now();
+        if (!token) {
+          showToast("Không tìm thấy mã xác thực Google!", "error", 3000);
+          setTimeout(() => {
+            window.location.href = "login.html?error=" + encodeURIComponent("Không tìm thấy mã xác thực Google.");
+          }, 1500);
+          return;
+        }
+
+        tempGoogleToken = token;
 
         // BR-03-2: Lần đầu đăng nhập Google -> hiện popup chọn role
         if (isNewUser || needRole) {
           document.getElementById("loadingView").style.display = "none";
           document.getElementById("roleModalOverlay").style.display = "flex";
         } else {
-          // BR-03-6: Các lần sau đăng nhập Google -> vào thẳng, không hỏi role lại
-          finishOAuthSuccess({
-            accessToken: token || "mock_jwt_token_" + Date.now(),
-            role: "RENTER",
-            status: "ACTIVE",
-            fullName: "Người dùng Google",
-            email: "google.user@gmail.com"
-          });
+          // BR-03-6: Các lần sau đăng nhập Google -> lấy profile thật và vào thẳng, không hỏi role lại
+          fetchUserInfoAndFinish(token);
         }
       });
+
+      async function fetchUserInfoAndFinish(accessToken) {
+        const claims = parseJwt(accessToken);
+        try {
+          const res = await fetch("http://localhost:8080/api/v1/users/me", {
+            headers: {
+              Authorization: `Bearer ${accessToken}`
+            }
+          });
+          const data = await res.json().catch(() => null);
+          if (res.ok && data && (data.result || data.data)) {
+            const profile = data.result || data.data;
+            const primaryRole = profile.role || (profile.roles && profile.roles[0]) || "RENTER";
+            finishOAuthSuccess({
+              accessToken: accessToken,
+              role: primaryRole.replace("ROLE_", ""),
+              status: profile.status || "ACTIVE",
+              fullName: profile.fullName || (claims && claims.name) || profile.username || "Người dùng Google",
+              email: profile.email || (claims && claims.email) || "",
+              userId: profile.userId || profile.id || (claims && claims.userId),
+              avatarUrl: profile.avatarUrl || (claims && claims.picture) || ""
+            });
+            return;
+          }
+        } catch (e) {
+          console.warn("Could not fetch user profile from API:", e);
+        }
+
+        // Nếu API /users/me gặp sự cố, lấy thông tin trực tiếp từ claims của accessToken thật
+        if (claims) {
+          const rolesArr = claims.roles || [];
+          const primaryRole = rolesArr.length > 0 ? rolesArr[0].replace("ROLE_", "") : "RENTER";
+          finishOAuthSuccess({
+            accessToken: accessToken,
+            role: primaryRole,
+            status: "ACTIVE",
+            fullName: claims.name || claims.sub || "Người dùng Google",
+            email: claims.email || "",
+            userId: claims.userId,
+            avatarUrl: claims.picture || ""
+          });
+          return;
+        }
+
+        // Nếu token không hợp lệ
+        showToast("Phiên đăng nhập không hợp lệ, vui lòng thử lại.", "error", 3000);
+        setTimeout(() => {
+          window.location.href = "login.html";
+        }, 1500);
+      }
 
       async function submitRoleSelection(selectedRole) {
         document.getElementById("roleModalOverlay").style.display = "none";
         document.getElementById("loadingView").style.display = "block";
+
+        // Lấy thông tin thật từ Google token claims
+        const googleClaims = parseJwt(tempGoogleToken);
+        console.log("[OAuth2] tempGoogleToken claims:", googleClaims);
 
         try {
           const res = await fetch("http://localhost:8080/api/v1/oauth2/complete-registration", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              google_token: tempGoogleToken,
               googleToken: tempGoogleToken,
               role: selectedRole
             })
           });
 
           const data = await res.json().catch(() => null);
+          console.log("[OAuth2] complete-registration response:", JSON.stringify(data));
 
-          if (res.ok && data && data.result) {
-            finishOAuthSuccess(data.result);
-            return;
+          if (res.ok && data) {
+            // Backend trả ApiResponse { success, data: { ... } } hoặc { result: { ... } }
+            const r = data.result || data.data || data;
+            if (r && (r.access_token || r.accessToken)) {
+              const accessToken = r.access_token || r.accessToken;
+              const refreshToken = r.refresh_token || r.refreshToken;
+              const userId = r.user_id || r.userId;
+              const email = r.email || (googleClaims && googleClaims.email) || "";
+              const username = r.username || "";
+              const fullName = (googleClaims && googleClaims.name) || r.full_name || r.fullName || username || "Người dùng Google";
+              const avatarUrl = (googleClaims && googleClaims.picture) || "";
+
+              const rolesArr = r.roles || [];
+              const primaryRole = rolesArr.length > 0
+                ? rolesArr[0].replace("ROLE_", "")
+                : selectedRole;
+
+              console.log("[OAuth2] Đăng ký thành công:", { primaryRole, email, username, fullName });
+
+              finishOAuthSuccess({
+                accessToken: accessToken,
+                refreshToken: refreshToken,
+                role: primaryRole,
+                status: selectedRole === "OWNER" ? "PENDING" : "ACTIVE",
+                fullName: fullName,
+                email: email,
+                userId: userId,
+                username: username,
+                avatarUrl: avatarUrl
+              });
+              return;
+            }
           }
-        } catch (err) {
-          console.warn("Complete registration API offline, using fallback mock:", err);
-        }
 
-        // Mock fallback
-        finishOAuthSuccess({
-          accessToken: "mock_google_jwt_" + Date.now(),
-          role: selectedRole,
-          status: selectedRole === "OWNER" ? "PENDING" : "ACTIVE",
-          fullName: "Người dùng Google (" + (selectedRole === "OWNER" ? "Chủ xe" : "Khách thuê") + ")",
-          email: "google.user@gmail.com"
-        });
+          // API trả lỗi thật sự
+          console.error("[OAuth2] complete-registration thất bại:", data);
+          const errorMsg = (data && data.message) || "Không thể hoàn tất đăng ký với tài khoản Google.";
+          showToast(errorMsg, "error", 4000);
+          setTimeout(() => {
+            window.location.href = "login.html?error=" + encodeURIComponent(errorMsg);
+          }, 2000);
+          return;
+        } catch (err) {
+          console.error("[OAuth2] Lỗi gọi complete-registration:", err);
+          showToast("Lỗi kết nối máy chủ khi đăng ký Google", "error", 4000);
+          setTimeout(() => {
+            window.location.href = "login.html?error=" + encodeURIComponent("Lỗi kết nối máy chủ");
+          }, 2000);
+          return;
+        }
       }
 
       function finishOAuthSuccess(authResult) {
         setSession(authResult);
-        showToast("Đăng nhập Google thành công!", "success", 2000);
+        showToast("Đăng nhập Google thành công! Chào mừng " + (authResult.fullName || ""), "success", 2000);
 
         setTimeout(() => {
           const role = (authResult.role || "").toUpperCase();
@@ -228,3 +348,4 @@
     </script>
   </body>
 </html>
+

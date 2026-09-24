@@ -332,4 +332,90 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .renterProfile(renterProfileSummary)
                 .build();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<com.driveshare.modules.admin.dto.response.PendingCccdResponse> getPendingCccdUsers() {
+        java.util.List<User> users = userRepository.findAll();
+        java.util.List<com.driveshare.modules.admin.dto.response.PendingCccdResponse> result = new java.util.ArrayList<>();
+        for (User u : users) {
+            boolean isPendingOwner = u.getOwnerProfile() != null && u.getOwnerProfile().getVerificationStatus() == EVerificationStatus.PENDING;
+            boolean isPendingRenter = u.getRenterProfile() != null && u.getRenterProfile().getVerificationStatus() == EVerificationStatus.PENDING;
+            if (isPendingOwner) {
+                result.add(com.driveshare.modules.admin.dto.response.PendingCccdResponse.builder()
+                        .userId(u.getUserId())
+                        .fullName(u.getFullName())
+                        .email(u.getEmail())
+                        .phone(u.getPhone())
+                        .role("OWNER")
+                        .cccdFrontUrl(u.getOwnerProfile().getIdCardFrontUrl())
+                        .cccdBackUrl(u.getOwnerProfile().getIdCardBackUrl())
+                        .submittedAt(u.getOwnerProfile().getUpdatedAt() != null ? u.getOwnerProfile().getUpdatedAt() : u.getCreatedAt())
+                        .build());
+            } else if (isPendingRenter) {
+                result.add(com.driveshare.modules.admin.dto.response.PendingCccdResponse.builder()
+                        .userId(u.getUserId())
+                        .fullName(u.getFullName())
+                        .email(u.getEmail())
+                        .phone(u.getPhone())
+                        .role("RENTER")
+                        .cccdFrontUrl(u.getRenterProfile().getIdCardFrontUrl())
+                        .cccdBackUrl(u.getRenterProfile().getIdCardBackUrl())
+                        .submittedAt(u.getRenterProfile().getUpdatedAt() != null ? u.getRenterProfile().getUpdatedAt() : u.getCreatedAt())
+                        .build());
+            }
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void verifyCccd(Long userId, String status, String reason, Long actorId, String actorUsername) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        boolean isApproved = "APPROVED".equalsIgnoreCase(status);
+        boolean isRejected = "REJECTED".equalsIgnoreCase(status);
+
+        if (!isApproved && !isRejected) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Trạng thái chỉ có thể là APPROVED hoặc REJECTED");
+        }
+
+        if (isRejected && (reason == null || reason.trim().isEmpty())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Lý do từ chối là bắt buộc khi REJECTED");
+        }
+
+        EVerificationStatus targetStatus = isApproved ? EVerificationStatus.VERIFIED : EVerificationStatus.REJECTED;
+
+        if (user.getOwnerProfile() != null) {
+            user.getOwnerProfile().setVerificationStatus(targetStatus);
+            if (isApproved) {
+                user.getOwnerProfile().setVerifiedAt(Instant.now());
+                user.getOwnerProfile().setVerifiedBy(actorId);
+                user.setStatus(EUserStatus.ACTIVE);
+            } else {
+                user.getOwnerProfile().setRejectionReason(reason.trim());
+            }
+        }
+
+        if (user.getRenterProfile() != null) {
+            user.getRenterProfile().setVerificationStatus(targetStatus);
+            if (!isApproved) {
+                user.getRenterProfile().setRejectionReason(reason.trim());
+            }
+        }
+
+        userRepository.save(user);
+
+        AuditLog logEntry = AuditLog.builder()
+                .actorId(actorId)
+                .actorUsername(actorUsername)
+                .targetType("USER_CCCD")
+                .targetId(userId)
+                .action(isApproved ? "APPROVE_CCCD" : "REJECT_CCCD")
+                .details(isApproved ? "Duyệt hồ sơ CCCD" : "Từ chối hồ sơ CCCD: " + reason.trim())
+                .createdAt(Instant.now())
+                .build();
+        auditLogRepository.save(logEntry);
+    }
 }

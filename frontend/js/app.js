@@ -16,8 +16,8 @@ const App = {
   },
 
   init() {
-    // 1. Cài đặt vai trò hiện tại
-    const currentRole = StorageService.getCurrentRole();
+    // 1. Cài đặt vai trò hiện tại (dựa vào JWT nếu đã đăng nhập)
+    const currentRole = this._resolveInitialRole();
     this.switchRole(currentRole);
 
     // 2. Cập nhật số lượng đơn cọc trên badge
@@ -27,6 +27,9 @@ const App = {
     if (typeof AuthService !== 'undefined') {
       AuthService.updateAuthUI();
     }
+
+    // 2.2. Ẩn/hiện các pill role theo quyền của tài khoản đang đăng nhập
+    this.updateNavByRole();
 
     // 3. Lắng nghe sự kiện modal đóng
     document.addEventListener('keydown', (e) => {
@@ -43,8 +46,109 @@ const App = {
     this.attachFilterEvents();
   },
 
+  // Xác định role ban đầu dựa vào JWT (tài khoản đã đăng nhập) hoặc StorageService
+  _resolveInitialRole() {
+    if (typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
+      const user = AuthService.getCurrentUser();
+      if (user) {
+        const role = (user.role || (user.roles && user.roles[0]) || 'RENTER')
+          .replace('ROLE_', '').toUpperCase();
+        if (role === 'ADMIN') return 'ADMIN';
+        if (role === 'OWNER') return 'OWNER';
+        return 'RENTER';
+      }
+    }
+    return StorageService.getCurrentRole();
+  },
+
+  // Ẩn/hiện các pill role và nút Đăng xe theo quyền tài khoản
+  updateNavByRole() {
+    const isLoggedIn = typeof AuthService !== 'undefined' && AuthService.isAuthenticated();
+    let userRole = 'GUEST';
+    if (isLoggedIn && typeof AuthService !== 'undefined') {
+      const user = AuthService.getCurrentUser();
+      if (user) {
+        userRole = (user.role || (user.roles && user.roles[0]) || 'RENTER')
+          .replace('ROLE_', '').toUpperCase();
+      }
+    }
+
+    const pillRenter = document.getElementById('pillRoleRenter');
+    const pillOwner  = document.getElementById('pillRoleOwner');
+    const pillAdmin  = document.getElementById('pillRoleAdmin');
+    const mobRenter  = document.getElementById('mobRoleRenter');
+    const mobOwner   = document.getElementById('mobRoleOwner');
+    const mobAdmin   = document.getElementById('mobRoleAdmin');
+    const btnAddCar  = document.getElementById('btnAddCar');
+    const navBookings = document.getElementById('navMyBookings');
+
+    if (userRole === 'RENTER') {
+      // Renter: chỉ thấy pill Khách thuê xe, ẩn Owner + Admin
+      if (pillRenter) pillRenter.style.display = '';
+      if (pillOwner)  pillOwner.style.display  = 'none';
+      if (pillAdmin)  pillAdmin.style.display  = 'none';
+      if (mobRenter)  mobRenter.style.display  = '';
+      if (mobOwner)   mobOwner.style.display   = 'none';
+      if (mobAdmin)   mobAdmin.style.display   = 'none';
+      if (btnAddCar)  btnAddCar.style.display  = 'none';
+      if (navBookings) navBookings.style.display = '';
+    } else if (userRole === 'OWNER') {
+      // Owner: chỉ thấy pill Chủ xe, ẩn Renter + Admin
+      if (pillRenter) pillRenter.style.display = 'none';
+      if (pillOwner)  pillOwner.style.display  = '';
+      if (pillAdmin)  pillAdmin.style.display  = 'none';
+      if (mobRenter)  mobRenter.style.display  = 'none';
+      if (mobOwner)   mobOwner.style.display   = '';
+      if (mobAdmin)   mobAdmin.style.display   = 'none';
+      if (btnAddCar)  btnAddCar.style.display  = '';
+      if (navBookings) navBookings.style.display = 'none';
+    } else if (userRole === 'ADMIN') {
+      // Admin: chỉ thấy pill Nhân viên/Admin, ẩn Renter + Owner
+      if (pillRenter) pillRenter.style.display = 'none';
+      if (pillOwner)  pillOwner.style.display  = 'none';
+      if (pillAdmin)  pillAdmin.style.display  = '';
+      if (mobRenter)  mobRenter.style.display  = 'none';
+      if (mobOwner)   mobOwner.style.display   = 'none';
+      if (mobAdmin)   mobAdmin.style.display   = '';
+      if (btnAddCar)  btnAddCar.style.display  = 'none';
+      if (navBookings) navBookings.style.display = 'none';
+    } else {
+      // Guest: thấy cả 3 pill (để xem demo), nút Đăng xe hỏi đăng nhập
+      if (pillRenter) pillRenter.style.display = '';
+      if (pillOwner)  pillOwner.style.display  = '';
+      if (pillAdmin)  pillAdmin.style.display  = '';
+      if (mobRenter)  mobRenter.style.display  = '';
+      if (mobOwner)   mobOwner.style.display   = '';
+      if (mobAdmin)   mobAdmin.style.display   = '';
+      if (btnAddCar)  btnAddCar.style.display  = '';
+      if (navBookings) navBookings.style.display = '';
+    }
+  },
+
   // Chuyển đổi vai trò người dùng (Khách thuê, Chủ xe, Nhân viên Quản trị)
   switchRole(role) {
+    // Kiểm tra quyền trước khi cho phép chuyển sang role khác
+    if (typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
+      const user = AuthService.getCurrentUser();
+      if (user) {
+        const userRole = (user.role || (user.roles && user.roles[0]) || 'RENTER')
+          .replace('ROLE_', '').toUpperCase();
+        // Không cho phép chuyển sang role không thuộc quyền
+        if (role !== userRole) {
+          if (typeof showToast === 'function') {
+            showToast('Bạn không có quyền truy cập phần này!', 'error');
+          }
+          return;
+        }
+      }
+    } else if (typeof AuthService !== 'undefined' && !AuthService.isAuthenticated()) {
+      // Chưa đăng nhập: nếu cố bấm OWNER/ADMIN thì redirect về login
+      if (role === 'OWNER' || role === 'ADMIN') {
+        window.location.href = 'login.html';
+        return;
+      }
+    }
+
     StorageService.setCurrentRole(role);
 
     // Update desktop pill active states
@@ -119,7 +223,9 @@ const App = {
   },
 
   showCatalogView() {
-    this.switchRole('RENTER');
+    // Chỉ về Renter view nếu đây là role của user (hoặc chưa đăng nhập)
+    const role = this._resolveInitialRole();
+    this.switchRole(role);
     document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
     document.getElementById('navCatalog')?.classList.add('active');
   },
@@ -490,5 +596,20 @@ const App = {
 
 // Khởi chạy ứng dụng khi DOM tải xong
 document.addEventListener('DOMContentLoaded', () => {
+  // QUAN TRỌNG: Trước khi init, ép đồng bộ role từ JWT vào localStorage
+  // Tránh trường hợp localStorage còn lưu role cũ (ADMIN/OWNER) từ session trước
+  if (typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
+    const user = AuthService.getCurrentUser();
+    if (user) {
+      const jwtRole = (user.role || (user.roles && user.roles[0]) || 'RENTER')
+        .replace('ROLE_', '').toUpperCase();
+      // Ép overwrite CURRENT_ROLE theo role thật của user hiện tại
+      localStorage.setItem('driveshare_current_role', jwtRole);
+    }
+  } else {
+    // Chưa đăng nhập: reset về RENTER
+    localStorage.setItem('driveshare_current_role', 'RENTER');
+  }
+
   App.init();
 });
