@@ -17,6 +17,14 @@ public class CurrentUserProfileResponse {
     @JsonProperty("userId")
     private Long userId;
 
+    @JsonProperty("user_id")
+    public Long getUserIdSnakeCase() {
+        return userId;
+    }
+
+    @JsonProperty("username")
+    private String username;
+
     @JsonProperty("email")
     private String email;
 
