@@ -199,6 +199,17 @@ public class CarServiceImpl implements CarService {
         return PageResponse.from(resultPage);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<CarResponse> getPublicActiveCars(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<CarResponse> resultPage = carRepository
+                .findByStatusAndDeletedAtIsNull(ECarStatus.ACTIVE, pageable)
+                .map(CarResponse::fromEntity);
+
+        return PageResponse.from(resultPage);
+    }
+
     // =====================================================================
     // Helper methods
     // =====================================================================

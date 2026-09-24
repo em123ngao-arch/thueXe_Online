@@ -40,10 +40,6 @@ const OwnerService = {
               <div class="portal-subtitle">Chủ xe: <strong>${owner.name}</strong> · ${owner.phone} · ${owner.address}</div>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <button class="btn btn-outline btn-sm" onclick="App.switchRole('RENTER')" style="background: white; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;" title="Về trang Thuê xe">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                Về trang Thuê xe
-              </button>
               <button class="btn btn-primary btn-sm" onclick="OwnerService.showAddCarTab()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
