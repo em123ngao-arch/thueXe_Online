@@ -8,7 +8,6 @@ import com.driveshare.modules.car.dto.request.CarUpdateRequest;
 import com.driveshare.modules.car.dto.response.CarResponse;
 import com.driveshare.modules.car.service.CarService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

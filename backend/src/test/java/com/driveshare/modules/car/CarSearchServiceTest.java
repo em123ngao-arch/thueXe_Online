@@ -27,6 +27,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.mockito.ArgumentMatchers;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -66,7 +68,7 @@ class CarSearchServiceTest {
         CarSearchFilterRequest request = new CarSearchFilterRequest();
         Page<Car> page = new PageImpl<>(List.of(sampleCar));
 
-        when(carRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(carRepository.findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class))).thenReturn(page);
 
         PageResponse<CarResponse> result = carSearchService.searchPublicCars(request);
 
@@ -74,7 +76,7 @@ class CarSearchServiceTest {
         assertEquals(1, result.getItems().size());
         assertEquals("Toyota", result.getItems().get(0).getBrand());
         assertEquals("Camry", result.getItems().get(0).getModel());
-        verify(carRepository).findAll(any(Specification.class), any(Pageable.class));
+        verify(carRepository).findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class));
     }
 
     @Test
@@ -87,7 +89,7 @@ class CarSearchServiceTest {
 
         AppException ex = assertThrows(AppException.class, () -> carSearchService.searchPublicCars(request));
         assertEquals(ErrorCode.INVALID_RENTAL_DATES, ex.getErrorCode());
-        verify(carRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+        verify(carRepository, never()).findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class));
     }
 
     @Test
@@ -110,7 +112,7 @@ class CarSearchServiceTest {
                 .build();
 
         Page<Car> page = new PageImpl<>(List.of(sampleCar));
-        when(carRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(carRepository.findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class))).thenReturn(page);
 
         PageResponse<CarResponse> result = carSearchService.searchPublicCars(request);
 
@@ -127,11 +129,11 @@ class CarSearchServiceTest {
                 .build();
 
         Page<Car> page = new PageImpl<>(List.of(sampleCar));
-        when(carRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(carRepository.findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class))).thenReturn(page);
 
         PageResponse<CarResponse> result = carSearchService.searchPublicCars(request);
         assertNotNull(result);
-        verify(carRepository).findAll(any(Specification.class), any(Pageable.class));
+        verify(carRepository).findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class));
     }
 
     @Test
@@ -142,10 +144,10 @@ class CarSearchServiceTest {
                 .build();
 
         Page<Car> page = new PageImpl<>(List.of(sampleCar));
-        when(carRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(carRepository.findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class))).thenReturn(page);
 
         PageResponse<CarResponse> result = carSearchService.searchPublicCars(request);
         assertNotNull(result);
-        verify(carRepository).findAll(any(Specification.class), any(Pageable.class));
+        verify(carRepository).findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class));
     }
 }

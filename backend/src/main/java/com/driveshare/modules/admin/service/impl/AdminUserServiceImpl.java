@@ -5,6 +5,7 @@ import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.admin.dto.request.AdminUserFilterRequest;
 import com.driveshare.modules.admin.dto.response.OwnerProfileSummaryResponse;
+import com.driveshare.modules.admin.dto.response.PendingCccdResponse;
 import com.driveshare.modules.admin.dto.response.RenterProfileSummaryResponse;
 import com.driveshare.modules.admin.dto.response.UserItemResponse;
 import com.driveshare.modules.admin.service.AdminUserService;
@@ -242,6 +243,10 @@ public class AdminUserServiceImpl implements AdminUserService {
 
         String targetStatus = request.getStatus() != null ? request.getStatus().trim().toLowerCase() : "";
 
+        if (actorId != null && actorId.equals(userId) && "locked".equals(targetStatus)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Quản trị viên không thể tự khóa tài khoản của chính mình");
+        }
+
         if ("locked".equals(targetStatus)) {
             // AC1 & AC2: Khóa tài khoản (LOCKED) -> chặn đăng nhập
             user.setStatus(EUserStatus.LOCKED);
@@ -333,6 +338,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .phone(user.getPhone())
                 .fullName(user.getFullName())
                 .avatarUrl(user.getAvatarUrl())
+                .address(user.getAddress())
                 .idCardNumber(user.getIdCardNumber())
                 .status(user.getStatus())
                 .roles(roles)
@@ -344,14 +350,14 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     @Transactional(readOnly = true)
-    public java.util.List<com.driveshare.modules.admin.dto.response.PendingCccdResponse> getPendingCccdUsers() {
+    public java.util.List<PendingCccdResponse> getPendingCccdUsers() {
         java.util.List<User> users = userRepository.findAll();
-        java.util.List<com.driveshare.modules.admin.dto.response.PendingCccdResponse> result = new java.util.ArrayList<>();
+        java.util.List<PendingCccdResponse> result = new java.util.ArrayList<>();
         for (User u : users) {
             boolean isPendingOwner = u.getOwnerProfile() != null && u.getOwnerProfile().getVerificationStatus() == EVerificationStatus.PENDING;
             boolean isPendingRenter = u.getRenterProfile() != null && u.getRenterProfile().getVerificationStatus() == EVerificationStatus.PENDING;
             if (isPendingOwner) {
-                result.add(com.driveshare.modules.admin.dto.response.PendingCccdResponse.builder()
+                result.add(PendingCccdResponse.builder()
                         .userId(u.getUserId())
                         .fullName(u.getFullName())
                         .email(u.getEmail())
@@ -362,7 +368,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                         .submittedAt(u.getOwnerProfile().getUpdatedAt() != null ? u.getOwnerProfile().getUpdatedAt() : u.getCreatedAt())
                         .build());
             } else if (isPendingRenter) {
-                result.add(com.driveshare.modules.admin.dto.response.PendingCccdResponse.builder()
+                result.add(PendingCccdResponse.builder()
                         .userId(u.getUserId())
                         .fullName(u.getFullName())
                         .email(u.getEmail())

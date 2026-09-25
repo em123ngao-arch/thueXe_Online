@@ -7,7 +7,6 @@ import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.car.entity.Car;
 import com.driveshare.modules.car.repository.CarRepository;
-import com.driveshare.modules.payment.dto.request.CreatePaymentRequest;
 import com.driveshare.modules.payment.dto.response.OwnerEarningsResponse;
 import com.driveshare.modules.payment.dto.response.PaymentResponse;
 import com.driveshare.modules.payment.entity.Payment;
@@ -30,7 +29,6 @@ import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 

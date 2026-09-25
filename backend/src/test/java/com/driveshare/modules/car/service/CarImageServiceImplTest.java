@@ -1,7 +1,6 @@
 package com.driveshare.modules.car.service;
 
 import com.driveshare.common.exception.AppException;
-import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.common.service.CloudinaryService;
 import com.driveshare.modules.car.dto.response.CarImageResponse;
 import com.driveshare.modules.car.entity.Car;
@@ -30,7 +29,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)

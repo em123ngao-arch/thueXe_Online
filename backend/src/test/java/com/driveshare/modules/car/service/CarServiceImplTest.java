@@ -15,7 +15,6 @@ import com.driveshare.modules.car.service.impl.CarServiceImpl;
 import com.driveshare.modules.user.entity.OwnerProfile;
 import com.driveshare.modules.user.entity.User;
 import com.driveshare.modules.user.repository.OwnerProfileRepository;
-import com.driveshare.modules.user.repository.UserRepository;
 import com.driveshare.security.CustomUserDetails;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -191,7 +190,7 @@ class CarServiceImplTest {
                 1
         );
 
-        when(carRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Pageable.class)))
+        when(carRepository.findAll(org.mockito.ArgumentMatchers.<org.springframework.data.jpa.domain.Specification<Car>>any(), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(mockPage);
 
         // Act
@@ -204,7 +203,7 @@ class CarServiceImplTest {
         assertThat(result.getPagination().getTotalItems()).isEqualTo(1);
 
 
-        verify(carRepository, times(1)).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Pageable.class));
+        verify(carRepository, times(1)).findAll(org.mockito.ArgumentMatchers.<org.springframework.data.jpa.domain.Specification<Car>>any(), any(org.springframework.data.domain.Pageable.class));
     }
 
     @Test

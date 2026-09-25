@@ -727,12 +727,16 @@ const AdminService = {
     if (typeof StorageService !== 'undefined') {
       StorageService.updateCarStatus(carId, 'ACTIVE');
     }
-    const msg = `Đã duyệt xe #${carId}! Xe đã được xuất bản và sẵn sàng cho thuê.`;
+    const msg = Đã duyệt xe #! Xe đã được xuất bản và sẵn sàng cho thuê.;
     if (typeof showToast === 'function') showToast(msg, 'success', 2500);
     else if (typeof App !== 'undefined' && App.showToast) App.showToast(msg, 'success');
 
     this.renderCarsList();
     this.loadAdminStats();
+  },
+
+  rejectCar(carId) {
+    this.openRejectCarModal(carId);
   },
 
   // BR-04-6: Mở modal yêu cầu nhập lý do từ chối xe
@@ -1292,6 +1296,31 @@ const AdminService = {
     }
   },
 
+  async rejectLicense(renterId) {
+    const reason = prompt('Nhập lý do từ chối hoặc yêu cầu chụp lại GPLX:', 'Ảnh chụp GPLX bị mờ hoặc không rõ số seri. Vui lòng chụp lại hai mặt rõ nét.');
+    if (!reason || !reason.trim()) {
+      if (typeof showToast === 'function') showToast('Bạn đã hủy thao tác từ chối GPLX', 'info');
+      else if (typeof App !== 'undefined' && App.showToast) App.showToast('Bạn đã hủy thao tác từ chối GPLX', 'info');
+      return;
+    }
+
+    if (typeof ApiService !== 'undefined') {
+      await ApiService.approveLicense(renterId, {
+        verification_status: 'rejected',
+        rejection_reason: reason.trim()
+      });
+    }
+    if (typeof StorageService !== 'undefined') {
+      StorageService.updateRenterLicense(renterId, 'REJECTED');
+    }
+    const msg = Đã yêu cầu khách thuê # chụp lại GPLX.;
+    if (typeof showToast === 'function') showToast(msg, 'warning', 3000);
+    else if (typeof App !== 'undefined' && App.showToast) App.showToast(msg, 'warning');
+
+    this.renderLicensesList();
+    this.loadAdminStats();
+  },
+
   // Mở modal xem chi tiết người dùng (Admin View User Detail - AC1, AC2, AC3)
   async openUserDetailModal(userId) {
     // 1. Mở modal với trạng thái đang tải
@@ -1437,6 +1466,12 @@ const AdminService = {
               <div style="font-size: 0.76rem; color: var(--slate-500);">Số CMND / Căn cước công dân</div>
               <div style="font-size: 0.9rem; font-weight: 600; color: var(--slate-800); font-family: monospace;">
                 ${u.id_card_number || u.idCardNumber || 'Chưa định danh'}
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 0.76rem; color: var(--slate-500);">Địa chỉ thường trú / Nơi ở</div>
+              <div style="font-size: 0.9rem; font-weight: 600; color: var(--slate-800);">
+                ${u.address || 'Chưa cập nhật'}
               </div>
             </div>
           </div>

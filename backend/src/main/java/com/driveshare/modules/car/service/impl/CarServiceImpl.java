@@ -2,8 +2,6 @@ package com.driveshare.modules.car.service.impl;
 
 import com.driveshare.common.dto.PageResponse;
 import com.driveshare.common.enums.ECarStatus;
-import com.driveshare.common.enums.EFuelType;
-import com.driveshare.common.enums.ETransmission;
 import com.driveshare.common.enums.EVerificationStatus;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;

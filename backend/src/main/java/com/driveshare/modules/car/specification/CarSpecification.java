@@ -74,7 +74,7 @@ public class CarSpecification {
 
             // 9. Lọc xe khả dụng theo khoảng ngày (CRP-38)
             // Loại trừ các xe đã có cuốc thuê ở trạng thái APPROVED hoặc CONFIRMED giao nhau với [startDate, endDate]
-            if (filter.getStartDate() != null && filter.getEndDate() != null) {
+            if (filter.getStartDate() != null && filter.getEndDate() != null && query != null) {
                 Subquery<Long> subquery = query.subquery(Long.class);
                 Root<Rental> rentalRoot = subquery.from(Rental.class);
                 subquery.select(rentalRoot.get("carId"));

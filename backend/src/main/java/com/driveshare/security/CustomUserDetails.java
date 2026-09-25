@@ -78,4 +78,20 @@ public class CustomUserDetails implements UserDetails {
     public boolean isEnabled() {
         return status == EUserStatus.ACTIVE;
     }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public EUserStatus getStatus() {
+        return status;
+    }
+
+    public long getTokenVersion() {
+        return tokenVersion;
+    }
 }
