@@ -419,8 +419,20 @@ const App = {
   },
 
   // Modal Chi tiết xe
-  openCarDetailModal(carId) {
-    const car = StorageService.getCarById(carId);
+  async openCarDetailModal(carId) {
+    let car = StorageService.getCarById(carId);
+
+    if (typeof ApiService !== 'undefined' && ApiService.getPublicCarDetail) {
+      try {
+        const res = await ApiService.getPublicCarDetail(carId);
+        if (res && (res.success || res.code === 200) && res.data) {
+          car = res.data;
+        }
+      } catch (err) {
+        console.warn('API getPublicCarDetail fallback to local data:', err);
+      }
+    }
+
     if (!car) return;
 
     const modalBody = document.getElementById('carDetailModalBody');

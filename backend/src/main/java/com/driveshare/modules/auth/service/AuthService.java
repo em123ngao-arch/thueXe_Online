@@ -1,6 +1,5 @@
 package com.driveshare.modules.auth.service;
 
-import com.driveshare.common.dto.ApiResponse;
 import com.driveshare.common.enums.ERole;
 import com.driveshare.common.enums.EUserStatus;
 import com.driveshare.common.enums.EVerificationStatus;

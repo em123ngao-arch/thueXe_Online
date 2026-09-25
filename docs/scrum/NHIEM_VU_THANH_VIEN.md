@@ -541,5 +541,89 @@ $confirm = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/payments/$($pay.
 Write-Host "Ket qua thanh toan: $($confirm.data.payment_status) - Status don: $($confirm.data.rental_status)"
 ```
 
+---
+
+## 🗄️ BẢNG TRA CỨU HỢP ĐỒNG CƠ SỞ DỮ LIỆU DÙNG CHUNG SPRINT 2 (DATA DICTIONARY & SHARED CONTRACT)
+
+> ⚠️ **QUY TẮC CỐT TỬ DÀNH CHO CẢ 6 THÀNH VIÊN & AI AGENT:**  
+> 1. Toàn bộ tính năng đặt xe Sprint 2 **BẮT BUỘC** dùng chung Entity [`Rental`](file:///d:/MONHOCITC/K4/Spring_ThucTap_k4/backend/src/main/java/com/driveshare/modules/rental/entity/Rental.java) (bảng `rentals`) và [`Payment`](file:///d:/MONHOCITC/K4/Spring_ThucTap_k4/backend/src/main/java/com/driveshare/modules/payment/entity/Payment.java) (bảng `payments`).  
+> 2. **TUYỆT ĐỐI KHÔNG TỰ Ý** tạo bảng/entity mới như `bookings`, `booking_requests`, `orders` hoặc tự chế thêm cột.  
+> 3. Toàn bộ các câu truy vấn phức tạp (xung đột lịch, đếm max pending, hết hạn 60p, tính doanh thu) đã được viết sẵn trong [`RentalRepository`](file:///d:/MONHOCITC/K4/Spring_ThucTap_k4/backend/src/main/java/com/driveshare/modules/rental/repository/RentalRepository.java) và [`PaymentRepository`](file:///d:/MONHOCITC/K4/Spring_ThucTap_k4/backend/src/main/java/com/driveshare/modules/payment/repository/PaymentRepository.java). Chỉ cần `@Autowired` và gọi trực tiếp!
+
+---
+
+### 1. Chi Tiết Thực Thể Bảng `rentals` (Yêu Cầu Thuê Xe)
+* **Java Entity:** `com.driveshare.modules.rental.entity.Rental` (kế thừa `BaseEntity`).
+* **Table Name:** `rentals`.
+
+| Tên Cột DB | Tên Thuộc Tính Java | Kiểu Dữ Liệu | Ràng Buộc / Mô Tả Nghiệp Vụ |
+|---|---|---|---|
+| `rental_id` | `rentalId` | `Long` (PK) | Khóa chính tự tăng (BIGSERIAL). |
+| `car_id` | `carId` | `Long` (FK) | Mã xe được thuê. Tham chiếu `cars(car_id)`. |
+| `renter_id` | `renterId` | `Long` (FK) | Mã khách thuê xe. Tham chiếu `users(user_id)`. |
+| `start_date` | `startDate` | `LocalDate` | Ngày bắt đầu thuê xe (`NOT NULL`). |
+| `end_date` | `endDate` | `LocalDate` | Ngày kết thúc thuê xe (`NOT NULL`, `>= start_date`). |
+| `total_days` | `totalDays` | `Integer` | Tổng số ngày thuê (`totalDays = Period(end - start) + 1` hoặc chênh lệch ngày). |
+| `price_per_day` | `pricePerDay` | `BigDecimal` | Đơn giá thuê/ngày tại thời điểm đặt xe (Precision: 12, Scale: 2). |
+| `total_price` | `totalPrice` | `BigDecimal` | Tổng tiền dự kiến (`pricePerDay * totalDays`). |
+| `deposit_amount` | `depositAmount` | `BigDecimal` | Tiền cọc 30% (`totalPrice * 0.3`). |
+| `status` | `status` | `ERentalStatus` | Trạng thái cuốc thuê: `PENDING`, `APPROVED`, `REJECTED`, `EXPIRED`, `CANCELLED`, `DEPOSIT_PAID`, `COMPLETED`. |
+| `reject_reason` | `rejectReason` | `String` | Lý do từ chối của chủ xe (bắt buộc khi `status == REJECTED`). |
+| `note` | `note` | `String` | Ghi chú thêm của khách khi tạo yêu cầu thuê. |
+| `created_at` | `createdAt` | `Instant` | Thời điểm tạo đơn (tự động từ `BaseEntity`). |
+
+---
+
+### 2. Chi Tiết Thực Thể Bảng `payments` (Giao Dịch Đặt Cọc & Thanh Toán)
+* **Java Entity:** `com.driveshare.modules.payment.entity.Payment` (kế thừa `BaseEntity`).
+* **Table Name:** `payments`.
+
+| Tên Cột DB | Tên Thuộc Tính Java | Kiểu Dữ Liệu | Ràng Buộc / Mô Tả Nghiệp Vụ |
+|---|---|---|---|
+| `payment_id` | `paymentId` | `Long` (PK) | Khóa chính tự tăng. |
+| `rental_id` | `rentalId` | `Long` (FK) | Đơn thuê được thanh toán. Tham chiếu `rentals(rental_id)`. |
+| `amount` | `amount` | `BigDecimal` | Số tiền thanh toán (thường là `depositAmount`). |
+| `payment_type` | `paymentType` | `String` | Loại thanh toán: `DEPOSIT` (cọc), `REMAINING` (phần còn lại), `REFUND` (hoàn cọc). |
+| `payment_method` | `paymentMethod` | `EPaymentMethod` | Phương thức: `VIETQR`, `CASH`, `BANK_TRANSFER`. |
+| `status` | `status` | `EPaymentStatus` | Trạng thái GD: `PENDING`, `SUCCESS`, `FAILED`, `CANCELLED`. |
+| `transaction_code`| `transactionCode`| `String` | Mã giao dịch ngân hàng / VietQR (Duy nhất). |
+| `qr_code_url` | `qrCodeUrl` | `String` | Link ảnh mã QR VietQR động. |
+| `paid_at` | `paidAt` | `Instant` | Thời điểm xác nhận nhận tiền thành công. |
+
+---
+
+### 3. Danh Mục Các Hàm Repository Dùng Chung Đã Dựng Sẵn (Tra Cứu Nhanh)
+
+| Thành viên | Tác vụ (Task Jira) | Hàm Repository Có Sẵn | File & Cách Dùng |
+|---|---|---|---|
+| **Vĩ (`VL`)** | `CRP-42`: Chặn khách đặt quá 3 đơn PENDING | `rentalRepository.countByRenterIdAndStatus(renterId, ERentalStatus.PENDING)` | Trả về `long`. Nếu `>= 3` ➔ throw `MAX_PENDING_RENTALS_EXCEEDED`. |
+| **Vĩ (`VL`)** | `CRP-43`: Scheduler hủy đơn PENDING sau 60p | `rentalRepository.findExpiredPendingRentals(ERentalStatus.PENDING, threshold)` | Quét danh sách đơn cũ hơn 60 phút để đổi sang `EXPIRED`. |
+| **Khiêm (`KT`)** | `CRP-47`: Chủ xe duyệt đơn | `rentalRepository.findByRentalIdAndCarIdIn(rentalId, ownerCarIds)` | Kiểm tra quyền sở hữu xe của Owner trước khi duyệt. |
+| **Khiêm (`KT`)** | `CRP-49`: Auto-reject các đơn PENDING trùng lịch | `rentalRepository.findCompetingPendingRentals(carId, start, end, rentalId, ERentalStatus.PENDING)` | Lấy tất cả các đơn khác bị trùng ngày để set `REJECTED`. |
+| **Quân (`QD`)** | `CRP-38`: Lọc xe rảnh theo khoảng ngày | `rentalRepository.findCarIdsWithConflictingRentals(start, end, List.of(APPROVED, DEPOSIT_PAID))` | Lấy danh sách `carId` bị bận ➔ loại trừ ra khỏi kết quả search! |
+| **Quân (`QD`)** | `CRP-44`: Khách xem lịch sử đơn thuê | `rentalRepository.findByRenterIdOrderByCreatedAtDesc(renterId)` | Trả về danh sách đơn của khách theo thời gian mới nhất. |
+| **Quân (`QD`)** | `CRP-46`: Chủ xe xem đơn gửi đến xe mình | `rentalRepository.findByCarIdInOrderByCreatedAtDesc(carIds)` | Trả về danh sách đơn gửi đến các xe của Owner. |
+| **Tín (`CN`)** | `CRP-51`: Tạo thanh toán cọc VietQR | `rentalRepository.findByRentalIdAndRenterId(rentalId, renterId)` | Tìm đúng đơn của khách và kiểm tra `status == APPROVED`. |
+| **Tín (`CN`)** | `CRP-54`: Thống kê tổng doanh thu chủ xe | `paymentRepository.sumEarningsByRentalIds(carRentalIds, EPaymentStatus.SUCCESS)` | Tính tổng tiền đã thanh toán thành công của các xe thuộc chủ xe. |
+| **Phát (`PT`)** | `CRP-24`: Chặn xóa xe đang có cuốc thuê | `carRepository.hasActiveBooking(carId)` | Trả về `true` nếu xe đang có đơn `PENDING`, `APPROVED` hoặc `DEPOSIT_PAID`. |
+
+---
+
+### 4. Dữ Liệu Mẫu (Seed Data) Tự Động Khởi Tạo Sẵn Để Test Ngay
+
+Khi ứng dụng chạy (môi trường Dev / H2 / Postgres), `DataInitializer` tự động nạp sẵn dữ liệu sau:
+
+1. **Tài khoản người dùng:**
+   - **Admin:** `admin@driveshare.com` / `Admin123@` (Role: `ROLE_ADMIN`)
+   - **Chủ xe (Owner):** `owner@driveshare.com` / `Owner123@` (Role: `ROLE_OWNER`, Status: `ACTIVE`)
+   - **Khách thuê (Renter):** `renter@driveshare.com` / `Renter123@` (Role: `ROLE_RENTER`, Status: `ACTIVE`)
+2. **Xe mẫu (Cars - Thuộc sở hữu của Chủ xe `owner_demo`):**
+   - **Xe 1:** `VinFast VF8` (2023) — Biển số: `51K-12345` — Giá: `1.200.000đ/ngày` — Vị trí: `Hồ Chí Minh` — Status: `ACTIVE`.
+   - **Xe 2:** `Mazda CX-5` (2022) — Biển số: `30H-67890` — Giá: `900.000đ/ngày` — Vị trí: `Hà Nội` — Status: `ACTIVE`.
+3. **Đơn thuê mẫu (Rentals):**
+   - **Đơn 1:** ID=`1`, Xe: `VinFast VF8`, Khách: `renter_demo`, Trạng thái: **`PENDING`**.
+   - **Mục đích:** Giúp **Khiêm** có ngay đơn để test API Duyệt/Từ chối (`CRP-47`, `CRP-48`) và giúp **Quân** test lọc ngày bận (`CRP-38`) mà **KHÔNG CẦN CHỜ VĨ CODE XONG API TẠO ĐƠN**!
+
+
 
 

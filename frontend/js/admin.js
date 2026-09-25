@@ -8,15 +8,6 @@ const AdminService = {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    const allCars = StorageService.getCars();
-    const pendingCars = allCars.filter(c => c.status === 'PENDING_APPROVAL' || c.status === 'PENDING');
-    const allRenters = StorageService.getRenters();
-    const pendingLicenses = allRenters.filter(r => r.license_status === 'PENDING');
-    const allBookings = StorageService.getBookings();
-    const allUsersObj = StorageService.getUsers();
-    const allUsersList = Array.isArray(allUsersObj) ? allUsersObj : (allUsersObj?.items || []);
-    const pendingCccdCount = allUsersList.filter(u => u.verification_status === 'PENDING' || u.status === 'PENDING').length;
-
     container.innerHTML = `
       <div class="portal-header">
         <div class="container">
@@ -38,16 +29,16 @@ const AdminService = {
           <!-- Tabs -->
           <div class="portal-tabs">
             <button class="portal-tab-btn active" id="adminTabCars" onclick="AdminService.switchTab('CARS')">
-              Duyệt xe mới đăng (${pendingCars.length})
+              Duyệt xe mới đăng (<span id="badgePendingCars">...</span>)
             </button>
             <button class="portal-tab-btn" id="adminTabCccd" onclick="AdminService.switchTab('CCCD')">
-              Duyệt CMND/CCCD (${pendingCccdCount})
+              Duyệt CMND/CCCD (<span id="badgePendingCccd">...</span>)
             </button>
             <button class="portal-tab-btn" id="adminTabLicenses" onclick="AdminService.switchTab('LICENSES')">
-              Xác minh bằng lái GPLX (${pendingLicenses.length})
+              Xác minh bằng lái GPLX (<span id="badgePendingLicenses">...</span>)
             </button>
             <button class="portal-tab-btn" id="adminTabBookings" onclick="AdminService.switchTab('BOOKINGS')">
-              Toàn bộ đơn đặt xe (${allBookings.length})
+              Toàn bộ đơn đặt xe (<span id="badgeTotalBookings">...</span>)
             </button>
             <button class="portal-tab-btn" id="adminTabUsers" onclick="AdminService.switchTab('USERS')">
               Quản lý tài khoản & Vai trò
@@ -68,7 +59,7 @@ const AdminService = {
               </svg>
             </div>
             <div class="stat-info">
-              <div class="stat-value">${pendingCars.length}</div>
+              <div class="stat-value" id="statPendingCars">...</div>
               <div class="stat-label">Xe chờ kiểm duyệt</div>
             </div>
           </div>
@@ -83,7 +74,7 @@ const AdminService = {
               </svg>
             </div>
             <div class="stat-info">
-              <div class="stat-value">${pendingLicenses.length}</div>
+              <div class="stat-value" id="statPendingLicenses">...</div>
               <div class="stat-label">GPLX chờ xác thực</div>
             </div>
           </div>
@@ -96,7 +87,7 @@ const AdminService = {
               </svg>
             </div>
             <div class="stat-info">
-              <div class="stat-value">${allCars.filter(c => c.status === 'ACTIVE').length}</div>
+              <div class="stat-value" id="statActiveCars">...</div>
               <div class="stat-label">Tổng xe đang hoạt động</div>
             </div>
           </div>
@@ -108,7 +99,7 @@ const AdminService = {
               </svg>
             </div>
             <div class="stat-info">
-              <div class="stat-value">${allBookings.length}</div>
+              <div class="stat-value" id="statTotalBookings">...</div>
               <div class="stat-label">Tổng lượt giao dịch</div>
             </div>
           </div>
@@ -120,49 +111,8 @@ const AdminService = {
             <div class="admin-table-header">
               <h3>Danh sách xe chờ phê duyệt xuất bản</h3>
             </div>
-            <div class="table-responsive">
-              <table class="custom-table">
-                <thead>
-                  <tr>
-                    <th>Thông tin xe</th>
-                    <th>Biển số</th>
-                    <th>Chủ xe</th>
-                    <th>Giá đề xuất</th>
-                    <th>Địa điểm đón</th>
-                    <th>Thẩm định & Quyết định</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${pendingCars.length === 0 ? `
-                    <tr><td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--slate-500);">
-                      Hệ thống đã xử lý hết mọi xe chờ duyệt. Hiện không có yêu cầu nào tồn đọng.
-                    </td></tr>
-                  ` : pendingCars.map(c => `
-                    <tr>
-                      <td>
-                        <div class="table-car-cell">
-                          <img class="table-car-thumb" src="${c.image_url}" alt="${c.brand}" />
-                          <div>
-                            <strong>${c.brand} ${c.model}</strong>
-                            <div style="font-size: 0.76rem; color: var(--slate-500);">${c.year} · ${c.seat_count} chỗ · ${c.transmission === 'AUTOMATIC' ? 'Tự động' : 'Số sàn'}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td><strong style="font-family: monospace;">${c.license_plate}</strong></td>
-                      <td>${c.owner_name}</td>
-                      <td style="color: var(--primary); font-weight: 700;">${StorageService.formatCurrency(c.price_per_day)}</td>
-                      <td style="font-size: 0.82rem; max-width: 180px;">${c.pickup_address}</td>
-                      <td>
-                        <div class="table-actions">
-                          <button class="btn btn-outline btn-sm" onclick="App.openCarDetailModal(${c.id})">Chi tiết</button>
-                          <button class="btn btn-primary btn-sm" onclick="AdminService.approveCar(${c.id})">Duyệt xe</button>
-                          <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="AdminService.openRejectCarModal(${c.id})">Từ chối</button>
-                        </div>
-                      </td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
+            <div class="table-responsive" id="adminCarsTableWrapper">
+              <!-- Được render động qua renderCarsList() -->
             </div>
           </div>
         </div>
@@ -178,7 +128,7 @@ const AdminService = {
             </div>
             <div style="padding: 1.25rem;">
               <div id="adminCccdListContainer">
-                <!-- Được render qua renderCccdList() -->
+                <!-- Được render động qua renderCccdList() -->
               </div>
             </div>
           </div>
@@ -191,35 +141,9 @@ const AdminService = {
               <h3>Hồ sơ Giấy phép lái xe (GPLX) gửi xác thực</h3>
             </div>
             <div style="padding: 1.15rem;">
-              ${allRenters.map(r => `
-                <div class="license-card">
-                  <img class="license-thumb" src="${r.license_image}" alt="GPLX ${r.name}" />
-                  <div>
-                    <div style="display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.3rem; flex-wrap: wrap;">
-                      <h4 style="font-size: 1rem; font-weight: 700;">${r.name}</h4>
-                      <span class="badge ${r.license_status === 'APPROVED' ? 'badge-success' : (r.license_status === 'PENDING' ? 'badge-warning' : 'badge-danger')}">
-                        ${r.license_status === 'APPROVED' ? 'Đã duyệt hợp lệ' : (r.license_status === 'PENDING' ? 'Chờ xác thực' : 'Bị từ chối')}
-                      </span>
-                    </div>
-                    <div style="font-size: 0.82rem; color: var(--slate-600); margin-bottom: 0.2rem;">
-                      Số GPLX: <strong style="font-family: monospace;">${r.license_number || 'Chưa cung cấp'}</strong>
-                    </div>
-                    <div style="font-size: 0.82rem; color: var(--slate-500);">
-                      SĐT: ${r.phone} · Email: ${r.email}
-                    </div>
-                  </div>
-                  <div>
-                    ${r.license_status === 'PENDING' ? `
-                      <div style="display: flex; gap: 0.45rem; flex-wrap: wrap;">
-                        <button class="btn btn-primary btn-sm" onclick="AdminService.approveLicense(${r.id})">Phê duyệt GPLX</button>
-                        <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="AdminService.rejectLicense(${r.id})">Yêu cầu chụp lại</button>
-                      </div>
-                    ` : `
-                      <span style="color: var(--slate-400); font-size: 0.82rem;">Đã hoàn thành xác minh</span>
-                    `}
-                  </div>
-                </div>
-              `).join('')}
+              <div id="adminLicensesContainer">
+                <!-- Được render động qua renderLicensesList() -->
+              </div>
             </div>
           </div>
         </div>
@@ -230,35 +154,8 @@ const AdminService = {
             <div class="admin-table-header">
               <h3>Toàn bộ giao dịch trên hệ thống DriveShare</h3>
             </div>
-            <div class="table-responsive">
-              <table class="custom-table">
-                <thead>
-                  <tr>
-                    <th>Mã đơn</th>
-                    <th>Phương tiện</th>
-                    <th>Khách thuê</th>
-                    <th>Lịch trình thuê</th>
-                    <th>Tổng tiền</th>
-                    <th>Tiền cọc (30%)</th>
-                    <th>Trạng thái đơn</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${allBookings.map(b => `
-                    <tr>
-                      <td><span class="booking-code">#${b.id}</span></td>
-                      <td><strong>${b.car_name}</strong><br/><span style="font-size: 0.76rem; color: var(--slate-500);">${b.car_plate}</span></td>
-                      <td>${b.renter_name}<br/><span style="font-size: 0.76rem; color: var(--slate-500);">${b.renter_phone}</span></td>
-                      <td style="font-size: 0.8rem;">${b.start_time} <br/>đến ${b.end_time} (${b.total_days} ngày)</td>
-                      <td style="font-weight: 700;">${StorageService.formatCurrency(b.total_amount)}</td>
-                      <td style="color: var(--primary); font-weight: 700;">${StorageService.formatCurrency(b.deposit_amount)}</td>
-                      <td>
-                        ${b.status === 'DEPOSIT_PAID' ? '<span class="badge badge-success">Đã cọc 30%</span>' : (b.status === 'COMPLETED' ? '<span class="badge badge-neutral">Đã hoàn thành</span>' : `<span class="badge badge-warning">${b.status}</span>`)}
-                      </td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
+            <div class="table-responsive" id="adminBookingsTableWrapper">
+              <!-- Được render động qua renderBookingsList() -->
             </div>
           </div>
         </div>
@@ -332,8 +229,9 @@ const AdminService = {
       </div>
     `;
 
-    // Render bảng người dùng ban đầu
-    this.renderUsersTable();
+    // Tải dữ liệu ban đầu
+    this.loadAdminStats();
+    this.renderCarsList();
   },
 
   // State quản lý filter và phân trang người dùng
@@ -504,24 +402,24 @@ const AdminService = {
       <div class="admin-pagination">
         <div>
           Hiển thị <strong>${users.length > 0 ? (pagination.page - 1) * pagination.limit + 1 : 0}</strong> - 
-          <strong>${Math.min(pagination.page * pagination.limit, pagination.totalItems || pagination.total_items)}</strong> 
-          trong tổng số <strong>${pagination.totalItems || pagination.total_items}</strong> người dùng
+          <strong>${Math.min(pagination.page * pagination.limit, pagination.totalItems ?? pagination.total_items ?? users.length)}</strong> 
+          trong tổng số <strong>${pagination.totalItems ?? pagination.total_items ?? users.length}</strong> người dùng
         </div>
 
         <div class="pagination-controls">
           <button 
             class="pagination-btn" 
             onclick="AdminService.goToUserPage(${pagination.page - 1})" 
-            ${!pagination.hasPrev ? 'disabled' : ''}>
+            ${!(pagination.hasPrev ?? pagination.has_prev) ? 'disabled' : ''}>
             &larr; Trang trước
           </button>
           
-          <span class="pagination-page-indicator">Trang ${pagination.page} / ${pagination.totalPages}</span>
+          <span class="pagination-page-indicator">Trang ${pagination.page} / ${pagination.totalPages ?? pagination.total_pages ?? 1}</span>
 
           <button 
             class="pagination-btn" 
             onclick="AdminService.goToUserPage(${pagination.page + 1})" 
-            ${!pagination.hasNext ? 'disabled' : ''}>
+            ${!(pagination.hasNext ?? pagination.has_next) ? 'disabled' : ''}>
             Trang sau &rarr;
           </button>
         </div>
@@ -529,11 +427,19 @@ const AdminService = {
     `;
   },
 
-  openModal(title, contentHtml) {
-    if (typeof App !== 'undefined' && App.openModal) {
-      App.openModal(title, contentHtml);
-      return;
+  showToast(message, type = 'info') {
+    if (typeof toast !== 'undefined' && typeof toast[type] === 'function') {
+      toast[type](message);
+    } else if (typeof toast !== 'undefined' && typeof toast.show === 'function') {
+      toast.show(message, type);
+    } else if (typeof showToast === 'function') {
+      showToast(message, type);
+    } else {
+      alert(message);
     }
+  },
+
+  openModal(title, contentHtml) {
     let overlay = document.getElementById('generalModalOverlay');
     if (overlay) {
       const titleEl = document.getElementById('generalModalTitle');
@@ -542,64 +448,295 @@ const AdminService = {
       if (bodyEl) bodyEl.innerHTML = contentHtml;
       overlay.classList.add('open');
       overlay.style.display = 'flex';
+      return;
+    }
+    if (typeof App !== 'undefined' && App.openModal) {
+      App.openModal(title, contentHtml);
     }
   },
 
   closeModal() {
-    if (typeof App !== 'undefined' && App.closeModal) {
-      App.closeModal();
-      return;
-    }
     let overlay = document.getElementById('generalModalOverlay');
     if (overlay) {
       overlay.classList.remove('open');
       overlay.style.display = 'none';
+      return;
+    }
+    if (typeof App !== 'undefined' && App.closeModal) {
+      App.closeModal();
     }
   },
 
-  switchTab(tabName) {
-    document.getElementById('adminTabCars')?.classList.toggle('active', tabName === 'CARS');
-    document.getElementById('adminTabCccd')?.classList.toggle('active', tabName === 'CCCD');
-    document.getElementById('adminTabLicenses')?.classList.toggle('active', tabName === 'LICENSES');
-    document.getElementById('adminTabBookings')?.classList.toggle('active', tabName === 'BOOKINGS');
-    document.getElementById('adminTabUsers')?.classList.toggle('active', tabName === 'USERS');
+  // Tải thống kê thời gian thực từ Backend DB (GET /api/v1/admin/stats)
+  async loadAdminStats() {
+    let stats = {
+      pendingCars: 0,
+      pendingLicenses: 0,
+      activeCars: 0,
+      totalBookings: 0,
+      pendingCccd: 0,
+      totalUsers: 0
+    };
 
-    const tabCars = document.getElementById('adminTabCarsContent');
-    const tabCccd = document.getElementById('adminTabCccdContent');
-    const tabLicenses = document.getElementById('adminTabLicensesContent');
-    const tabBookings = document.getElementById('adminTabBookingsContent');
-    const tabUsers = document.getElementById('adminTabUsersContent');
-
-    if (tabCars) tabCars.style.display = tabName === 'CARS' ? 'block' : 'none';
-    if (tabCccd) {
-      tabCccd.style.display = tabName === 'CCCD' ? 'block' : 'none';
-      if (tabName === 'CCCD') this.renderCccdList();
+    try {
+      if (typeof ApiService !== 'undefined') {
+        const res = await ApiService.getAdminStats();
+        if (res && res.success && res.data) {
+          const d = res.data;
+          stats.pendingCars = d.pending_cars_count ?? d.pending_cars ?? d.pendingCarsCount ?? 0;
+          stats.pendingLicenses = d.pending_licenses_count ?? d.pending_licenses ?? d.pendingLicensesCount ?? 0;
+          stats.activeCars = d.active_cars_count ?? d.active_cars ?? d.activeCarsCount ?? 0;
+          stats.totalBookings = d.total_bookings_count ?? d.total_bookings ?? d.totalBookingsCount ?? 0;
+          stats.pendingCccd = d.pending_cccd_count ?? d.pending_cccd ?? d.pendingCccdCount ?? 0;
+          stats.totalUsers = d.total_users_count ?? d.total_users ?? d.totalUsersCount ?? 0;
+        }
+      } else if (typeof StorageService !== 'undefined') {
+        const allCars = StorageService.getCars();
+        stats.pendingCars = allCars.filter(c => c.status === 'PENDING_APPROVAL' || c.status === 'PENDING').length;
+        stats.activeCars = allCars.filter(c => c.status === 'ACTIVE').length;
+        const allRenters = StorageService.getRenters();
+        stats.pendingLicenses = allRenters.filter(r => r.license_status === 'PENDING').length;
+        stats.totalBookings = StorageService.getBookings().length;
+        const allUsersObj = StorageService.getUsers();
+        const allUsersList = Array.isArray(allUsersObj) ? allUsersObj : (allUsersObj?.items || []);
+        stats.pendingCccd = allUsersList.filter(u => u.verification_status === 'PENDING' || u.status === 'PENDING').length;
+        stats.totalUsers = allUsersList.length;
+      }
+    } catch (e) {
+      console.warn('Lỗi khi tải thống kê Admin:', e);
     }
-    if (tabLicenses) tabLicenses.style.display = tabName === 'LICENSES' ? 'block' : 'none';
-    if (tabBookings) tabBookings.style.display = tabName === 'BOOKINGS' ? 'block' : 'none';
-    if (tabUsers) {
-      tabUsers.style.display = tabName === 'USERS' ? 'block' : 'none';
-      if (tabName === 'USERS') {
-        this.renderUsersTable();
+
+    // 4 Thẻ KPI chính
+    const elPendingCars = document.getElementById('statPendingCars');
+    if (elPendingCars) elPendingCars.innerText = stats.pendingCars;
+    const elPendingLicenses = document.getElementById('statPendingLicenses');
+    if (elPendingLicenses) elPendingLicenses.innerText = stats.pendingLicenses;
+    const elActiveCars = document.getElementById('statActiveCars');
+    if (elActiveCars) elActiveCars.innerText = stats.activeCars;
+    const elTotalBookings = document.getElementById('statTotalBookings');
+    if (elTotalBookings) elTotalBookings.innerText = stats.totalBookings;
+
+    // Badges trên các Tab
+    const badgePendingCars = document.getElementById('badgePendingCars');
+    if (badgePendingCars) badgePendingCars.innerText = stats.pendingCars;
+    const badgePendingCccd = document.getElementById('badgePendingCccd');
+    if (badgePendingCccd) badgePendingCccd.innerText = stats.pendingCccd;
+    const badgePendingLicenses = document.getElementById('badgePendingLicenses');
+    if (badgePendingLicenses) badgePendingLicenses.innerText = stats.pendingLicenses;
+    const badgeTotalBookings = document.getElementById('badgeTotalBookings');
+    if (badgeTotalBookings) badgeTotalBookings.innerText = stats.totalBookings;
+  },
+
+  // Tab 1: Duyệt xe mới đăng (GET /api/v1/admin/cars/pending)
+  async renderCarsList() {
+    const wrapper = document.getElementById('adminCarsTableWrapper');
+    if (!wrapper) return;
+
+    wrapper.innerHTML = `
+      <div style="padding: 2.5rem; text-align: center; color: var(--slate-500);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" style="margin: 0 auto 0.5rem auto; display: block;">
+          <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10"></path>
+        </svg>
+        Đang tải danh sách xe chờ duyệt từ hệ thống...
+      </div>
+    `;
+
+    let cars = [];
+    try {
+      if (typeof ApiService !== 'undefined') {
+        const res = await ApiService.getAdminPendingCars();
+        if (res && res.success) {
+          cars = res.items || (Array.isArray(res.data) ? res.data : (res.data?.items || []));
+        }
+      } else if (typeof StorageService !== 'undefined') {
+        const allCars = StorageService.getCars();
+        cars = allCars.filter(c => c.status === 'PENDING_APPROVAL' || c.status === 'PENDING' || c.status === 'PENDING_REVIEW');
+      }
+    } catch (e) {
+      console.warn('renderCarsList error:', e);
+    }
+
+    wrapper.innerHTML = `
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Thông tin xe</th>
+            <th>Biển số</th>
+            <th>Chủ xe</th>
+            <th>Giá đề xuất</th>
+            <th>Địa điểm đón</th>
+            <th>Thẩm định & Quyết định</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${cars.length === 0 ? `
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--slate-500);">
+                Hệ thống đã xử lý hết mọi xe chờ duyệt. Hiện không có yêu cầu nào tồn đọng.
+              </td>
+            </tr>
+          ` : cars.map(c => {
+            const carId = c.car_id || c.id;
+            const thumb = c.thumbnail_url || c.thumbnailUrl || c.image_url || c.imageUrl || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80';
+            const brand = c.brand || 'Xe';
+            const model = c.model || '';
+            const year = c.year || '';
+            const seats = c.seat_count || c.seatCount || c.seats || 4;
+            const trans = (c.transmission === 'AUTOMATIC' || c.transmission === 'Số tự động') ? 'Tự động' : 'Số sàn';
+            const plate = c.license_plate || c.licensePlate || c.plate_number || c.plateNumber || 'N/A';
+            const owner = c.owner_name || c.ownerName || 'Chủ xe';
+            const price = c.base_price_per_day || c.basePricePerDay || c.price_per_day || c.pricePerDay || 0;
+            const addr = c.pickup_address || c.pickupAddress || c.address || 'Chưa cập nhật';
+            return `
+            <tr>
+              <td>
+                <div class="table-car-cell">
+                  <img class="table-car-thumb" src="${thumb}" alt="${brand}" />
+                  <div>
+                    <strong>${brand} ${model}</strong>
+                    <div style="font-size: 0.76rem; color: var(--slate-500);">${year} · ${seats} chỗ · ${trans}</div>
+                  </div>
+                </div>
+              </td>
+              <td><strong style="font-family: monospace;">${plate}</strong></td>
+              <td>${owner}</td>
+              <td style="color: var(--primary); font-weight: 700;">${typeof StorageService !== 'undefined' ? StorageService.formatCurrency(price) : (Number(price).toLocaleString('vi-VN') + ' đ')}</td>
+              <td style="font-size: 0.82rem; max-width: 180px;">${addr}</td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn btn-outline btn-sm" onclick="AdminService.openCarDetailModal(${carId})">Chi tiết</button>
+                  <button class="btn btn-primary btn-sm" onclick="AdminService.approveCar(${carId})">Duyệt xe</button>
+                  <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="AdminService.openRejectCarModal(${carId})">Từ chối</button>
+                </div>
+              </td>
+            </tr>
+          `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  },
+
+  // Modal xem chi tiết xe trong Admin
+  async openCarDetailModal(carId) {
+    this.openModal(`Chi tiết xe #${carId}`, `
+      <div style="padding: 2.5rem; text-align: center; color: var(--slate-500);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" style="margin: 0 auto 0.5rem auto; display: block; color: var(--primary);">
+          <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10"></path>
+        </svg>
+        Đang tải thông tin chi tiết xe...
+      </div>
+    `);
+
+    let car = null;
+    try {
+      if (typeof ApiService !== 'undefined') {
+        if (ApiService.getAdminCarById) {
+          const res = await ApiService.getAdminCarById(carId);
+          if (res && res.success && res.data) car = res.data;
+        } else if (ApiService.getCarById) {
+          const res = await ApiService.getCarById(carId);
+          if (res && res.success && res.data) car = res.data;
+        }
+      }
+      if (!car && typeof CarAPI !== 'undefined' && CarAPI.getPublicCarDetail) {
+        const res = await CarAPI.getPublicCarDetail(carId);
+        if (res && res.success && res.data) car = res.data;
+      }
+      if (!car && typeof StorageService !== 'undefined') {
+        car = StorageService.getCarById(carId);
+      }
+    } catch (e) {
+      console.warn('openCarDetailModal error:', e);
+    }
+
+    if (!car) {
+      const modalBody = document.getElementById('generalModalBody');
+      if (modalBody) {
+        modalBody.innerHTML = `
+          <div style="padding: 2rem; text-align: center;">
+            <p style="color: var(--danger); font-weight: 600;">Không tìm thấy thông tin xe #${carId}</p>
+            <button class="btn btn-outline btn-sm" onclick="AdminService.closeModal()">Đóng</button>
+          </div>
+        `;
+      }
+      return;
+    }
+
+    const modalBody = document.getElementById('generalModalBody');
+    if (modalBody) {
+      const thumb = car.thumbnail_url || car.thumbnailUrl || car.image_url || car.imageUrl || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80';
+      const brand = car.brand || 'Xe';
+      const model = car.model || '';
+      const year = car.year || '';
+      const plate = car.license_plate || car.licensePlate || car.plate_number || car.plateNumber || 'N/A';
+      const owner = car.owner_name || car.ownerName || 'Chủ xe';
+      const price = car.base_price_per_day || car.basePricePerDay || car.price_per_day || car.pricePerDay || 0;
+      const seats = car.seat_count || car.seatCount || car.seats || 4;
+      const trans = (car.transmission === 'AUTOMATIC' || car.transmission === 'Số tự động') ? 'Tự động' : 'Số sàn';
+      const fuel = car.fuel_type || car.fuelType || car.fuel || 'Xăng';
+      const addr = car.pickup_address || car.pickupAddress || car.address || 'Chưa cập nhật';
+      const priceStr = typeof StorageService !== 'undefined' ? StorageService.formatCurrency(price) : (Number(price).toLocaleString('vi-VN') + ' đ');
+
+      modalBody.innerHTML = `
+        <div style="padding: 1.25rem;">
+          <div style="display: flex; gap: 1.25rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
+            <img src="${thumb}" alt="${brand} ${model}" style="width: 240px; height: 160px; object-fit: cover; border-radius: 10px; border: 1px solid var(--slate-200);" />
+            <div style="flex: 1; min-width: 220px;">
+              <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--slate-900); margin: 0 0 0.4rem 0;">${brand} ${model} (${year})</h3>
+              <div style="font-size: 0.88rem; color: var(--slate-500); margin-bottom: 0.5rem;">Biển số: <strong style="font-family: monospace; color: var(--slate-800);">${plate}</strong></div>
+              <div style="font-size: 0.88rem; color: var(--slate-500); margin-bottom: 0.5rem;">Chủ xe: <strong style="color: var(--slate-800);">${owner}</strong></div>
+              <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary); margin-top: 0.5rem;">${priceStr} <span style="font-size: 0.8rem; font-weight: 500; color: var(--slate-500);">/ ngày</span></div>
+            </div>
+          </div>
+          <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; font-size: 0.85rem;">
+              <div><span style="color: var(--slate-500);">Số chỗ:</span> <strong>${seats} chỗ</strong></div>
+              <div><span style="color: var(--slate-500);">Hộp số:</span> <strong>${trans}</strong></div>
+              <div><span style="color: var(--slate-500);">Nhiên liệu:</span> <strong>${fuel}</strong></div>
+              <div><span style="color: var(--slate-500);">Địa điểm đón:</span> <strong>${addr}</strong></div>
+            </div>
+          </div>
+          <div style="text-align: right; display: flex; justify-content: flex-end; gap: 8px;">
+            <button class="btn btn-outline btn-sm" onclick="AdminService.closeModal()">Đóng</button>
+            <button class="btn btn-primary btn-sm" onclick="AdminService.closeModal(); AdminService.approveCar(${carId});">Duyệt xe này</button>
+            <button class="btn btn-outline btn-sm" style="color: var(--danger); border-color: var(--danger);" onclick="AdminService.closeModal(); AdminService.openRejectCarModal(${carId});">Từ chối xe</button>
+          </div>
+        </div>
+      `;
+    }
+  },
+
+  // Duyệt xe thành công (PUT /api/v1/admin/cars/{carId}/approve)
+  async approveCar(carId) {
+    if (typeof ApiService !== 'undefined') {
+      await ApiService.approveCar(carId, 'APPROVED');
+    } else {
+      try {
+        await fetch(`http://localhost:8080/api/v1/admin/cars/${carId}/approve`, {
+          method: 'PUT',
+          headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'APPROVED' })
+        });
+      } catch (e) {
+        console.warn('API approveCar offline:', e);
       }
     }
-  },
-
-  async approveCar(carId) {
-    try {
-      await fetch(`http://localhost:8080/api/v1/admin/cars/${carId}/approve`, {
-        method: 'PUT',
-        headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'APPROVED' })
-      });
-    } catch (e) {
-      console.warn('API approveCar offline:', e);
+    if (typeof StorageService !== 'undefined') {
+      StorageService.updateCarStatus(carId, 'ACTIVE');
     }
-    StorageService.updateCarStatus(carId, 'ACTIVE');
-    const msg = `Đã duyệt xe #${carId}! Xe đã xuất hiện trên trang tìm kiếm.`;
+    const msg = Đã duyệt xe #! Xe đã được xuất bản và sẵn sàng cho thuê.;
     if (typeof showToast === 'function') showToast(msg, 'success', 2500);
     else if (typeof App !== 'undefined' && App.showToast) App.showToast(msg, 'success');
-    this.renderAdminPortal();
+
+    this.renderCarsList();
+    this.loadAdminStats();
+  },
+
+  rejectCar(carId) {
+    this.openRejectCarModal(carId);
   },
 
   // BR-04-6: Mở modal yêu cầu nhập lý do từ chối xe
@@ -625,7 +762,7 @@ const AdminService = {
     this.openModal(`Từ chối duyệt xe #${carId} (BR-04-6)`, html);
   },
 
-  // BR-04-6: Kiểm tra lý do từ chối bắt buộc
+  // BR-04-6: Xác nhận từ chối xe có lý do bắt buộc
   async submitRejectCar(carId) {
     const reasonInput = document.getElementById('carRejectReasonInput');
     const errorEl = document.getElementById('carRejectReasonError');
@@ -642,69 +779,65 @@ const AdminService = {
       return;
     }
 
-    try {
-      await fetch(`http://localhost:8080/api/v1/admin/cars/${carId}/approve`, {
-        method: 'PUT',
-        headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'REJECTED', reason })
-      });
-    } catch (e) {
-      console.warn('API rejectCar offline:', e);
+    if (typeof ApiService !== 'undefined') {
+      await ApiService.approveCar(carId, 'REJECTED', reason);
+    } else {
+      try {
+        await fetch(`http://localhost:8080/api/v1/admin/cars/${carId}/approve`, {
+          method: 'PUT',
+          headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'REJECTED', reason })
+        });
+      } catch (e) {
+        console.warn('API rejectCar offline:', e);
+      }
     }
 
-    StorageService.updateCarStatus(carId, 'REJECTED', reason);
+    if (typeof StorageService !== 'undefined') {
+      StorageService.updateCarStatus(carId, 'REJECTED', reason);
+    }
     const msg = `Đã từ chối xe #${carId}. Lý do: ${reason}`;
     if (typeof showToast === 'function') showToast(msg, 'info', 3000);
     else if (typeof App !== 'undefined' && App.showToast) App.showToast(msg, 'info');
 
     this.closeModal();
-    this.renderAdminPortal();
+    this.renderCarsList();
+    this.loadAdminStats();
   },
 
-  // Task 15: Duyệt CMND/CCCD
+  // Tab 2: Duyệt CMND/CCCD (GET /api/v1/admin/users/pending-cccd)
   async renderCccdList() {
     const container = document.getElementById('adminCccdListContainer');
     if (!container) return;
 
-    container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #64748b;">Đang tải danh sách CMND/CCCD chờ duyệt...</div>`;
+    container.innerHTML = `
+      <div style="text-align: center; padding: 2rem; color: #64748b;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" style="margin: 0 auto 0.5rem auto; display: block;">
+          <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10"></path>
+        </svg>
+        Đang tải danh sách CMND/CCCD chờ duyệt từ cơ sở dữ liệu...
+      </div>
+    `;
 
     let pendingList = [];
     try {
-      const res = await fetch('http://localhost:8080/api/v1/admin/users/pending-cccd', {
-        headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {}
-      });
-      const data = await res.json().catch(() => null);
-      if (res.ok && data && Array.isArray(data.result)) {
-        pendingList = data.result;
+      if (typeof ApiService !== 'undefined') {
+        const res = await ApiService.getAdminPendingCccd();
+        if (res && res.success && Array.isArray(res.data)) {
+          pendingList = res.data;
+        }
+      } else {
+        const res = await fetch('http://localhost:8080/api/v1/admin/users/pending-cccd', {
+          headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {}
+        });
+        const data = await res.json().catch(() => null);
+        if (res.ok && data && Array.isArray(data.data || data.result)) {
+          pendingList = data.data || data.result;
+        }
       }
     } catch (e) {
       console.warn('API pending-cccd offline:', e);
-    }
-
-    // Mock fallback
-    if (pendingList.length === 0) {
-      pendingList = [
-        {
-          userId: 4,
-          fullName: 'Nguyễn Văn B',
-          email: 'b@gmail.com',
-          phone: '0908889999',
-          role: 'RENTER',
-          cccdFrontUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
-          cccdBackUrl: 'https://images.unsplash.com/photo-1544717305-9e6b4e057115?auto=format&fit=crop&w=600&q=80',
-          submittedAt: '2026-09-19 10:00'
-        },
-        {
-          userId: 5,
-          fullName: 'Trần Thị Thu Thảo',
-          email: 'thao.tran@driveshare.com',
-          phone: '0933221144',
-          role: 'OWNER',
-          cccdFrontUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80',
-          cccdBackUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
-          submittedAt: '2026-09-19 11:30'
-        }
-      ];
     }
 
     if (pendingList.length === 0) {
@@ -718,62 +851,78 @@ const AdminService = {
 
     container.innerHTML = `
       <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-        ${pendingList.map(u => `
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-            <div style="flex: 1; min-width: 260px;">
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                <strong style="font-size: 1.05rem; color: #0f172a;">${u.fullName}</strong>
-                <span class="badge ${u.role === 'OWNER' ? 'badge-warning' : 'badge-info'}" style="font-size: 0.72rem;">${u.role === 'OWNER' ? 'Chủ xe' : 'Khách thuê'}</span>
-                <span class="badge badge-warning" style="font-size: 0.72rem;">Chờ thẩm định CCCD</span>
-              </div>
-              <div style="font-size: 0.85rem; color: #475569; margin-bottom: 3px;">Email: <strong>${u.email}</strong></div>
-              <div style="font-size: 0.85rem; color: #475569; margin-bottom: 3px;">Số điện thoại: <strong>${u.phone || '0901234567'}</strong></div>
-              <div style="font-size: 0.78rem; color: #94a3b8;">Thời gian nộp: ${u.submittedAt || 'Mới nộp'}</div>
-            </div>
+        ${pendingList.map(u => {
+          const userId = u.user_id || u.userId;
+          const fullName = u.full_name || u.fullName;
+          const email = u.email;
+          const phone = u.phone || 'Chưa cập nhật';
+          const role = u.role;
+          const cccdFront = u.cccd_front_url || u.cccdFrontUrl || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80';
+          const cccdBack = u.cccd_back_url || u.cccdBackUrl || 'https://images.unsplash.com/photo-1544717305-9e6b4e057115?auto=format&fit=crop&w=600&q=80';
+          const submittedAt = u.submitted_at || u.submittedAt || 'Mới nộp';
 
-            <!-- Ảnh CCCD 2 mặt -->
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-              <div style="text-align: center;">
-                <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 4px;">Mặt trước CCCD</div>
-                <img src="${u.cccdFrontUrl}" alt="Mặt trước" style="width: 140px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer;" onclick="window.open('${u.cccdFrontUrl}', '_blank')" title="Nhấp để xem ảnh lớn" />
+          return `
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+              <div style="flex: 1; min-width: 260px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <strong style="font-size: 1.05rem; color: #0f172a;">${fullName}</strong>
+                  <span class="badge ${role === 'OWNER' ? 'badge-warning' : 'badge-info'}" style="font-size: 0.72rem;">${role === 'OWNER' ? 'Chủ xe' : 'Khách thuê'}</span>
+                  <span class="badge badge-warning" style="font-size: 0.72rem;">Chờ thẩm định CCCD</span>
+                </div>
+                <div style="font-size: 0.85rem; color: #475569; margin-bottom: 3px;">Email: <strong>${email}</strong></div>
+                <div style="font-size: 0.85rem; color: #475569; margin-bottom: 3px;">Số điện thoại: <strong>${phone}</strong></div>
+                <div style="font-size: 0.78rem; color: #94a3b8;">Thời gian nộp: ${submittedAt}</div>
               </div>
-              <div style="text-align: center;">
-                <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 4px;">Mặt sau CCCD</div>
-                <img src="${u.cccdBackUrl}" alt="Mặt sau" style="width: 140px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer;" onclick="window.open('${u.cccdBackUrl}', '_blank')" title="Nhấp để xem ảnh lớn" />
-              </div>
-            </div>
 
-            <!-- Nút hành động -->
-            <div style="display: flex; flex-direction: column; gap: 8px; justify-content: center; min-width: 130px;">
-              <button class="btn btn-primary btn-sm" onclick="AdminService.approveCccd(${u.userId})" style="font-weight: 700;">
-                Phê duyệt CCCD
-              </button>
-              <button class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #fca5a5;" onclick="AdminService.openRejectCccdModal(${u.userId})">
-                Từ chối hồ sơ
-              </button>
+              <!-- Ảnh CCCD 2 mặt -->
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <div style="text-align: center;">
+                  <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 4px;">Mặt trước CCCD</div>
+                  <img src="${cccdFront}" alt="Mặt trước" style="width: 140px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer;" onclick="window.open('${cccdFront}', '_blank')" title="Nhấp để xem ảnh lớn" />
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 4px;">Mặt sau CCCD</div>
+                  <img src="${cccdBack}" alt="Mặt sau" style="width: 140px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer;" onclick="window.open('${cccdBack}', '_blank')" title="Nhấp để xem ảnh lớn" />
+                </div>
+              </div>
+
+              <!-- Nút hành động -->
+              <div style="display: flex; flex-direction: column; gap: 8px; justify-content: center; min-width: 130px;">
+                <button class="btn btn-primary btn-sm" onclick="AdminService.approveCccd(${userId})" style="font-weight: 700;">
+                  Phê duyệt CCCD
+                </button>
+                <button class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #fca5a5;" onclick="AdminService.openRejectCccdModal(${userId})">
+                  Từ chối hồ sơ
+                </button>
+              </div>
             </div>
-          </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
     `;
   },
 
-  // BR-02-5: Phê duyệt CCCD
+  // BR-02-5: Phê duyệt CCCD (PUT /api/v1/admin/users/{userId}/verify-cccd)
   async approveCccd(userId) {
-    try {
-      await fetch(`http://localhost:8080/api/v1/admin/users/${userId}/verify-cccd`, {
-        method: 'PUT',
-        headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'APPROVED' })
-      });
-    } catch (e) {
-      console.warn('Approve CCCD API offline:', e);
+    if (typeof ApiService !== 'undefined') {
+      await ApiService.verifyCccd(userId, 'APPROVED');
+    } else {
+      try {
+        await fetch(`http://localhost:8080/api/v1/admin/users/${userId}/verify-cccd`, {
+          method: 'PUT',
+          headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'APPROVED' })
+        });
+      } catch (e) {
+        console.warn('Approve CCCD API offline:', e);
+      }
     }
 
     if (typeof showToast === 'function') {
       showToast(`Đã phê duyệt CMND/CCCD thành công cho user #${userId}!`, 'success', 2500);
     }
     this.renderCccdList();
+    this.loadAdminStats();
   },
 
   // BR-02-6: Mở modal từ chối CCCD bắt buộc lý do
@@ -816,14 +965,18 @@ const AdminService = {
       return;
     }
 
-    try {
-      await fetch(`http://localhost:8080/api/v1/admin/users/${userId}/verify-cccd`, {
-        method: 'PUT',
-        headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'REJECTED', reason })
-      });
-    } catch (e) {
-      console.warn('Reject CCCD API offline:', e);
+    if (typeof ApiService !== 'undefined') {
+      await ApiService.verifyCccd(userId, 'REJECTED', reason);
+    } else {
+      try {
+        await fetch(`http://localhost:8080/api/v1/admin/users/${userId}/verify-cccd`, {
+          method: 'PUT',
+          headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'REJECTED', reason })
+        });
+      } catch (e) {
+        console.warn('Reject CCCD API offline:', e);
+      }
     }
 
     if (typeof showToast === 'function') {
@@ -831,6 +984,253 @@ const AdminService = {
     }
     this.closeModal();
     this.renderCccdList();
+    this.loadAdminStats();
+  },
+
+  // Tab 3: Xác minh bằng lái GPLX (GET /api/v1/admin/users/pending-licenses)
+  async renderLicensesList() {
+    const container = document.getElementById('adminLicensesContainer');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div style="padding: 2.5rem; text-align: center; color: var(--slate-500);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" style="margin: 0 auto 0.5rem auto; display: block;">
+          <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10"></path>
+        </svg>
+        Đang tải danh sách hồ sơ GPLX từ cơ sở dữ liệu...
+      </div>
+    `;
+
+    let licenses = [];
+    try {
+      if (typeof ApiService !== 'undefined') {
+        const res = await ApiService.getAdminLicenses();
+        if (res && res.success && Array.isArray(res.data)) {
+          licenses = res.data;
+        }
+      } else if (typeof StorageService !== 'undefined') {
+        const allRenters = StorageService.getRenters();
+        licenses = allRenters.map(r => ({
+          user_id: r.id,
+          full_name: r.name,
+          phone: r.phone,
+          email: r.email,
+          license_number: r.license_number,
+          license_image_url: r.license_image,
+          license_status: r.license_status
+        }));
+      }
+    } catch (e) {
+      console.warn('renderLicensesList error:', e);
+    }
+
+    if (licenses.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem; color: #64748b;">
+          Hiện không có hồ sơ Giấy phép lái xe (GPLX) nào cần xác minh.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        ${licenses.map(r => {
+          const userId = r.user_id || r.userId || r.id;
+          const status = r.license_status || r.licenseStatus || 'PENDING';
+          const isPending = status === 'PENDING';
+          return `
+            <div class="license-card">
+              <img class="license-thumb" src="${r.license_image_url || r.licenseImageUrl || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=400&q=80'}" alt="GPLX ${r.full_name || r.fullName}" onclick="window.open(this.src, '_blank')" style="cursor: pointer;" title="Nhấp để xem ảnh lớn" />
+              <div>
+                <div style="display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.3rem; flex-wrap: wrap;">
+                  <h4 style="font-size: 1rem; font-weight: 700;">${r.full_name || r.fullName}</h4>
+                  <span class="badge ${status === 'VERIFIED' || status === 'APPROVED' ? 'badge-success' : (isPending ? 'badge-warning' : 'badge-danger')}">
+                    ${status === 'VERIFIED' || status === 'APPROVED' ? 'Đã duyệt hợp lệ' : (isPending ? 'Chờ xác thực' : 'Bị từ chối')}
+                  </span>
+                </div>
+                <div style="font-size: 0.82rem; color: var(--slate-600); margin-bottom: 0.2rem;">
+                  Số GPLX: <strong style="font-family: monospace;">${r.license_number || r.licenseNumber || 'Chưa cung cấp'}</strong>
+                </div>
+                <div style="font-size: 0.82rem; color: var(--slate-500);">
+                  SĐT: ${r.phone || 'Chưa cập nhật'} · Email: ${r.email || 'Chưa cập nhật'}
+                </div>
+                ${r.submitted_at || r.submittedAt ? `<div style="font-size: 0.76rem; color: var(--slate-400); margin-top: 0.2rem;">Thời gian gửi: ${r.submitted_at || r.submittedAt}</div>` : ''}
+              </div>
+              <div>
+                ${isPending ? `
+                  <div style="display: flex; gap: 0.45rem; flex-wrap: wrap;">
+                    <button class="btn btn-primary btn-sm" onclick="AdminService.approveLicense(${userId})">Phê duyệt GPLX</button>
+                    <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="AdminService.openRejectLicenseModal(${userId})">Yêu cầu chụp lại</button>
+                  </div>
+                ` : `
+                  <span style="color: var(--slate-400); font-size: 0.82rem;">Đã hoàn thành xác minh</span>
+                `}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  },
+
+  // Phê duyệt GPLX (PATCH /api/v1/admin/users/{userId}/approve-license)
+  async approveLicense(userId) {
+    if (typeof ApiService !== 'undefined') {
+      await ApiService.approveLicense(userId, 'verified');
+    }
+    if (typeof StorageService !== 'undefined') {
+      StorageService.updateRenterLicense(userId, 'APPROVED');
+    }
+    const msg = `Đã xác minh GPLX hợp lệ cho khách thuê #${userId}!`;
+    if (typeof showToast === 'function') showToast(msg, 'success', 2500);
+    else if (typeof App !== 'undefined' && App.showToast) App.showToast(msg, 'success');
+
+    this.renderLicensesList();
+    this.loadAdminStats();
+  },
+
+  // Mở modal yêu cầu chụp lại GPLX kèm lý do
+  openRejectLicenseModal(userId) {
+    const html = `
+      <div style="padding: 0.5rem 0;">
+        <p style="color: #475569; font-size: 0.9rem; margin-bottom: 1rem;">
+          Bạn đang từ chối GPLX của khách thuê <strong>#${userId}</strong>. Vui lòng nhập lý do để thông báo cho khách hàng:
+        </p>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label style="display: block; font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; color: #1e293b;">
+            Lý do từ chối * (Bắt buộc)
+          </label>
+          <textarea id="licenseRejectReasonInput" class="form-control" rows="3" placeholder="Ví dụ: Ảnh chụp bị lóa sáng, số bằng lái không đọc được, giấy phép hết hạn..." style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 0.9rem; box-sizing: border-box;"></textarea>
+          <div id="licenseRejectReasonError" style="color: #ef4444; font-size: 0.8rem; font-weight: 600; margin-top: 5px; display: none;"></div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="AdminService.closeModal()">Hủy</button>
+          <button type="button" class="btn btn-primary btn-sm" style="background: #ef4444; border-color: #dc2626;" onclick="AdminService.submitRejectLicense(${userId})">Xác nhận từ chối</button>
+        </div>
+      </div>
+    `;
+    this.openModal(`Từ chối GPLX #${userId}`, html);
+  },
+
+  // Xác nhận từ chối GPLX có lý do bắt buộc
+  async submitRejectLicense(userId) {
+    const input = document.getElementById('licenseRejectReasonInput');
+    const reason = input ? input.value.trim() : '';
+    if (!reason) {
+      const err = document.getElementById('licenseRejectReasonError');
+      if (err) {
+        err.innerText = 'Lý do từ chối là bắt buộc!';
+        err.style.display = 'block';
+      }
+      return;
+    }
+
+    if (typeof ApiService !== 'undefined') {
+      await ApiService.approveLicense(userId, 'rejected', reason);
+    }
+    if (typeof StorageService !== 'undefined') {
+      StorageService.updateRenterLicense(userId, 'REJECTED');
+    }
+    const msg = `Đã yêu cầu khách thuê #${userId} chụp lại GPLX.`;
+    if (typeof showToast === 'function') showToast(msg, 'warning', 3000);
+    else if (typeof App !== 'undefined' && App.showToast) App.showToast(msg, 'warning');
+
+    this.closeModal();
+    this.renderLicensesList();
+    this.loadAdminStats();
+  },
+
+  // Tab 4: Toàn bộ đơn đặt xe (GET /api/v1/admin/rentals)
+  async renderBookingsList() {
+    const wrapper = document.getElementById('adminBookingsTableWrapper');
+    if (!wrapper) return;
+
+    wrapper.innerHTML = `
+      <div style="padding: 2.5rem; text-align: center; color: var(--slate-500);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" style="margin: 0 auto 0.5rem auto; display: block;">
+          <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10"></path>
+        </svg>
+        Đang tải toàn bộ đơn đặt xe từ cơ sở dữ liệu...
+      </div>
+    `;
+
+    let bookings = [];
+    try {
+      if (typeof ApiService !== 'undefined') {
+        const res = await ApiService.getAdminRentals();
+        if (res && res.success && Array.isArray(res.data)) {
+          bookings = res.data;
+        }
+      } else if (typeof StorageService !== 'undefined') {
+        bookings = StorageService.getBookings();
+      }
+    } catch (e) {
+      console.warn('renderBookingsList error:', e);
+    }
+
+    const getStatusBadge = (st) => {
+      switch (String(st).toUpperCase()) {
+        case 'CONFIRMED':
+        case 'DEPOSIT_PAID':
+          return '<span class="badge badge-success">Đã đặt cọc (30%)</span>';
+        case 'ACTIVE':
+          return '<span class="badge badge-primary">Đang thuê</span>';
+        case 'COMPLETED':
+          return '<span class="badge badge-neutral">Đã hoàn thành</span>';
+        case 'CANCELLED':
+          return '<span class="badge badge-danger">Đã hủy</span>';
+        case 'PENDING':
+          return '<span class="badge badge-warning">Chờ chủ xe duyệt</span>';
+        default:
+          return `<span class="badge badge-warning">${st}</span>`;
+      }
+    };
+
+    wrapper.innerHTML = `
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Mã đơn</th>
+            <th>Phương tiện</th>
+            <th>Khách thuê</th>
+            <th>Lịch trình thuê</th>
+            <th>Tổng tiền</th>
+            <th>Tiền cọc (30%)</th>
+            <th>Trạng thái đơn</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${bookings.length === 0 ? `
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--slate-500);">
+                Chưa có giao dịch thuê xe nào trên hệ thống DriveShare.
+              </td>
+            </tr>
+          ` : bookings.map(b => `
+            <tr>
+              <td><span class="booking-code">#${b.rental_id || b.rentalId || b.id}</span></td>
+              <td>
+                <strong>${b.car_name || b.carName || 'Phương tiện'}</strong><br/>
+                <span style="font-size: 0.76rem; color: var(--slate-500); font-family: monospace;">${b.car_plate || b.carPlate || b.license_plate || b.licensePlate || 'N/A'}</span>
+              </td>
+              <td>
+                ${b.renter_name || b.renterName || 'Khách thuê'}<br/>
+                <span style="font-size: 0.76rem; color: var(--slate-500);">${b.renter_phone || b.renterPhone || b.renter_email || ''}</span>
+              </td>
+              <td style="font-size: 0.8rem;">
+                ${b.start_date || b.startDate || b.start_time || ''} <br/>đến ${b.end_date || b.endDate || b.end_time || ''} (${b.total_days || b.totalDays || 1} ngày)
+              </td>
+              <td style="font-weight: 700;">${StorageService.formatCurrency(b.total_price || b.totalPrice || b.total_amount || b.totalAmount || 0)}</td>
+              <td style="color: var(--primary); font-weight: 700;">${StorageService.formatCurrency(b.deposit_amount || b.depositAmount || 0)}</td>
+              <td>${getStatusBadge(b.status)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
   },
 
   // Task 14: Chọn 2 tab Khách thuê / Chủ xe
@@ -860,24 +1260,71 @@ const AdminService = {
     this.renderUsersTable();
   },
 
-  approveLicense(renterId) {
-    StorageService.updateRenterLicense(renterId, 'APPROVED');
-    App.showToast(`Đã xác minh GPLX hợp lệ cho khách thuê #${renterId}!`, 'success');
-    this.renderAdminPortal();
-    this.switchTab('LICENSES');
+  // Chuyển Tab Admin
+  switchTab(tabName) {
+    document.getElementById('adminTabCars')?.classList.toggle('active', tabName === 'CARS');
+    document.getElementById('adminTabCccd')?.classList.toggle('active', tabName === 'CCCD');
+    document.getElementById('adminTabLicenses')?.classList.toggle('active', tabName === 'LICENSES');
+    document.getElementById('adminTabBookings')?.classList.toggle('active', tabName === 'BOOKINGS');
+    document.getElementById('adminTabUsers')?.classList.toggle('active', tabName === 'USERS');
+
+    const tabCars = document.getElementById('adminTabCarsContent');
+    const tabCccd = document.getElementById('adminTabCccdContent');
+    const tabLicenses = document.getElementById('adminTabLicensesContent');
+    const tabBookings = document.getElementById('adminTabBookingsContent');
+    const tabUsers = document.getElementById('adminTabUsersContent');
+
+    if (tabCars) {
+      tabCars.style.display = tabName === 'CARS' ? 'block' : 'none';
+      if (tabName === 'CARS') this.renderCarsList();
+    }
+    if (tabCccd) {
+      tabCccd.style.display = tabName === 'CCCD' ? 'block' : 'none';
+      if (tabName === 'CCCD') this.renderCccdList();
+    }
+    if (tabLicenses) {
+      tabLicenses.style.display = tabName === 'LICENSES' ? 'block' : 'none';
+      if (tabName === 'LICENSES') this.renderLicensesList();
+    }
+    if (tabBookings) {
+      tabBookings.style.display = tabName === 'BOOKINGS' ? 'block' : 'none';
+      if (tabName === 'BOOKINGS') this.renderBookingsList();
+    }
+    if (tabUsers) {
+      tabUsers.style.display = tabName === 'USERS' ? 'block' : 'none';
+      if (tabName === 'USERS') this.renderUsersTable();
+    }
   },
 
-  rejectLicense(renterId) {
-    StorageService.updateRenterLicense(renterId, 'REJECTED');
-    App.showToast(`Đã yêu cầu khách thuê #${renterId} chụp lại GPLX.`, 'error');
-    this.renderAdminPortal();
-    this.switchTab('LICENSES');
+  async rejectLicense(renterId) {
+    const reason = prompt('Nhập lý do từ chối hoặc yêu cầu chụp lại GPLX:', 'Ảnh chụp GPLX bị mờ hoặc không rõ số seri. Vui lòng chụp lại hai mặt rõ nét.');
+    if (!reason || !reason.trim()) {
+      if (typeof showToast === 'function') showToast('Bạn đã hủy thao tác từ chối GPLX', 'info');
+      else if (typeof App !== 'undefined' && App.showToast) App.showToast('Bạn đã hủy thao tác từ chối GPLX', 'info');
+      return;
+    }
+
+    if (typeof ApiService !== 'undefined') {
+      await ApiService.approveLicense(renterId, {
+        verification_status: 'rejected',
+        rejection_reason: reason.trim()
+      });
+    }
+    if (typeof StorageService !== 'undefined') {
+      StorageService.updateRenterLicense(renterId, 'REJECTED');
+    }
+    const msg = Đã yêu cầu khách thuê # chụp lại GPLX.;
+    if (typeof showToast === 'function') showToast(msg, 'warning', 3000);
+    else if (typeof App !== 'undefined' && App.showToast) App.showToast(msg, 'warning');
+
+    this.renderLicensesList();
+    this.loadAdminStats();
   },
 
   // Mở modal xem chi tiết người dùng (Admin View User Detail - AC1, AC2, AC3)
   async openUserDetailModal(userId) {
     // 1. Mở modal với trạng thái đang tải
-    App.openModal(`Chi tiết người dùng #${userId}`, `
+    this.openModal(`Chi tiết người dùng #${userId}`, `
       <div style="padding: 3rem 1.5rem; text-align: center; color: var(--slate-500);">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" style="margin: 0 auto 0.75rem auto; display: block; color: var(--primary);">
           <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
@@ -916,7 +1363,7 @@ const AdminService = {
             <div style="padding: 0.75rem; background: var(--slate-50); border: 1px dashed var(--slate-300); border-radius: 8px; font-size: 0.8rem; color: var(--slate-600); margin-bottom: 1.5rem; font-family: monospace;">
               GET /api/v1/admin/users/${userId} &rarr; 404 Not Found (USER_NOT_FOUND)
             </div>
-            <button class="btn btn-primary" onclick="App.closeModal()">Đã hiểu & Đóng</button>
+            <button class="btn btn-primary" onclick="AdminService.closeModal()">Đã hiểu & Đóng</button>
           </div>
         `;
       }
@@ -1019,6 +1466,12 @@ const AdminService = {
               <div style="font-size: 0.76rem; color: var(--slate-500);">Số CMND / Căn cước công dân</div>
               <div style="font-size: 0.9rem; font-weight: 600; color: var(--slate-800); font-family: monospace;">
                 ${u.id_card_number || u.idCardNumber || 'Chưa định danh'}
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 0.76rem; color: var(--slate-500);">Địa chỉ thường trú / Nơi ở</div>
+              <div style="font-size: 0.9rem; font-weight: 600; color: var(--slate-800);">
+                ${u.address || 'Chưa cập nhật'}
               </div>
             </div>
           </div>
@@ -1133,7 +1586,7 @@ const AdminService = {
                 🔒 Khóa tài khoản (Block)
               </button>
             `}
-            <button class="btn btn-outline btn-sm" onclick="App.closeModal()">Đóng</button>
+            <button class="btn btn-outline btn-sm" onclick="AdminService.closeModal()">Đóng</button>
           </div>
         </div>
       </div>
@@ -1148,11 +1601,12 @@ const AdminService = {
 
     const res = await ApiService.approveOwner(userId, { verification_status: 'verified' });
     if (res && res.success) {
-      App.showToast(`Đã phê duyệt hồ sơ Chủ xe @${username} thành công! Tài khoản đã ACTIVE.`, 'success');
+      this.showToast(`Đã phê duyệt hồ sơ Chủ xe @${username} thành công! Tài khoản đã ACTIVE.`, 'success');
       await this.openUserDetailModal(userId);
       this.renderUsersTable();
+      this.loadAdminStats();
     } else {
-      App.showToast(res?.message || 'Không thể phê duyệt hồ sơ chủ xe', 'error');
+      this.showToast(res?.message || 'Không thể phê duyệt hồ sơ chủ xe', 'error');
     }
   },
 
@@ -1171,11 +1625,12 @@ const AdminService = {
     });
 
     if (res && res.success) {
-      App.showToast(`Đã từ chối hồ sơ Chủ xe @${username}. Lý do từ chối đã được gửi thông báo tới chủ xe!`, 'warning');
+      this.showToast(`Đã từ chối hồ sơ Chủ xe @${username}. Lý do từ chối đã được gửi thông báo tới chủ xe!`, 'warning');
       await this.openUserDetailModal(userId);
       this.renderUsersTable();
+      this.loadAdminStats();
     } else {
-      App.showToast(res?.message || 'Không thể từ chối hồ sơ chủ xe', 'error');
+      this.showToast(res?.message || 'Không thể từ chối hồ sơ chủ xe', 'error');
     }
   },
 
@@ -1190,14 +1645,15 @@ const AdminService = {
     });
 
     if (res && res.success) {
-      App.showToast(`Đã khóa tài khoản @${username} thành công! Người dùng này không thể đăng nhập nữa.`, 'warning');
-      const modal = document.getElementById('generalModal');
-      if (modal && modal.classList.contains('active')) {
+      this.showToast(`Đã khóa tài khoản @${username} thành công! Người dùng này không thể đăng nhập nữa.`, 'warning');
+      const modal = document.getElementById('generalModalOverlay');
+      if (modal && modal.classList.contains('open')) {
         await this.openUserDetailModal(userId);
       }
       this.renderUsersTable();
+      this.loadAdminStats();
     } else {
-      App.showToast(res?.message || 'Không thể khóa tài khoản', 'error');
+      this.showToast(res?.message || 'Không thể khóa tài khoản', 'error');
     }
   },
 
@@ -1212,14 +1668,15 @@ const AdminService = {
     });
 
     if (res && res.success) {
-      App.showToast(`Đã mở khóa tài khoản @${username} thành công! Đăng nhập hoạt động trở lại.`, 'success');
-      const modal = document.getElementById('generalModal');
-      if (modal && modal.classList.contains('active')) {
+      this.showToast(`Đã mở khóa tài khoản @${username} thành công! Đăng nhập hoạt động trở lại.`, 'success');
+      const modal = document.getElementById('generalModalOverlay');
+      if (modal && modal.classList.contains('open')) {
         await this.openUserDetailModal(userId);
       }
       this.renderUsersTable();
+      this.loadAdminStats();
     } else {
-      App.showToast(res?.message || 'Không thể mở khóa tài khoản', 'error');
+      this.showToast(res?.message || 'Không thể mở khóa tài khoản', 'error');
     }
   }
 };

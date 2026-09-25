@@ -380,12 +380,16 @@ const ProfileController = {
 
     if (res.success) {
       // BR-06-5: Sau khi đổi thành công -> logout tất cả session
+      const form = document.getElementById("formChangePassword");
+      if (form) form.reset();
+
       showToast("Đổi mật khẩu thành công! Các phiên đăng nhập khác đã bị vô hiệu hóa. Vui lòng đăng nhập lại.", "success", 2500);
       setTimeout(() => {
         window.location.href = "login.html";
       }, 2500);
     } else {
-      showToast(res.message || "Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu cũ!", "error", 2500);
+      const errorMessage = res.data?.errors?.[0]?.message || res.details || res.message || "Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu cũ!";
+      showToast(errorMessage, "error", 3000);
     }
   },
 

@@ -16,6 +16,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByRentalId(Long rentalId);
 
+    Optional<Payment> findByRentalIdAndStatus(Long rentalId, EPaymentStatus status);
+
     Optional<Payment> findByTransactionCode(String transactionCode);
 
     List<Payment> findByRentalIdInAndStatus(List<Long> rentalIds, EPaymentStatus status);
@@ -27,4 +29,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             @Param("rentalIds") List<Long> rentalIds,
             @Param("status") EPaymentStatus status
     );
+
+    List<Payment> findByRentalIdInOrderByCreatedAtDesc(List<Long> rentalIds);
 }

@@ -6,6 +6,7 @@ import com.driveshare.modules.admin.dto.request.AdminUserFilterRequest;
 import com.driveshare.modules.admin.dto.request.ApproveLicenseRequest;
 import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
 import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
+import com.driveshare.modules.admin.dto.response.PendingCccdResponse;
 import com.driveshare.modules.admin.dto.response.UserItemResponse;
 import com.driveshare.modules.admin.service.AdminUserService;
 import com.driveshare.security.CustomUserDetails;
@@ -57,9 +58,17 @@ public class AdminUserController {
     @GetMapping("/pending-cccd")
     @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
     @Operation(summary = "Lấy danh sách hồ sơ CMND/CCCD chờ xét duyệt (BR-02-4)")
-    public ResponseEntity<ApiResponse<java.util.List<com.driveshare.modules.admin.dto.response.PendingCccdResponse>>> getPendingCccdUsers() {
-        java.util.List<com.driveshare.modules.admin.dto.response.PendingCccdResponse> list = adminUserService.getPendingCccdUsers();
+    public ResponseEntity<ApiResponse<java.util.List<PendingCccdResponse>>> getPendingCccdUsers() {
+        java.util.List<PendingCccdResponse> list = adminUserService.getPendingCccdUsers();
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách CCCD chờ duyệt thành công", list));
+    }
+
+    @GetMapping("/pending-licenses")
+    @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Lấy danh sách hồ sơ GPLX của khách thuê cần xác thực")
+    public ResponseEntity<ApiResponse<java.util.List<com.driveshare.modules.admin.dto.response.PendingLicenseResponse>>> getPendingLicenses() {
+        java.util.List<com.driveshare.modules.admin.dto.response.PendingLicenseResponse> list = adminUserService.getPendingLicenses();
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách GPLX cần duyệt thành công", list));
     }
 
     @PutMapping("/{userId}/verify-cccd")
@@ -88,7 +97,7 @@ public class AdminUserController {
     }
 
     @GetMapping("/{userId}")
-    @PreAuthorize("permitAll()")
+    @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
     @Operation(summary = "Xem chi tiết một người dùng")
     public ResponseEntity<ApiResponse<UserItemResponse>> getUserById(@PathVariable Long userId) {
         UserItemResponse user = adminUserService.getUserById(userId);

@@ -194,6 +194,9 @@ const BookingService = {
 
         <div style="margin-top: 1.35rem; display: flex; gap: 0.65rem; justify-content: center; flex-wrap: wrap;">
           <button class="btn btn-outline btn-sm" onclick="App.closeModal()">Để thanh toán sau</button>
+          <a href="payment.html?id=${tempOrderId}" class="btn btn-outline btn-sm" style="color: var(--primary); border-color: var(--primary);">
+            Mở cổng thanh toán riêng &rarr;
+          </a>
           <button class="btn btn-primary btn-sm" onclick="BookingService.confirmPaymentSuccess('${tempOrderId}')">
             Xác nhận đã chuyển khoản thành công
           </button>

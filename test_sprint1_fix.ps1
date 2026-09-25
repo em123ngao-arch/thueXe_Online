@@ -147,6 +147,120 @@ if ($renterToken) {
     }
 }
 
+# TC 2.4: BR-06-2 Doi mat khau trung mat khau cu -> 400 NEW_PASSWORD_SAME_AS_OLD
+if ($renterToken) {
+    try {
+        $headers = @{ Authorization = "Bearer $renterToken" }
+        $bodySame = @{
+            oldPassword = "Renter123@"
+            newPassword = "Renter123@"
+            confirmPassword = "Renter123@"
+        } | ConvertTo-Json
+        $res = Invoke-RestMethod -Uri "$baseUrl/api/v1/auth/change-password" -Method PUT -Headers $headers -ContentType "application/json" -Body $bodySame -ErrorAction Stop
+        Record-Result "TC-PWD-01" "Doi mat khau trung voi mat khau cu" "400 NEW_PASSWORD_SAME_AS_OLD" "200 OK" "FAILED" "Khong chan mat khau trung"
+    } catch {
+        $code = $_.Exception.Response.StatusCode.value__
+        if ($code -eq 400) {
+            Record-Result "TC-PWD-01" "Doi mat khau trung voi mat khau cu" "400 NEW_PASSWORD_SAME_AS_OLD" "400 Bad Request" "PASSED" "Chan mat khau cu thanh cong (BR-06-2)"
+        } else {
+            Record-Result "TC-PWD-01" "Doi mat khau trung voi mat khau cu" "400 NEW_PASSWORD_SAME_AS_OLD" "$code" "FAILED" "Ma loi: $code"
+        }
+    }
+}
+
+# TC 2.5: BR-06-3 Xac nhan mat khau khong khop -> 400 PASSWORD_CONFIRM_MISMATCH
+if ($renterToken) {
+    try {
+        $headers = @{ Authorization = "Bearer $renterToken" }
+        $bodyMismatch = @{
+            oldPassword = "Renter123@"
+            newPassword = "Renter12345@"
+            confirmPassword = "RenterMismatch123@"
+        } | ConvertTo-Json
+        $res = Invoke-RestMethod -Uri "$baseUrl/api/v1/auth/change-password" -Method PUT -Headers $headers -ContentType "application/json" -Body $bodyMismatch -ErrorAction Stop
+        Record-Result "TC-PWD-02" "Xac nhan mat khau khong khop" "400 PASSWORD_CONFIRM_MISMATCH" "200 OK" "FAILED" "Khong chan mat khau xac nhan sai"
+    } catch {
+        $code = $_.Exception.Response.StatusCode.value__
+        if ($code -eq 400) {
+            Record-Result "TC-PWD-02" "Xac nhan mat khau khong khop" "400 PASSWORD_CONFIRM_MISMATCH" "400 Bad Request" "PASSED" "Chan xac nhan sai thanh cong (BR-06-3)"
+        } else {
+            Record-Result "TC-PWD-02" "Xac nhan mat khau khong khop" "400 PASSWORD_CONFIRM_MISMATCH" "$code" "FAILED" "Ma loi: $code"
+        }
+    }
+}
+
+# TC 2.6: BR-06 Sai mat khau cu -> 400 PASSWORD_NOT_MATCH
+if ($renterToken) {
+    try {
+        $headers = @{ Authorization = "Bearer $renterToken" }
+        $bodyWrongOld = @{
+            oldPassword = "WrongOldPassword123@"
+            newPassword = "Renter12345@"
+            confirmPassword = "Renter12345@"
+        } | ConvertTo-Json
+        $res = Invoke-RestMethod -Uri "$baseUrl/api/v1/auth/change-password" -Method PUT -Headers $headers -ContentType "application/json" -Body $bodyWrongOld -ErrorAction Stop
+        Record-Result "TC-PWD-03" "Sai mat khau cu" "400 PASSWORD_NOT_MATCH" "200 OK" "FAILED" "Khong chan sai mat khau cu"
+    } catch {
+        $code = $_.Exception.Response.StatusCode.value__
+        if ($code -eq 400) {
+            Record-Result "TC-PWD-03" "Sai mat khau cu" "400 PASSWORD_NOT_MATCH" "400 Bad Request" "PASSED" "Chan sai mat khau cu thanh cong"
+        } else {
+            Record-Result "TC-PWD-03" "Sai mat khau cu" "400 PASSWORD_NOT_MATCH" "$code" "FAILED" "Ma loi: $code"
+        }
+    }
+}
+
+# TC 2.7: BR-06-1 Doi mat khau hop le -> 200 OK
+$oldRenterTokenBackup = $renterToken
+if ($renterToken) {
+    try {
+        $headers = @{ Authorization = "Bearer $renterToken" }
+        $bodyValid = @{
+            oldPassword = "Renter123@"
+            old_password = "Renter123@"
+            newPassword = "Renter12345@"
+            new_password = "Renter12345@"
+            confirmPassword = "Renter12345@"
+            confirm_password = "Renter12345@"
+        } | ConvertTo-Json
+        $res = Invoke-RestMethod -Uri "$baseUrl/api/v1/auth/change-password" -Method PUT -Headers $headers -ContentType "application/json" -Body $bodyValid -ErrorAction Stop
+        Record-Result "TC-PWD-04" "Doi mat khau hop le (3 o)" "200 OK + Sessions Revoked" "200 OK" "PASSED" "Doi mat khau thanh cong (BR-06-1)"
+    } catch {
+        Record-Result "TC-PWD-04" "Doi mat khau hop le (3 o)" "200 OK" "$($_.Exception.Message)" "FAILED" "Doi mat khau that bai"
+    }
+}
+
+# TC 2.8: BR-06-5 Goi API bang Token cu sau khi doi mat khau -> 401 UNAUTHENTICATED
+if ($oldRenterTokenBackup) {
+    try {
+        $headers = @{ Authorization = "Bearer $oldRenterTokenBackup" }
+        $res = Invoke-RestMethod -Uri "$baseUrl/api/v1/users/me" -Method GET -Headers $headers -ErrorAction Stop
+        Record-Result "TC-PWD-05" "Token cu sau khi doi mat khau" "401 UNAUTHENTICATED" "200 OK" "FAILED" "Token cu van con hieu luc (Chua revoke session)"
+    } catch {
+        $code = $_.Exception.Response.StatusCode.value__
+        if ($code -eq 401) {
+            Record-Result "TC-PWD-05" "Token cu sau khi doi mat khau" "401 UNAUTHENTICATED" "401 Unauthorized" "PASSED" "Session cu da bi huy hop le (BR-06-5)"
+        } else {
+            Record-Result "TC-PWD-05" "Token cu sau khi doi mat khau" "401 UNAUTHENTICATED" "$code" "WARNING" "Ma phan hoi: $code"
+        }
+    }
+}
+
+# Khoi phuc mat khau goc ve Renter123@
+try {
+    $loginNew = Invoke-RestMethod -Uri "$baseUrl/api/v1/auth/login" -Method POST -ContentType "application/json" -Body '{"identifier":"renter_demo","password":"Renter12345@"}'
+    $tokenNew = $loginNew.data.access_token
+    $revertBody = @{
+        oldPassword = "Renter12345@"
+        newPassword = "Renter123@"
+        confirmPassword = "Renter123@"
+    } | ConvertTo-Json
+    Invoke-RestMethod -Uri "$baseUrl/api/v1/auth/change-password" -Method PUT -Headers @{ Authorization = "Bearer $tokenNew" } -ContentType "application/json" -Body $revertBody | Out-Null
+    Write-Host "Da khoi phuc mat khau renter_demo ve Renter123@ thanh cong." -ForegroundColor Green
+} catch {
+    Write-Host "Canh bao khong the khoi phuc mat khau: $($_.Exception.Message)" -ForegroundColor Yellow
+}
+
 # TC 3: ADMIN API TESTS
 if ($adminToken) {
     $headers = @{ Authorization = "Bearer $adminToken" }
