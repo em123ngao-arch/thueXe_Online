@@ -159,8 +159,19 @@ const StorageService = {
   },
 
   getCurrentOwner() {
+    if (typeof AuthService !== 'undefined' && AuthService.getCurrentUser) {
+      const u = AuthService.getCurrentUser();
+      if (u && Array.isArray(u.roles) && u.roles.some(r => String(r).toUpperCase().includes('OWNER'))) {
+        return {
+          id: u.userId || 2,
+          name: u.fullName || u.username || 'Chủ xe',
+          phone: u.phone || '0900 000 002',
+          address: u.address || 'Quận 1, TP.HCM'
+        };
+      }
+    }
     const owners = this.getOwners();
-    return owners[0]; // Mặc định Anh Hùng (Quận 1)
+    return owners[0] || { id: 1, name: 'Chủ xe DriveShare', phone: '0901 234 567', address: 'TP.HCM' };
   },
 
   // Người dùng (Users & Roles)
@@ -202,7 +213,7 @@ const StorageService = {
     const startIndex = (page - 1) * limit;
     const items = users.slice(startIndex, startIndex + limit);
 
-    return {
+    const result = {
       items,
       pagination: {
         page,
@@ -211,8 +222,14 @@ const StorageService = {
         totalPages,
         hasNext: page < totalPages,
         hasPrev: page > 1
-      }
+      },
+      length: items.length,
+      filter: (fn) => items.filter(fn),
+      map: (fn) => items.map(fn),
+      forEach: (fn) => items.forEach(fn)
     };
+
+    return result;
   },
 
   // Lấy chi tiết một người dùng theo ID

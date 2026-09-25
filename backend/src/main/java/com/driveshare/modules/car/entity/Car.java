@@ -13,13 +13,30 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Entity ánh xạ bảng {@code cars}.
+ * <p>
+ * Kế thừa {@link BaseEntity} để có sẵn các trường audit:
+ * {@code createdAt}, {@code createdBy}, {@code updatedAt}, {@code updatedBy},
+ * {@code deletedAt}, {@code deletedBy}.
+ * <p>
+ * Soft-delete được thực hiện thông qua {@code deletedAt} có sẵn trong {@link BaseEntity}
+ * — {@link BaseEntity#isDeleted()} trả về {@code true} khi {@code deletedAt != null}.
+ */
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "cars")
+@Table(
+        name = "cars",
+        indexes = {
+                @Index(name = "idx_cars_owner_id", columnList = "owner_id"),
+                @Index(name = "idx_cars_plate_number", columnList = "plate_number"),
+                @Index(name = "idx_cars_status", columnList = "status")
+        }
+)
 public class Car extends BaseEntity {
 
     @Id
@@ -27,23 +44,37 @@ public class Car extends BaseEntity {
     @Column(name = "car_id")
     private Long carId;
 
+    // -----------------------------------------------------------------
+    // Quan hệ Owner — dùng FK thay vì @ManyToOne để tránh N+1 Query
+    // khi chỉ cần ownerId mà không cần load toàn bộ User.
+    // Khiêm dùng @ManyToOne(FetchType.LAZY) cho Admin queries.
+    // -----------------------------------------------------------------
+    @Column(name = "owner_id", nullable = false)
+    private Long ownerId;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false)
+    @JoinColumn(name = "owner_id", insertable = false, updatable = false)
     private User owner;
 
-    @Column(name = "brand", length = 50, nullable = false)
+    // -----------------------------------------------------------------
+    // Thông tin nhận diện xe
+    // -----------------------------------------------------------------
+    @Column(name = "plate_number", length = 20, nullable = false, unique = true)
+    private String plateNumber;
+
+    @Column(name = "brand", length = 100, nullable = false)
     private String brand;
 
     @Column(name = "model", length = 100, nullable = false)
     private String model;
 
-    @Column(name = "year")
+    @Column(name = "\"year\"", nullable = false)
     private Integer year;
 
-    @Column(name = "license_plate", length = 20, unique = true, nullable = false)
-    private String licensePlate;
+    @Column(name = "color", length = 50)
+    private String color;
 
-    @Column(name = "seats")
+    @Column(name = "seats", nullable = false)
     private Integer seats;
 
     @Enumerated(EnumType.STRING)
@@ -54,14 +85,17 @@ public class Car extends BaseEntity {
     @Column(name = "fuel_type", length = 20)
     private EFuelType fuelType;
 
-    @Column(name = "color", length = 30)
-    private String color;
+    // -----------------------------------------------------------------
+    // Giá & Địa điểm
+    // -----------------------------------------------------------------
+    @Column(name = "price_per_day", nullable = false, precision = 15, scale = 2)
+    private BigDecimal pricePerDay;
 
-    @Column(name = "description", columnDefinition = "TEXT")
-    private String description;
+    @Column(name = "address", length = 500)
+    private String address;
 
-    @Column(name = "pickup_address", length = 255)
-    private String pickupAddress;
+    @Column(name = "province", length = 100)
+    private String province;
 
     @Column(name = "latitude", precision = 10, scale = 7)
     private BigDecimal latitude;
@@ -69,22 +103,20 @@ public class Car extends BaseEntity {
     @Column(name = "longitude", precision = 10, scale = 7)
     private BigDecimal longitude;
 
-    @Column(name = "base_price_per_day", precision = 12, scale = 2, nullable = false)
-    private BigDecimal basePricePerDay;
+    // -----------------------------------------------------------------
+    // Mô tả & Tiện nghi
+    // -----------------------------------------------------------------
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 30)
-    @Builder.Default
-    private ECarStatus status = ECarStatus.PENDING_REVIEW;
+    @Column(name = "features", columnDefinition = "TEXT")
+    private String features; // Lưu dạng JSON hoặc CSV: "GPS,Bluetooth,Camera"
 
-    @Column(name = "rejection_reason", length = 500)
-    private String rejectionReason;
-
-    @Column(name = "approved_by")
-    private Long approvedBy;
-
-    @Column(name = "approved_at")
-    private Instant approvedAt;
+    // -----------------------------------------------------------------
+    // Hình ảnh
+    // -----------------------------------------------------------------
+    @Column(name = "thumbnail_url", length = 500)
+    private String thumbnailUrl;
 
     @OneToMany(mappedBy = "car", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -93,4 +125,27 @@ public class Car extends BaseEntity {
     @OneToMany(mappedBy = "car", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<CarDocument> documents = new ArrayList<>();
+
+    // -----------------------------------------------------------------
+    // Trạng thái & Soft-delete
+    // -----------------------------------------------------------------
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 20, nullable = false)
+    @Builder.Default
+    private ECarStatus status = ECarStatus.PENDING_REVIEW;
+
+    /**
+     * Lý do Admin từ chối duyệt xe (điền khi status = REJECTED).
+     */
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
+    /**
+     * Thời điểm Admin/Staff duyệt xe.
+     */
+    @Column(name = "approved_at")
+    private Instant approvedAt;
+
+    @Column(name = "approved_by")
+    private Long approvedBy;
 }

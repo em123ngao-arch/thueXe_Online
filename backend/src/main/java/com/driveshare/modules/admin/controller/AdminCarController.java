@@ -53,6 +53,55 @@ public class AdminCarController {
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách xe thành công", response));
     }
 
+    @GetMapping("/pending")
+    @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Lấy danh sách xe chờ duyệt (BR-04-4)")
+    public ResponseEntity<ApiResponse<PageResponse<AdminCarItemResponse>>> getPendingCars(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+        AdminCarFilterRequest request = AdminCarFilterRequest.builder()
+                .page(page)
+                .limit(limit)
+                .status("pending")
+                .sortBy("created_at")
+                .sortDir("desc")
+                .build();
+        PageResponse<AdminCarItemResponse> response = adminCarService.getCars(request);
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách xe chờ duyệt thành công", response));
+    }
+
+    @PutMapping("/{carId}/approve")
+    @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Phê duyệt hoặc từ chối xe (Tương thích FE & API Spec)")
+    public ResponseEntity<ApiResponse<AdminCarDetailResponse>> updateCarApproval(
+            @PathVariable Long carId,
+            @RequestBody java.util.Map<String, String> body,
+            Authentication authentication
+    ) {
+        String status = body != null ? body.getOrDefault("status", "APPROVED") : "APPROVED";
+        String reason = body != null ? body.get("reason") : null;
+        Long actorId = 6L;
+        String actorUsername = "admin_tin";
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails userDetails) {
+            actorId = userDetails.getUserId();
+            actorUsername = userDetails.getUsername();
+        }
+
+        if ("REJECTED".equalsIgnoreCase(status)) {
+            if (reason == null || reason.trim().isEmpty()) {
+                throw new com.driveshare.common.exception.AppException(com.driveshare.common.exception.ErrorCode.INVALID_REQUEST, "Lý do từ chối là bắt buộc khi REJECTED");
+            }
+            ApproveCarRequest req = new ApproveCarRequest();
+            req.setRejectionReason(reason.trim());
+            AdminCarDetailResponse car = adminCarService.rejectCar(carId, req, actorId, actorUsername);
+            return ResponseEntity.ok(ApiResponse.success("Đã từ chối xe và gửi thông báo lý do cho chủ xe", car));
+        } else {
+            AdminCarDetailResponse car = adminCarService.approveCar(carId, actorId, actorUsername);
+            return ResponseEntity.ok(ApiResponse.success("Phê duyệt xe thành công. Xe đã sẵn sàng đón khách!", car));
+        }
+    }
+
     @GetMapping("/{carId}")
     @PreAuthorize("permitAll()")
     @Operation(summary = "Xem thông tin chi tiết một xe", description = "Bao gồm hình ảnh xe, giấy tờ pháp lý xe và thông tin chủ xe")

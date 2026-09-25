@@ -97,13 +97,13 @@ public class AdminCarServiceImpl implements AdminCarService {
                 .actorUsername(actorUsername != null ? actorUsername : "system_admin")
                 .targetType("CAR")
                 .targetId(carId)
-                .details("Phê duyệt xe " + car.getBrand() + " " + car.getModel() + " (" + car.getLicensePlate() + ") thành công. Xe đã chuyển sang ACTIVE.")
+                .details("Phê duyệt xe " + car.getBrand() + " " + car.getModel() + " (" + car.getPlateNumber() + ") thành công. Xe đã chuyển sang ACTIVE.")
                 .createdAt(Instant.now())
                 .build();
         auditLogRepository.save(auditLog);
 
         log.info("🚗 [AUDIT] Admin '{}' approved car #{} ({}), status set to ACTIVE",
-                actorUsername, carId, car.getLicensePlate());
+                actorUsername, carId, car.getPlateNumber());
         if (car.getOwner() != null) {
             log.info("📧 [NOTIFICATION] Sent car approval notice to owner: {} ({})",
                     car.getOwner().getFullName(), car.getOwner().getEmail());
@@ -135,13 +135,13 @@ public class AdminCarServiceImpl implements AdminCarService {
                 .actorUsername(actorUsername != null ? actorUsername : "system_admin")
                 .targetType("CAR")
                 .targetId(carId)
-                .details("Từ chối xe " + car.getBrand() + " " + car.getModel() + " (" + car.getLicensePlate() + "). Lý do: " + reason.trim())
+                .details("Từ chối xe " + car.getBrand() + " " + car.getModel() + " (" + car.getPlateNumber() + "). Lý do: " + reason.trim())
                 .createdAt(Instant.now())
                 .build();
         auditLogRepository.save(auditLog);
 
         log.warn("⚠️ [AUDIT] Admin '{}' rejected car #{} ({}). Reason: {}",
-                actorUsername, carId, car.getLicensePlate(), reason.trim());
+                actorUsername, carId, car.getPlateNumber(), reason.trim());
         if (car.getOwner() != null) {
             log.info("📧 [NOTIFICATION] Sent car rejection notice to owner: {} ({}) with reason: '{}'",
                     car.getOwner().getFullName(), car.getOwner().getEmail(), reason.trim());
@@ -225,13 +225,13 @@ public class AdminCarServiceImpl implements AdminCarService {
                 .brand(car.getBrand())
                 .model(car.getModel())
                 .year(car.getYear())
-                .licensePlate(car.getLicensePlate())
+                .licensePlate(car.getPlateNumber())
                 .seats(car.getSeats())
                 .transmission(car.getTransmission())
                 .fuelType(car.getFuelType())
                 .color(car.getColor())
-                .basePricePerDay(car.getBasePricePerDay())
-                .pickupAddress(car.getPickupAddress())
+                .basePricePerDay(car.getPricePerDay())
+                .pickupAddress(car.getAddress())
                 .thumbnailUrl(thumbnailUrl)
                 .status(car.getStatus())
                 .rejectionReason(car.getRejectionReason())
@@ -259,16 +259,16 @@ public class AdminCarServiceImpl implements AdminCarService {
                 .brand(car.getBrand())
                 .model(car.getModel())
                 .year(car.getYear())
-                .licensePlate(car.getLicensePlate())
+                .licensePlate(car.getPlateNumber())
                 .seats(car.getSeats())
                 .transmission(car.getTransmission())
                 .fuelType(car.getFuelType())
                 .color(car.getColor())
                 .description(car.getDescription())
-                .pickupAddress(car.getPickupAddress())
+                .pickupAddress(car.getAddress())
                 .latitude(car.getLatitude())
                 .longitude(car.getLongitude())
-                .basePricePerDay(car.getBasePricePerDay())
+                .basePricePerDay(car.getPricePerDay())
                 .status(car.getStatus())
                 .rejectionReason(car.getRejectionReason())
                 .approvedBy(car.getApprovedBy())

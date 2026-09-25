@@ -39,13 +39,15 @@ const OwnerService = {
               </h2>
               <div class="portal-subtitle">Chủ xe: <strong>${owner.name}</strong> · ${owner.phone} · ${owner.address}</div>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="OwnerService.showAddCarTab()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              Đăng ký xe cho thuê mới
-            </button>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button class="btn btn-primary btn-sm" onclick="OwnerService.showAddCarTab()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Đăng ký xe cho thuê mới
+              </button>
+            </div>
           </div>
 
           <!-- Tabs -->
@@ -100,8 +102,8 @@ const OwnerService = {
               </svg>
             </div>
             <div class="stat-info">
-              <div class="stat-value">${ownerCars.filter(c => c.status === 'PENDING_APPROVAL').length}</div>
-              <div class="stat-label">Xe chờ nhân viên duyệt</div>
+              <div class="stat-value">${ownerCars.filter(c => c.status === 'PENDING_APPROVAL' || c.status === 'PENDING').length}</div>
+              <div class="stat-label">Xe đang chờ duyệt</div>
             </div>
           </div>
 
@@ -119,27 +121,28 @@ const OwnerService = {
           </div>
         </div>
 
-        <!-- Tab Content: Danh sách xe của tôi -->
+        <!-- Tab Content: Danh sách xe -->
         <div id="ownerTabCarsContent">
           <div class="admin-table-card">
             <div class="admin-table-header">
-              <h3>Phương tiện của tôi</h3>
+              <h3>Đội xe cho thuê của bạn</h3>
+              <span class="badge badge-info">${ownerCars.length} xe</span>
             </div>
             <div class="table-responsive">
               <table class="custom-table">
                 <thead>
                   <tr>
-                    <th>Xe & Năm sản xuất</th>
+                    <th>Phương tiện</th>
                     <th>Biển số</th>
-                    <th>Giá thuê / ngày</th>
-                    <th>Địa điểm đón xe</th>
-                    <th>Trạng thái</th>
+                    <th>Giá thuê/ngày</th>
+                    <th>Địa điểm giao xe</th>
+                    <th>Trạng thái duyệt</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${ownerCars.length === 0 ? `
-                    <tr><td colspan="6" style="text-align: center; padding: 2rem;">Chưa có xe nào. Hãy nhấn "Đăng xe mới" để bắt đầu!</td></tr>
+                    <tr><td colspan="6" style="text-align: center; padding: 2rem;">Bạn chưa có xe nào. Hãy đăng ký chiếc xe đầu tiên!</td></tr>
                   ` : ownerCars.map(c => `
                     <tr>
                       <td>
@@ -157,8 +160,8 @@ const OwnerService = {
                       <td>
                         ${c.status === 'ACTIVE' 
                           ? '<span class="badge badge-success">Đang hoạt động</span>' 
-                          : (c.status === 'PENDING_APPROVAL' 
-                            ? '<span class="badge badge-warning">Chờ nhân viên duyệt</span>' 
+                          : (c.status === 'PENDING_APPROVAL' || c.status === 'PENDING'
+                            ? '<span class="badge badge-warning" style="background:#fef3c7; color:#92400e; font-weight:700;">Đang chờ duyệt</span>' 
                             : '<span class="badge badge-danger">Bị từ chối</span>')}
                       </td>
                       <td>

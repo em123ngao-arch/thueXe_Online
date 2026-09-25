@@ -1,518 +1,1034 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="description" content="DriveShare - Nền tảng cho thuê xe ô tô tự lái trực tuyến tại Việt Nam. Đa dạng mẫu xe Sedan, SUV, MPV 7 chỗ, xe điện đời mới, đặt cọc 30% giữ chỗ nhanh chóng." />
-  <title>DriveShare — Nền Tảng Cho Thuê Xe Tự Lái Trực Tuyến</title>
-  
-  <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/base.css" />
-  <link rel="stylesheet" href="css/components.css" />
-  <link rel="stylesheet" href="css/portals.css" />
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta
+      name="description"
+      content="DriveShare - Nền tảng cho thuê xe ô tô tự lái trực tuyến tại Việt Nam. Đa dạng mẫu xe Sedan, SUV, MPV 7 chỗ, xe điện đời mới, đặt cọc 30% giữ chỗ nhanh chóng."
+    />
+    <title>DriveShare — Nền Tảng Cho Thuê Xe Tự Lái Trực Tuyến</title>
+    <!-- Dùng để đăng nhập bằng gg -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- CSS Stylesheets -->
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/portals.css" />
+  </head>
+  <body>
+    <!-- ==================== 1. TOP NAVBAR ==================== -->
+    <header class="site-header">
+      <div class="container nav-container">
+        <!-- Brand Logo -->
+        <a
+          href="javascript:void(0)"
+          class="brand-logo"
+          onclick="App.showCatalogView()"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"
+            ></path>
+            <circle cx="7" cy="17" r="2"></circle>
+            <path d="M9 17h6"></path>
+            <circle cx="17" cy="17" r="2"></circle>
+          </svg>
+          <span>DriveShare</span>
+          <span class="brand-badge">K4 Pro</span>
+        </a>
 
-  <!-- ==================== 1. TOP NAVBAR ==================== -->
-  <header class="site-header">
-    <div class="container nav-container">
-      
-      <!-- Brand Logo -->
-      <a href="javascript:void(0)" class="brand-logo" onclick="App.showCatalogView()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path>
-          <circle cx="7" cy="17" r="2"></circle>
-          <path d="M9 17h6"></path>
-          <circle cx="17" cy="17" r="2"></circle>
-        </svg>
-        <span>DriveShare</span>
-        <span class="brand-badge">K4 Pro</span>
-      </a>
-
-      <!-- Center Role Switcher (Desktop) -->
-      <div class="role-switcher-wrapper">
-        <div class="role-pill active" id="pillRoleRenter" onclick="App.switchRole('RENTER')">
-          Khách thuê xe
+        <!-- Center Role Switcher (Desktop) -->
+        <div class="role-switcher-wrapper">
+          <div
+            class="role-pill active"
+            id="pillRoleRenter"
+            onclick="App.switchRole('RENTER')"
+          >
+            Khách thuê xe
+          </div>
+          <div
+            class="role-pill"
+            id="pillRoleOwner"
+            onclick="App.switchRole('OWNER')"
+          >
+            Chủ xe
+          </div>
+          <div
+            class="role-pill"
+            id="pillRoleAdmin"
+            onclick="App.switchRole('ADMIN')"
+          >
+            Nhân viên / Admin
+          </div>
         </div>
-        <div class="role-pill" id="pillRoleOwner" onclick="App.switchRole('OWNER')">
+
+        <!-- Right Nav Actions -->
+        <div class="nav-actions">
+          <!-- Auth Container (Đăng nhập / Đăng ký / Thông tin cá nhân) -->
+          <div
+            id="navAuthContainer"
+            style="display: flex; align-items: center; gap: 0.5rem"
+          >
+            <!-- Được sinh tự động bởi AuthService.updateAuthUI() -->
+          </div>
+
+          <a
+            href="javascript:void(0)"
+            class="nav-link booking-badge-btn"
+            id="navMyBookings"
+            onclick="App.showMyBookingsView()"
+            title="Chuyến của tôi"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span class="nav-text-label">Chuyến đi</span>
+            <span
+              class="badge-count"
+              id="navBookingBadgeCount"
+              style="display: none"
+              >0</span
+            >
+          </a>
+          <button
+            id="btnAddCar"
+            class="btn btn-primary btn-sm"
+            onclick="
+              App.switchRole('OWNER');
+              OwnerService.showAddCarTab();
+            "
+          >
+            + Đăng xe
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mobile Secondary Role Bar -->
+    <div class="mobile-role-bar">
+      <div class="role-switcher-wrapper">
+        <div
+          class="role-pill active"
+          id="mobRoleRenter"
+          onclick="App.switchRole('RENTER')"
+        >
+          Khách thuê
+        </div>
+        <div
+          class="role-pill"
+          id="mobRoleOwner"
+          onclick="App.switchRole('OWNER')"
+        >
           Chủ xe
         </div>
-        <div class="role-pill" id="pillRoleAdmin" onclick="App.switchRole('ADMIN')">
-          Nhân viên / Admin
+        <div
+          class="role-pill"
+          id="mobRoleAdmin"
+          onclick="App.switchRole('ADMIN')"
+        >
+          Quản trị
         </div>
-      </div>
-
-      <!-- Right Nav Actions -->
-      <div class="nav-actions">
-        <!-- Auth Container (Đăng nhập / Đăng ký / Thông tin cá nhân) -->
-        <div id="navAuthContainer" style="display: flex; align-items: center; gap: 0.5rem;">
-          <!-- Được sinh tự động bởi AuthService.updateAuthUI() -->
-        </div>
-
-        <a href="javascript:void(0)" class="nav-link booking-badge-btn" id="navMyBookings" onclick="App.showMyBookingsView()" title="Chuyến của tôi">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-          </svg>
-          <span class="nav-text-label">Chuyến đi</span>
-          <span class="badge-count" id="navBookingBadgeCount" style="display: none;">0</span>
-        </a>
-        <button class="btn btn-primary btn-sm" onclick="App.switchRole('OWNER'); OwnerService.showAddCarTab();">
-          + Đăng xe
-        </button>
-      </div>
-
-    </div>
-  </header>
-
-  <!-- Mobile Secondary Role Bar -->
-  <div class="mobile-role-bar">
-    <div class="role-switcher-wrapper">
-      <div class="role-pill active" id="mobRoleRenter" onclick="App.switchRole('RENTER')">
-        Khách thuê
-      </div>
-      <div class="role-pill" id="mobRoleOwner" onclick="App.switchRole('OWNER')">
-        Chủ xe
-      </div>
-      <div class="role-pill" id="mobRoleAdmin" onclick="App.switchRole('ADMIN')">
-        Quản trị
       </div>
     </div>
-  </div>
 
-  <!-- ==================== 2. MAIN VIEW CONTAINERS ==================== -->
-  <main id="mainAppContent">
-
-    <!-- ==================== PHÂN HỆ 1: KHÁCH THUÊ (RENTER) ==================== -->
-    <div id="renterSection">
-      
-      <!-- Hero Banner & Booking Search Widget -->
-      <section class="hero-section">
-        <div class="container">
-          <div class="hero-header">
-            <div class="hero-tagline">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>
-              <span>Nền tảng cho thuê xe tự lái trực tuyến</span>
-            </div>
-            <h1 class="hero-title">Thuê xe tự lái - Giao nhận tận nơi toàn quốc</h1>
-            <p class="hero-subtitle">Hơn 500+ dòng xe đời mới được bảo dưỡng chính hãng, thủ tục đơn giản với CCCD và GPLX B2, bảo hiểm 2 chiều MIC an tâm trọn vẹn.</p>
-          </div>
-
-          <!-- Search Box -->
-          <div class="search-widget-card">
-            <div class="search-type-tabs">
-              <button class="search-type-btn active">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                Xe tự lái
-              </button>
-              <button class="search-type-btn" onclick="App.showToast('Dịch vụ Xe có tài xế đang được chuẩn bị ở giai đoạn tiếp theo!', 'info')">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
-                Xe có tài xế
-              </button>
-            </div>
-
-            <div class="search-grid">
-              <!-- Location Field -->
-              <div class="search-field-group">
-                <label class="search-field-label">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                  Địa điểm nhận xe
-                </label>
-                <select class="search-field-select" id="searchLocationSelect">
-                  <option value="ALL">Toàn quốc (TP.HCM, Hà Nội, Đà Nẵng...)</option>
-                  <option value="TP. Hồ Chí Minh" selected>TP. Hồ Chí Minh (Q.1, Q.7, Tân Bình...)</option>
-                  <option value="Hà Nội">Hà Nội (Cầu Giấy, Nam Từ Liêm...)</option>
-                  <option value="Đà Nẵng">Đà Nẵng (Sân bay Đà Nẵng, Hải Châu...)</option>
-                </select>
-              </div>
-
-              <!-- Pick-up Date & Time -->
-              <div class="search-field-group">
-                <label class="search-field-label">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                  Nhận xe
-                </label>
-                <div class="search-field-dates">
-                  <input type="date" class="search-field-input" id="searchStartDate" value="2026-09-15" />
-                  <span class="date-divider">|</span>
-                  <input type="time" class="search-field-input" id="searchStartTime" value="08:00" style="max-width: 75px;" />
-                </div>
-              </div>
-
-              <!-- Return Date & Time -->
-              <div class="search-field-group">
-                <label class="search-field-label">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                  Trả xe
-                </label>
-                <div class="search-field-dates">
-                  <input type="date" class="search-field-input" id="searchEndDate" value="2026-09-17" />
-                  <span class="date-divider">|</span>
-                  <input type="time" class="search-field-input" id="searchEndTime" value="20:00" style="max-width: 75px;" />
-                </div>
-              </div>
-
-              <!-- Search Button -->
-              <button class="btn btn-primary btn-lg" id="btnHeroSearch" style="height: 100%; min-height: 52px;">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                Tìm xe ngay
-              </button>
-            </div>
-
-            <!-- Features Trust Bar -->
-            <div class="features-strip">
-              <div class="feature-item">
-                <div class="feature-icon-box">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                </div>
-                <div class="feature-text">
-                  <h4>Bảo hiểm chuyến đi</h4>
-                  <p>Bảo hiểm 2 chiều MIC cho toàn bộ chuyến</p>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="feature-icon-box">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M16 8l-8 8"></path><path d="M8 8h8v8"></path></svg>
-                </div>
-                <div class="feature-text">
-                  <h4>Giữ chỗ với 30% cọc</h4>
-                  <p>Đặt cọc qua VietQR minh bạch an toàn</p>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="feature-icon-box">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                </div>
-                <div class="feature-text">
-                  <h4>Giao xe tận nơi</h4>
-                  <p>Hỗ trợ bàn giao tại nhà hoặc sân bay</p>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="feature-icon-box">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                </div>
-                <div class="feature-text">
-                  <h4>Hỗ trợ 24/7</h4>
-                  <p>Đồng hành cùng bạn trên mọi cung đường</p>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      <!-- Catalog Section with Filters & Car Grid -->
-      <section class="catalog-section" id="catalogSection">
-        <div class="container">
-          
-          <!-- Smart Practical Route Suggestions (Không emoji) -->
-          <div class="smart-prompt-box">
-            <div class="smart-prompt-left">
-              <div class="smart-prompt-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-              </div>
-              <div class="smart-prompt-content">
-                <h4>Gợi ý theo nhu cầu thực tế:</h4>
-                <p>Chọn nhanh lộ trình chuyến đi để tìm kiếm dòng xe phù hợp và tiết kiệm chi phí</p>
-              </div>
-            </div>
-            <div class="smart-prompt-actions">
-              <button class="smart-chip-btn" onclick="App.applyPromptSuggestion('VUNG_TAU')">Đi Vũng Tàu (4-5 chỗ)</button>
-              <button class="smart-chip-btn" onclick="App.applyPromptSuggestion('DA_LAT_7CHO')">Gia đình đi Đà Lạt (7 chỗ)</button>
-              <button class="smart-chip-btn" onclick="App.applyPromptSuggestion('XE_DIEN')">Xe điện cao cấp (EV)</button>
-              <button class="smart-chip-btn" onclick="App.applyPromptSuggestion('TIET_KIEM')">Xe tiết kiệm (&lt; 800k)</button>
-            </div>
-          </div>
-
-          <!-- Comprehensive Filter Bar -->
-          <div class="filter-bar">
-            <!-- Row 1: Hãng xe Chips -->
-            <div class="filter-row" style="margin-bottom: 0.85rem;">
-              <div class="filter-chips-group">
-                <span class="filter-label">Hãng xe:</span>
-                <button class="chip active" data-filter-brand="ALL">Tất cả</button>
-                <button class="chip" data-filter-brand="Toyota">Toyota</button>
-                <button class="chip" data-filter-brand="VinFast">VinFast</button>
-                <button class="chip" data-filter-brand="Hyundai">Hyundai</button>
-                <button class="chip" data-filter-brand="Kia">Kia</button>
-                <button class="chip" data-filter-brand="Honda">Honda</button>
-                <button class="chip" data-filter-brand="Mazda">Mazda</button>
-                <button class="chip" data-filter-brand="Mitsubishi">Mitsubishi</button>
-                <button class="chip" data-filter-brand="Ford">Ford</button>
-              </div>
-            </div>
-
-            <!-- Row 2: Số chỗ Chips -->
-            <div class="filter-row">
-              <div class="filter-chips-group">
-                <span class="filter-label">Số chỗ & Phân khúc:</span>
-                <button class="chip active" data-filter-seats="ALL">Tất cả xe</button>
-                <button class="chip" data-filter-seats="4-5">4 - 5 chỗ (Sedan / CUV)</button>
-                <button class="chip" data-filter-seats="7">7 chỗ (MPV / SUV)</button>
-                <button class="chip" data-filter-seats="PICKUP">Xe bán tải (4x4)</button>
-              </div>
-              <button class="btn btn-ghost btn-sm" onclick="App.resetFilters()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-                Xóa bộ lọc
-              </button>
-            </div>
-
-            <!-- Row 3: Dropdown filters -->
-            <div class="filter-secondary-row">
-              <div style="display: flex; gap: 0.65rem; flex-wrap: wrap; align-items: center;">
-                <div>
-                  <select class="select-filter" id="selectTransmission">
-                    <option value="ALL">Hộp số: Tất cả</option>
-                    <option value="AUTOMATIC">Số tự động (AT)</option>
-                    <option value="MANUAL">Số sàn (MT)</option>
-                  </select>
-                </div>
-                <div>
-                  <select class="select-filter" id="selectFuel">
-                    <option value="ALL">Nhiên liệu: Tất cả</option>
-                    <option value="GASOLINE">Chạy xăng</option>
-                    <option value="ELECTRIC">Chạy điện (EV)</option>
-                    <option value="DIESEL">Dầu Diesel</option>
-                  </select>
-                </div>
-                <div>
-                  <select class="select-filter" id="selectPrice">
-                    <option value="ALL">Mức giá: Tất cả</option>
-                    <option value="UNDER_800">Dưới 800.000 đ</option>
-                    <option value="800_1200">Từ 800k - 1.200.000 đ</option>
-                    <option value="OVER_1200">Trên 1.200.000 đ</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style="display: flex; align-items: center; gap: 0.85rem; justify-content: space-between;">
-                <div class="results-count-text">
-                  Tìm thấy <span id="resultsCountNumber">9</span> xe có sẵn
-                </div>
-                <select class="select-filter" id="selectSort">
-                  <option value="RECOMMENDED">Gợi ý tốt nhất</option>
-                  <option value="PRICE_ASC">Giá: Thấp đến cao</option>
-                  <option value="PRICE_DESC">Giá: Cao đến thấp</option>
-                  <option value="RATING">Đánh giá cao nhất</option>
-                  <option value="TRIPS">Nhiều chuyến đi nhất</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <!-- Car Cards Grid -->
-          <div class="car-grid" id="carGridContainer">
-            <!-- Sẽ được RenderService.renderCarGrid chèn động -->
-          </div>
-
-        </div>
-      </section>
-
-      <!-- ==================== BANNER ĐĂNG KÝ TRỞ THÀNH CHỦ XE NGAY TRANG CHỦ ==================== -->
-      <section class="container">
-        <div class="owner-home-section">
+    <!-- ==================== 2. MAIN VIEW CONTAINERS ==================== -->
+    <main id="mainAppContent">
+      <!-- ==================== PHÂN HỆ 1: KHÁCH THUÊ (RENTER) ==================== -->
+      <div id="renterSection">
+        <!-- Hero Banner & Booking Search Widget -->
+        <section class="hero-section">
           <div class="container">
-            <div class="owner-home-grid">
-              
-              <!-- Left Info -->
-              <div class="owner-home-info">
-                <h2>Biến chiếc xe nhàn rỗi thành nguồn thu nhập vượt trội</h2>
-                <p>
-                  Gia nhập cộng đồng hơn 5.000+ chủ xe cùng DriveShare. Bảo hiểm vật chất 2 chiều MIC bảo vệ 100% chuyến đi, công nghệ định vị GPS giám sát hành trình thời gian thực.
-                </p>
-                
-                <div class="owner-benefits-list">
-                  <div class="owner-benefit-item">
-                    <div class="owner-benefit-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    </div>
-                    <span>Thu nhập bình quân từ 12 - 25 triệu đồng / tháng / xe</span>
-                  </div>
+            <div class="hero-header">
+              <div class="hero-tagline">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                >
+                  <path
+                    d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"
+                  ></path>
+                  <circle cx="7" cy="17" r="2"></circle>
+                  <path d="M9 17h6"></path>
+                  <circle cx="17" cy="17" r="2"></circle>
+                </svg>
+                <span>Nền tảng cho thuê xe tự lái trực tuyến</span>
+              </div>
+              <h1 class="hero-title">
+                Thuê xe tự lái - Giao nhận tận nơi toàn quốc
+              </h1>
+              <p class="hero-subtitle">
+                Hơn 500+ dòng xe đời mới được bảo dưỡng chính hãng, thủ tục đơn
+                giản với CCCD và GPLX B2, bảo hiểm 2 chiều MIC an tâm trọn vẹn.
+              </p>
+            </div>
 
-                  <div class="owner-benefit-item">
-                    <div class="owner-benefit-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    </div>
-                    <span>Khách thuê được định danh CCCD chip & Giấy phép lái xe chặt chẽ</span>
-                  </div>
+            <!-- Search Box -->
+            <div class="search-widget-card">
+              <div class="search-type-tabs">
+                <button class="search-type-btn active">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path
+                      d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+                    ></path>
+                  </svg>
+                  Xe tự lái
+                </button>
+                <button
+                  class="search-type-btn"
+                  onclick="
+                    App.showToast(
+                      'Dịch vụ Xe có tài xế đang được chuẩn bị ở giai đoạn tiếp theo!',
+                      'info',
+                    )
+                  "
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                  </svg>
+                  Xe có tài xế
+                </button>
+              </div>
 
-                  <div class="owner-benefit-item">
-                    <div class="owner-benefit-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    </div>
-                    <span>Nhận tiền cọc giữ chỗ 30% trực tiếp vào tài khoản ngân hàng</span>
+              <div class="search-grid">
+                <!-- Location Field -->
+                <div class="search-field-group">
+                  <label class="search-field-label">
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+                      ></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    Địa điểm nhận xe
+                  </label>
+                  <select class="search-field-select" id="searchLocationSelect">
+                    <option value="ALL">
+                      Toàn quốc (TP.HCM, Hà Nội, Đà Nẵng...)
+                    </option>
+                    <option value="TP. Hồ Chí Minh" selected>
+                      TP. Hồ Chí Minh (Q.1, Q.7, Tân Bình...)
+                    </option>
+                    <option value="Hà Nội">
+                      Hà Nội (Cầu Giấy, Nam Từ Liêm...)
+                    </option>
+                    <option value="Đà Nẵng">
+                      Đà Nẵng (Sân bay Đà Nẵng, Hải Châu...)
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Pick-up Date & Time -->
+                <div class="search-field-group">
+                  <label class="search-field-label">
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <rect
+                        x="3"
+                        y="4"
+                        width="18"
+                        height="18"
+                        rx="2"
+                        ry="2"
+                      ></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Nhận xe
+                  </label>
+                  <div class="search-field-dates">
+                    <input
+                      type="date"
+                      class="search-field-input"
+                      id="searchStartDate"
+                      value="2026-09-15"
+                    />
+                    <span class="date-divider">|</span>
+                    <input
+                      type="time"
+                      class="search-field-input"
+                      id="searchStartTime"
+                      value="08:00"
+                      style="max-width: 75px"
+                    />
+                  </div>
+                </div>
+
+                <!-- Return Date & Time -->
+                <div class="search-field-group">
+                  <label class="search-field-label">
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <rect
+                        x="3"
+                        y="4"
+                        width="18"
+                        height="18"
+                        rx="2"
+                        ry="2"
+                      ></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Trả xe
+                  </label>
+                  <div class="search-field-dates">
+                    <input
+                      type="date"
+                      class="search-field-input"
+                      id="searchEndDate"
+                      value="2026-09-17"
+                    />
+                    <span class="date-divider">|</span>
+                    <input
+                      type="time"
+                      class="search-field-input"
+                      id="searchEndTime"
+                      value="20:00"
+                      style="max-width: 75px"
+                    />
+                  </div>
+                </div>
+
+                <!-- Search Button -->
+                <button
+                  class="btn btn-primary btn-lg"
+                  id="btnHeroSearch"
+                  style="height: 100%; min-height: 52px"
+                >
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                  >
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  Tìm xe ngay
+                </button>
+              </div>
+
+              <!-- Features Trust Bar -->
+              <div class="features-strip">
+                <div class="feature-item">
+                  <div class="feature-icon-box">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                      ></path>
+                    </svg>
+                  </div>
+                  <div class="feature-text">
+                    <h4>Bảo hiểm chuyến đi</h4>
+                    <p>Bảo hiểm 2 chiều MIC cho toàn bộ chuyến</p>
+                  </div>
+                </div>
+
+                <div class="feature-item">
+                  <div class="feature-icon-box">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M16 8l-8 8"></path>
+                      <path d="M8 8h8v8"></path>
+                    </svg>
+                  </div>
+                  <div class="feature-text">
+                    <h4>Giữ chỗ với 30% cọc</h4>
+                    <p>Đặt cọc qua VietQR minh bạch an toàn</p>
+                  </div>
+                </div>
+
+                <div class="feature-item">
+                  <div class="feature-icon-box">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+                      ></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                  </div>
+                  <div class="feature-text">
+                    <h4>Giao xe tận nơi</h4>
+                    <p>Hỗ trợ bàn giao tại nhà hoặc sân bay</p>
+                  </div>
+                </div>
+
+                <div class="feature-item">
+                  <div class="feature-icon-box">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+                      ></path>
+                    </svg>
+                  </div>
+                  <div class="feature-text">
+                    <h4>Hỗ trợ 24/7</h4>
+                    <p>Đồng hành cùng bạn trên mọi cung đường</p>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
 
-              <!-- Right Form -->
-              <div class="owner-register-card">
-                <h3>Đăng ký trở thành Chủ xe</h3>
-                <p>Điền thông tin cơ bản để nhận bảng ước tính doanh thu và chuyên viên liên hệ trong 30 phút</p>
+        <!-- Catalog Section with Filters & Car Grid -->
+        <section class="catalog-section" id="catalogSection">
+          <div class="container">
+            <!-- Smart Practical Route Suggestions (Không emoji) -->
+            <div class="smart-prompt-box">
+              <div class="smart-prompt-left">
+                <div class="smart-prompt-icon">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polygon
+                      points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+                    ></polygon>
+                  </svg>
+                </div>
+                <div class="smart-prompt-content">
+                  <h4>Gợi ý theo nhu cầu thực tế:</h4>
+                  <p>
+                    Chọn nhanh lộ trình chuyến đi để tìm kiếm dòng xe phù hợp và
+                    tiết kiệm chi phí
+                  </p>
+                </div>
+              </div>
+              <div class="smart-prompt-actions">
+                <button
+                  class="smart-chip-btn"
+                  onclick="App.applyPromptSuggestion('VUNG_TAU')"
+                >
+                  Đi Vũng Tàu (4-5 chỗ)
+                </button>
+                <button
+                  class="smart-chip-btn"
+                  onclick="App.applyPromptSuggestion('DA_LAT_7CHO')"
+                >
+                  Gia đình đi Đà Lạt (7 chỗ)
+                </button>
+                <button
+                  class="smart-chip-btn"
+                  onclick="App.applyPromptSuggestion('XE_DIEN')"
+                >
+                  Xe điện cao cấp (EV)
+                </button>
+                <button
+                  class="smart-chip-btn"
+                  onclick="App.applyPromptSuggestion('TIET_KIEM')"
+                >
+                  Xe tiết kiệm (&lt; 800k)
+                </button>
+              </div>
+            </div>
 
-                <form id="formHomeOwnerRegister" onsubmit="AuthService.handleOwnerHomeRegister(event)">
-                  <div class="form-group">
-                    <label class="form-label">Họ và tên chủ xe <span style="color: var(--danger);">*</span></label>
-                    <input type="text" class="form-control" id="ownerRegName" placeholder="Ví dụ: Nguyễn Văn Hùng" required />
-                  </div>
-
-                  <div class="form-group">
-                    <label class="form-label">Số điện thoại liên hệ <span style="color: var(--danger);">*</span></label>
-                    <input type="tel" class="form-control" id="ownerRegPhone" placeholder="0901 234 567" required />
-                  </div>
-
-                  <div class="form-grid-2">
-                    <div class="form-group">
-                      <label class="form-label">Khu vực cho thuê <span style="color: var(--danger);">*</span></label>
-                      <select class="form-control" id="ownerRegArea" required>
-                        <option value="">Chọn khu vực</option>
-                        <option value="TP. Hồ Chí Minh (Quận 1, 3, 7, Bình Thạnh...)">TP. Hồ Chí Minh</option>
-                        <option value="Hà Nội (Cầu Giấy, Nam Từ Liêm, Đống Đa...)">Hà Nội</option>
-                        <option value="Đà Nẵng (Hải Châu, Sơn Trà...)">Đà Nẵng</option>
-                        <option value="Bình Dương (Thủ Dầu Một, Thuận An...)">Bình Dương</option>
-                        <option value="Đồng Nai (Biên Hòa...)">Đồng Nai</option>
-                        <option value="Khác">Tỉnh thành khác</option>
-                      </select>
-                    </div>
-
-                    <div class="form-group">
-                      <label class="form-label">Loại xe cho thuê <span style="color: var(--danger);">*</span></label>
-                      <select class="form-control" id="ownerRegCarType" required>
-                        <option value="">Chọn loại xe</option>
-                        <option value="Sedan 4-5 chỗ (Vios, Accent, City, Mazda 3...)">Sedan 4 - 5 chỗ</option>
-                        <option value="SUV / Crossover (CX-5, Tucson, SantaFe...)">SUV / Crossover</option>
-                        <option value="MPV 7 chỗ (Xpander, Veloz, Innova, Carnival...)">MPV 7 chỗ</option>
-                        <option value="Xe điện thông minh (VF8, VF9, VF5...)">Xe điện thông minh (EV)</option>
-                        <option value="Bán tải (Ranger, Hilux, Triton...)">Xe Bán tải</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <button type="submit" class="btn btn-accent btn-lg" style="width: 100%; margin-top: 0.5rem; font-weight: 700;">
-                    Gửi yêu cầu đăng ký Chủ xe
+            <!-- Comprehensive Filter Bar -->
+            <div class="filter-bar">
+              <!-- Row 1: Hãng xe Chips -->
+              <div class="filter-row" style="margin-bottom: 0.85rem">
+                <div class="filter-chips-group">
+                  <span class="filter-label">Hãng xe:</span>
+                  <button class="chip active" data-filter-brand="ALL">
+                    Tất cả
                   </button>
-                </form>
+                  <button class="chip" data-filter-brand="Toyota">
+                    Toyota
+                  </button>
+                  <button class="chip" data-filter-brand="VinFast">
+                    VinFast
+                  </button>
+                  <button class="chip" data-filter-brand="Hyundai">
+                    Hyundai
+                  </button>
+                  <button class="chip" data-filter-brand="Kia">Kia</button>
+                  <button class="chip" data-filter-brand="Honda">Honda</button>
+                  <button class="chip" data-filter-brand="Mazda">Mazda</button>
+                  <button class="chip" data-filter-brand="Mitsubishi">
+                    Mitsubishi
+                  </button>
+                  <button class="chip" data-filter-brand="Ford">Ford</button>
+                </div>
               </div>
 
+              <!-- Row 2: Số chỗ Chips -->
+              <div class="filter-row">
+                <div class="filter-chips-group">
+                  <span class="filter-label">Số chỗ & Phân khúc:</span>
+                  <button class="chip active" data-filter-seats="ALL">
+                    Tất cả xe
+                  </button>
+                  <button class="chip" data-filter-seats="4-5">
+                    4 - 5 chỗ (Sedan / CUV)
+                  </button>
+                  <button class="chip" data-filter-seats="7">
+                    7 chỗ (MPV / SUV)
+                  </button>
+                  <button class="chip" data-filter-seats="PICKUP">
+                    Xe bán tải (4x4)
+                  </button>
+                </div>
+                <button
+                  class="btn btn-ghost btn-sm"
+                  onclick="App.resetFilters()"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+                    ></path>
+                    <path d="M3 3v5h5"></path>
+                  </svg>
+                  Xóa bộ lọc
+                </button>
+              </div>
+
+              <!-- Row 3: Dropdown filters -->
+              <div class="filter-secondary-row">
+                <div
+                  style="
+                    display: flex;
+                    gap: 0.65rem;
+                    flex-wrap: wrap;
+                    align-items: center;
+                  "
+                >
+                  <div>
+                    <select class="select-filter" id="selectTransmission">
+                      <option value="ALL">Hộp số: Tất cả</option>
+                      <option value="AUTOMATIC">Số tự động (AT)</option>
+                      <option value="MANUAL">Số sàn (MT)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <select class="select-filter" id="selectFuel">
+                      <option value="ALL">Nhiên liệu: Tất cả</option>
+                      <option value="GASOLINE">Chạy xăng</option>
+                      <option value="ELECTRIC">Chạy điện (EV)</option>
+                      <option value="DIESEL">Dầu Diesel</option>
+                    </select>
+                  </div>
+                  <div>
+                    <select class="select-filter" id="selectPrice">
+                      <option value="ALL">Mức giá: Tất cả</option>
+                      <option value="UNDER_800">Dưới 800.000 đ</option>
+                      <option value="800_1200">Từ 800k - 1.200.000 đ</option>
+                      <option value="OVER_1200">Trên 1.200.000 đ</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 0.85rem;
+                    justify-content: space-between;
+                  "
+                >
+                  <div class="results-count-text">
+                    Tìm thấy <span id="resultsCountNumber">9</span> xe có sẵn
+                  </div>
+                  <select class="select-filter" id="selectSort">
+                    <option value="RECOMMENDED">Gợi ý tốt nhất</option>
+                    <option value="PRICE_ASC">Giá: Thấp đến cao</option>
+                    <option value="PRICE_DESC">Giá: Cao đến thấp</option>
+                    <option value="RATING">Đánh giá cao nhất</option>
+                    <option value="TRIPS">Nhiều chuyến đi nhất</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Car Cards Grid -->
+            <div class="car-grid" id="carGridContainer">
+              <!-- Sẽ được RenderService.renderCarGrid chèn động -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== BANNER ĐĂNG KÝ TRỞ THÀNH CHỦ XE NGAY TRANG CHỦ ==================== -->
+        <section class="container">
+          <div class="owner-home-section">
+            <div class="container">
+              <div class="owner-home-grid">
+                <!-- Left Info -->
+                <div class="owner-home-info">
+                  <h2>Biến chiếc xe nhàn rỗi thành nguồn thu nhập vượt trội</h2>
+                  <p>
+                    Gia nhập cộng đồng hơn 5.000+ chủ xe cùng DriveShare. Bảo
+                    hiểm vật chất 2 chiều MIC bảo vệ 100% chuyến đi, công nghệ
+                    định vị GPS giám sát hành trình thời gian thực.
+                  </p>
+
+                  <div class="owner-benefits-list">
+                    <div class="owner-benefit-item">
+                      <div class="owner-benefit-icon">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                        >
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      </div>
+                      <span
+                        >Thu nhập bình quân từ 12 - 25 triệu đồng / tháng /
+                        xe</span
+                      >
+                    </div>
+
+                    <div class="owner-benefit-item">
+                      <div class="owner-benefit-icon">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                        >
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      </div>
+                      <span
+                        >Khách thuê được định danh CCCD chip & Giấy phép lái xe
+                        chặt chẽ</span
+                      >
+                    </div>
+
+                    <div class="owner-benefit-item">
+                      <div class="owner-benefit-icon">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                        >
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      </div>
+                      <span
+                        >Nhận tiền cọc giữ chỗ 30% trực tiếp vào tài khoản ngân
+                        hàng</span
+                      >
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right Form -->
+                <div class="owner-register-card">
+                  <h3>Đăng ký trở thành Chủ xe</h3>
+                  <p>
+                    Điền thông tin cơ bản để nhận bảng ước tính doanh thu và
+                    chuyên viên liên hệ trong 30 phút
+                  </p>
+
+                  <form
+                    id="formHomeOwnerRegister"
+                    onsubmit="AuthService.handleOwnerHomeRegister(event)"
+                  >
+                    <div class="form-group">
+                      <label class="form-label"
+                        >Họ và tên chủ xe
+                        <span style="color: var(--danger)">*</span></label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="ownerRegName"
+                        placeholder="Ví dụ: Nguyễn Văn Hùng"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-group">
+                      <label class="form-label"
+                        >Số điện thoại liên hệ
+                        <span style="color: var(--danger)">*</span></label
+                      >
+                      <input
+                        type="tel"
+                        class="form-control"
+                        id="ownerRegPhone"
+                        placeholder="0901 234 567"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-grid-2">
+                      <div class="form-group">
+                        <label class="form-label"
+                          >Khu vực cho thuê
+                          <span style="color: var(--danger)">*</span></label
+                        >
+                        <select class="form-control" id="ownerRegArea" required>
+                          <option value="">Chọn khu vực</option>
+                          <option
+                            value="TP. Hồ Chí Minh (Quận 1, 3, 7, Bình Thạnh...)"
+                          >
+                            TP. Hồ Chí Minh
+                          </option>
+                          <option
+                            value="Hà Nội (Cầu Giấy, Nam Từ Liêm, Đống Đa...)"
+                          >
+                            Hà Nội
+                          </option>
+                          <option value="Đà Nẵng (Hải Châu, Sơn Trà...)">
+                            Đà Nẵng
+                          </option>
+                          <option value="Bình Dương (Thủ Dầu Một, Thuận An...)">
+                            Bình Dương
+                          </option>
+                          <option value="Đồng Nai (Biên Hòa...)">
+                            Đồng Nai
+                          </option>
+                          <option value="Khác">Tỉnh thành khác</option>
+                        </select>
+                      </div>
+
+                      <div class="form-group">
+                        <label class="form-label"
+                          >Loại xe cho thuê
+                          <span style="color: var(--danger)">*</span></label
+                        >
+                        <select
+                          class="form-control"
+                          id="ownerRegCarType"
+                          required
+                        >
+                          <option value="">Chọn loại xe</option>
+                          <option
+                            value="Sedan 4-5 chỗ (Vios, Accent, City, Mazda 3...)"
+                          >
+                            Sedan 4 - 5 chỗ
+                          </option>
+                          <option
+                            value="SUV / Crossover (CX-5, Tucson, SantaFe...)"
+                          >
+                            SUV / Crossover
+                          </option>
+                          <option
+                            value="MPV 7 chỗ (Xpander, Veloz, Innova, Carnival...)"
+                          >
+                            MPV 7 chỗ
+                          </option>
+                          <option value="Xe điện thông minh (VF8, VF9, VF5...)">
+                            Xe điện thông minh (EV)
+                          </option>
+                          <option value="Bán tải (Ranger, Hilux, Triton...)">
+                            Xe Bán tải
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      class="btn btn-accent btn-lg"
+                      style="width: 100%; margin-top: 0.5rem; font-weight: 700"
+                    >
+                      Gửi yêu cầu đăng ký Chủ xe
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ==================== PHÂN HỆ: CHUYẾN CỦA TÔI (MY BOOKINGS) ==================== -->
+      <div id="myBookingsSection" style="display: none">
+        <div class="portal-header">
+          <div class="container">
+            <div class="portal-title-row">
+              <div class="portal-title-group">
+                <h2>
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    color="#0f766e"
+                  >
+                    <rect
+                      x="3"
+                      y="4"
+                      width="18"
+                      height="18"
+                      rx="2"
+                      ry="2"
+                    ></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  Lịch Sử Chuyến Đi Của Tôi
+                </h2>
+                <div class="portal-subtitle">
+                  Khách thuê: <strong>Lê Hoàng Nam</strong> · GPLX Hạng B2 (Đã
+                  xác minh)
+                </div>
+              </div>
+              <button
+                class="btn btn-outline btn-sm"
+                onclick="App.showCatalogView()"
+              >
+                + Đặt thêm chuyến xe mới
+              </button>
             </div>
           </div>
         </div>
-      </section>
 
-    </div>
-
-    <!-- ==================== PHÂN HỆ: CHUYẾN CỦA TÔI (MY BOOKINGS) ==================== -->
-    <div id="myBookingsSection" style="display: none;">
-      <div class="portal-header">
         <div class="container">
-          <div class="portal-title-row">
-            <div class="portal-title-group">
-              <h2>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" color="#0f766e">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                Lịch Sử Chuyến Đi Của Tôi
-              </h2>
-              <div class="portal-subtitle">Khách thuê: <strong>Lê Hoàng Nam</strong> · GPLX Hạng B2 (Đã xác minh)</div>
-            </div>
-            <button class="btn btn-outline btn-sm" onclick="App.showCatalogView()">
-              + Đặt thêm chuyến xe mới
-            </button>
+          <div id="myBookingsListContainer">
+            <!-- RenderService.renderMyBookings -->
           </div>
         </div>
       </div>
 
-      <div class="container">
-        <div id="myBookingsListContainer">
-          <!-- RenderService.renderMyBookings -->
+      <!-- ==================== PHÂN HỆ 2: CHỦ XE (OWNER PORTAL) ==================== -->
+      <div id="ownerSection" style="display: none">
+        <div id="ownerPortalContainer">
+          <!-- Được sinh tự động bởi OwnerService.renderOwnerPortal() -->
+        </div>
+      </div>
+
+      <!-- ==================== PHÂN HỆ 3: NHÂN VIÊN & QUẢN TRỊ (ADMIN PORTAL) ==================== -->
+      <div id="adminSection" style="display: none">
+        <div id="adminPortalContainer">
+          <!-- Được sinh tự động bởi AdminService.renderAdminPortal() -->
+        </div>
+      </div>
+    </main>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- Car Detail Modal -->
+    <div class="modal-overlay" id="carDetailModalOverlay">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title" id="carDetailModalTitle">
+            Chi tiết phương tiện
+          </h3>
+          <button class="modal-close-btn" onclick="App.closeCarDetailModal()">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body" id="carDetailModalBody">
+          <!-- Nội dung xe -->
         </div>
       </div>
     </div>
 
-    <!-- ==================== PHÂN HỆ 2: CHỦ XE (OWNER PORTAL) ==================== -->
-    <div id="ownerSection" style="display: none;">
-      <div id="ownerPortalContainer">
-        <!-- Được sinh tự động bởi OwnerService.renderOwnerPortal() -->
-      </div>
-    </div>
-
-    <!-- ==================== PHÂN HỆ 3: NHÂN VIÊN & QUẢN TRỊ (ADMIN PORTAL) ==================== -->
-    <div id="adminSection" style="display: none;">
-      <div id="adminPortalContainer">
-        <!-- Được sinh tự động bởi AdminService.renderAdminPortal() -->
-      </div>
-    </div>
-
-  </main>
-
-  <!-- ==================== MODALS ==================== -->
-  
-  <!-- Car Detail Modal -->
-  <div class="modal-overlay" id="carDetailModalOverlay">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3 class="modal-title" id="carDetailModalTitle">Chi tiết phương tiện</h3>
-        <button class="modal-close-btn" onclick="App.closeCarDetailModal()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-      </div>
-      <div class="modal-body" id="carDetailModalBody">
-        <!-- Nội dung xe -->
-      </div>
-    </div>
-  </div>
-
-  <!-- General Action Modal (Booking, VietQR, Handover, Support) -->
-  <div class="modal-overlay" id="generalModalOverlay">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3 class="modal-title" id="generalModalTitle">Thông báo hệ thống</h3>
-        <button class="modal-close-btn" onclick="App.closeModal()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-      </div>
-      <div class="modal-body" id="generalModalBody">
-        <!-- Nội dung modal động -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Footer -->
-  <footer style="background: var(--white); border-top: 1px solid var(--slate-200); padding: 2rem 0; margin-top: auto;">
-    <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-      <div>
-        <div style="font-weight: 800; font-size: 1.15rem; color: var(--primary);">DriveShare</div>
-        <div style="color: var(--slate-500); font-size: 0.82rem; margin-top: 0.2rem;">
-          Đề tài thực tập K4: Nền tảng chia sẻ xe ô tô tự lái trực tuyến (Mô hình Mioto)
+    <!-- General Action Modal (Booking, VietQR, Handover, Support) -->
+    <div class="modal-overlay" id="generalModalOverlay">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title" id="generalModalTitle">Thông báo hệ thống</h3>
+          <button class="modal-close-btn" onclick="App.closeModal()">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body" id="generalModalBody">
+          <!-- Nội dung modal động -->
         </div>
       </div>
-      <div style="font-size: 0.82rem; color: var(--slate-500); text-align: right;">
-        <div>Nhóm thực hiện: <strong>Lâm Chí Vĩ, Đỗ Ngọc Phát, Hồ Huỳnh Khiêm, Nguyễn Duy Quân, Nguyễn Hữu Tín</strong></div>
-        <div style="margin-top: 0.2rem;">Thiết kế giao diện chuẩn mực, tối ưu hóa di động và máy tính · 2026</div>
-      </div>
     </div>
-  </footer>
 
-  <!-- Scripts -->
-  <script src="js/data.js"></script>
-  <script src="js/storage.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/render.js"></script>
-  <script src="js/booking.js"></script>
-  <script src="js/owner.js"></script>
-  <script src="js/admin.js"></script>
-  <script src="js/app.js"></script>
+    <!-- Footer -->
+    <footer
+      style="
+        background: var(--white);
+        border-top: 1px solid var(--slate-200);
+        padding: 2rem 0;
+        margin-top: auto;
+      "
+    >
+      <div
+        class="container"
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 1rem;
+        "
+      >
+        <div>
+          <div
+            style="font-weight: 800; font-size: 1.15rem; color: var(--primary)"
+          >
+            DriveShare
+          </div>
+          <div
+            style="
+              color: var(--slate-500);
+              font-size: 0.82rem;
+              margin-top: 0.2rem;
+            "
+          >
+            Đề tài thực tập K4: Nền tảng chia sẻ xe ô tô tự lái trực tuyến (Mô
+            hình Mioto)
+          </div>
+        </div>
+        <div
+          style="font-size: 0.82rem; color: var(--slate-500); text-align: right"
+        >
+          <div>
+            Nhóm thực hiện:
+            <strong
+              >Lâm Chí Vĩ, Đỗ Ngọc Phát, Hồ Huỳnh Khiêm, Nguyễn Duy Quân, Nguyễn
+              Hữu Tín</strong
+            >
+          </div>
+          <div style="margin-top: 0.2rem">
+            Thiết kế giao diện chuẩn mực, tối ưu hóa di động và máy tính · 2026
+          </div>
+        </div>
+      </div>
+    </footer>
 
-</body>
+    <!-- Scripts -->
+    <script src="js/data.js?v=20260921c"></script>
+    <script src="js/storage.js?v=20260921c"></script>
+    <script src="js/api.js?v=20260921c"></script>
+    <script src="js/toast.js?v=20260921c"></script>
+    <script src="js/auth.js?v=20260921c"></script>
+    <script src="js/render.js?v=20260921c"></script>
+    <script src="js/booking.js?v=20260921c"></script>
+    <script src="js/owner.js?v=20260921c"></script>
+    <script src="js/admin.js?v=20260921c"></script>
+    <script src="js/app.js?v=20260921c"></script>
+    <script src="js/chat-ai.js?v=20260922"></script>
+  </body>
 </html>

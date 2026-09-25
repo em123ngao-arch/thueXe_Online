@@ -6,6 +6,7 @@ import com.driveshare.modules.admin.dto.request.AdminUserFilterRequest;
 import com.driveshare.modules.admin.dto.request.ApproveLicenseRequest;
 import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
 import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
+import com.driveshare.modules.admin.dto.response.PendingCccdResponse;
 import com.driveshare.modules.admin.dto.response.UserItemResponse;
 import com.driveshare.modules.admin.service.AdminUserService;
 import com.driveshare.security.CustomUserDetails;
@@ -52,6 +53,39 @@ public class AdminUserController {
 
         PageResponse<UserItemResponse> response = adminUserService.getUsers(request);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách người dùng thành công", response));
+    }
+
+    @GetMapping("/pending-cccd")
+    @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Lấy danh sách hồ sơ CMND/CCCD chờ xét duyệt (BR-02-4)")
+    public ResponseEntity<ApiResponse<java.util.List<PendingCccdResponse>>> getPendingCccdUsers() {
+        java.util.List<PendingCccdResponse> list = adminUserService.getPendingCccdUsers();
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách CCCD chờ duyệt thành công", list));
+    }
+
+    @PutMapping("/{userId}/verify-cccd")
+    @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Phê duyệt hoặc từ chối hồ sơ CMND/CCCD (BR-02-5, BR-02-6)")
+    public ResponseEntity<ApiResponse<Void>> verifyCccd(
+            @PathVariable Long userId,
+            @RequestBody java.util.Map<String, String> body,
+            Authentication authentication
+    ) {
+        String status = body != null ? body.get("status") : null;
+        String reason = body != null ? body.get("reason") : null;
+
+        Long actorId = 6L;
+        String actorUsername = "admin_tin";
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails userDetails) {
+            actorId = userDetails.getUserId();
+            actorUsername = userDetails.getUsername();
+        }
+
+        adminUserService.verifyCccd(userId, status, reason, actorId, actorUsername);
+        String message = "APPROVED".equalsIgnoreCase(status)
+                ? "Đã phê duyệt CCCD thành công"
+                : "Đã từ chối hồ sơ CCCD";
+        return ResponseEntity.ok(ApiResponse.success(message, null));
     }
 
     @GetMapping("/{userId}")

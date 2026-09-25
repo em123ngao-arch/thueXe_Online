@@ -4,7 +4,10 @@ import com.driveshare.common.dto.PageResponse;
 import com.driveshare.modules.admin.dto.request.AdminUserFilterRequest;
 import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
 import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
+import com.driveshare.modules.admin.dto.response.PendingCccdResponse;
 import com.driveshare.modules.admin.dto.response.UserItemResponse;
+
+import java.util.List;
 
 public interface AdminUserService {
 
@@ -17,4 +20,8 @@ public interface AdminUserService {
     UserItemResponse approveLicense(Long userId, com.driveshare.modules.admin.dto.request.ApproveLicenseRequest request, Long actorId, String actorUsername);
 
     UserItemResponse updateUserStatus(Long userId, UpdateUserStatusRequest request, Long actorId, String actorUsername);
+
+    List<PendingCccdResponse> getPendingCccdUsers();
+
+    void verifyCccd(Long userId, String status, String reason, Long actorId, String actorUsername);
 }

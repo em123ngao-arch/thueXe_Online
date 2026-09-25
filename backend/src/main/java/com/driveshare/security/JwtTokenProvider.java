@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,8 +42,10 @@ public class JwtTokenProvider {
                 .collect(Collectors.toList());
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(userDetails.getUsername())
                 .claim("userId", userDetails.getUserId())
+                .claim("tokenVersion", userDetails.getTokenVersion())
                 .claim("email", userDetails.getEmail())
                 .claim("roles", roles)
                 .issuedAt(now)
@@ -56,8 +59,11 @@ public class JwtTokenProvider {
         Date expiryDate = new Date(now.getTime() + refreshExpirationMs);
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(userDetails.getUsername())
                 .claim("userId", userDetails.getUserId())
+                .claim("tokenVersion", userDetails.getTokenVersion())
+                .claim("type", "refresh")
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
@@ -67,6 +73,12 @@ public class JwtTokenProvider {
     public String getUsernameFromToken(String token) {
         return getClaims(token).getSubject();
     }
+
+    public String getJtiFromToken(String token) { return getClaims(token).getId(); }
+
+    public Long getTokenVersionFromToken(String token) { return getClaims(token).get("tokenVersion", Long.class); }
+
+    public boolean isRefreshToken(String token) { return "refresh".equals(getClaims(token).get("type", String.class)); }
 
     public Long getUserIdFromToken(String token) {
         return getClaims(token).get("userId", Long.class);
