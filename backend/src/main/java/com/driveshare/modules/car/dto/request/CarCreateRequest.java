@@ -2,6 +2,8 @@ package com.driveshare.modules.car.dto.request;
 
 import com.driveshare.common.enums.EFuelType;
 import com.driveshare.common.enums.ETransmission;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -23,6 +25,8 @@ public class CarCreateRequest {
             regexp = "^[0-9]{2}[A-Z]-[0-9]{4,5}$|^[0-9]{2}[A-Z][0-9]-[0-9]{4}$",
             message = "Biển số xe không đúng định dạng Việt Nam (VD: 51A-12345, 50F1-1234)"
     )
+    @JsonProperty("plateNumber")
+    @JsonAlias({"plate_number", "licensePlate", "license_plate"})
     private String plateNumber;
 
     @NotBlank(message = "Hãng xe không được để trống")
@@ -44,12 +48,16 @@ public class CarCreateRequest {
     @NotNull(message = "Số chỗ ngồi không được để trống")
     @Min(value = 2, message = "Số chỗ ngồi tối thiểu là 2")
     @Max(value = 16, message = "Số chỗ ngồi tối đa là 16")
+    @JsonProperty("seats")
+    @JsonAlias({"seat_count", "seatCount"})
     private Integer seats;
 
     @NotNull(message = "Hộp số không được để trống")
     private ETransmission transmission;
 
     @NotNull(message = "Loại nhiên liệu không được để trống")
+    @JsonProperty("fuelType")
+    @JsonAlias({"fuel_type", "fuel"})
     private EFuelType fuelType;
 
     // -----------------------------------------------------------------
@@ -59,14 +67,20 @@ public class CarCreateRequest {
     @NotNull(message = "Giá thuê mỗi ngày không được để trống")
     @DecimalMin(value = "100000", message = "Giá thuê tối thiểu là 100.000 VNĐ/ngày")
     @DecimalMax(value = "10000000", message = "Giá thuê tối đa là 10.000.000 VNĐ/ngày")
+    @JsonProperty("pricePerDay")
+    @JsonAlias({"price_per_day", "price"})
     private BigDecimal pricePerDay;
 
     @NotBlank(message = "Địa chỉ xe không được để trống")
     @Size(max = 500, message = "Địa chỉ không được vượt quá 500 ký tự")
+    @JsonProperty("address")
+    @JsonAlias({"pickupAddress", "pickup_address"})
     private String address;
 
     @NotBlank(message = "Tỉnh/Thành phố không được để trống")
     @Size(max = 100, message = "Tỉnh/Thành phố không được vượt quá 100 ký tự")
+    @JsonProperty("province")
+    @JsonAlias({"city"})
     private String province;
 
     // -----------------------------------------------------------------
@@ -84,5 +98,7 @@ public class CarCreateRequest {
     private String features;
 
     @Size(max = 500, message = "URL ảnh bìa không được vượt quá 500 ký tự")
+    @JsonProperty("thumbnailUrl")
+    @JsonAlias({"thumbnail_url", "imageUrl", "image_url"})
     private String thumbnailUrl;
 }

@@ -364,7 +364,16 @@ const AuthService = {
   async changePassword(oldPassword, newPassword, confirmPassword) {
     const res = await this.request("/auth/change-password", {
       method: "PUT",
-      body: JSON.stringify({ oldPassword, newPassword, confirmPassword }),
+      body: JSON.stringify({
+        oldPassword,
+        old_password: oldPassword,
+        currentPassword: oldPassword,
+        current_password: oldPassword,
+        newPassword,
+        new_password: newPassword,
+        confirmPassword,
+        confirm_password: confirmPassword,
+      }),
     });
 
     if (res.success) {

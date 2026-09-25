@@ -46,15 +46,27 @@ public class DataInitializer implements CommandLineRunner {
     private final CarRepository carRepository;
     private final RentalRepository rentalRepository;
     private final PasswordEncoder passwordEncoder;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @Override
     @Transactional
     public void run(String... args) {
+        fixDatabaseConstraints();
         initRoles();
         initDefaultAdmin();
         initDefaultOwner();
         initDefaultRenter();
         initDefaultCarsAndRentals();
+    }
+
+    private void fixDatabaseConstraints() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE cars DROP CONSTRAINT IF EXISTS cars_status_check");
+            jdbcTemplate.execute("ALTER TABLE cars ADD CONSTRAINT cars_status_check CHECK (status IN ('PENDING_REVIEW', 'APPROVED', 'REJECTED', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING', 'DRAFT'))");
+            log.info("Successfully updated cars_status_check constraint for PostgreSQL");
+        } catch (Exception e) {
+            log.warn("Could not update cars_status_check constraint: {}", e.getMessage());
+        }
     }
 
     private void initRoles() {

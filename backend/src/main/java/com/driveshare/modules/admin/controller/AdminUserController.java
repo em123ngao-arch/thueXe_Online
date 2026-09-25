@@ -62,6 +62,14 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách CCCD chờ duyệt thành công", list));
     }
 
+    @GetMapping("/pending-licenses")
+    @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Lấy danh sách hồ sơ GPLX của khách thuê cần xác thực")
+    public ResponseEntity<ApiResponse<java.util.List<com.driveshare.modules.admin.dto.response.PendingLicenseResponse>>> getPendingLicenses() {
+        java.util.List<com.driveshare.modules.admin.dto.response.PendingLicenseResponse> list = adminUserService.getPendingLicenses();
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách GPLX cần duyệt thành công", list));
+    }
+
     @PutMapping("/{userId}/verify-cccd")
     @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
     @Operation(summary = "Phê duyệt hoặc từ chối hồ sơ CMND/CCCD (BR-02-5, BR-02-6)")

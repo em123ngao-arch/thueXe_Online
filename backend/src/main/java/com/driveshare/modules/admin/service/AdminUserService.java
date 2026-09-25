@@ -21,4 +21,8 @@ public interface AdminUserService {
     java.util.List<com.driveshare.modules.admin.dto.response.PendingCccdResponse> getPendingCccdUsers();
 
     void verifyCccd(Long userId, String status, String reason, Long actorId, String actorUsername);
+
+    java.util.List<com.driveshare.modules.admin.dto.response.PendingLicenseResponse> getPendingLicenses();
+
+    com.driveshare.modules.admin.dto.response.AdminStatsResponse getAdminStats();
 }

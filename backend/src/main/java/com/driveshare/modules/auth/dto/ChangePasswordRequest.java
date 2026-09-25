@@ -15,14 +15,18 @@ import lombok.NoArgsConstructor;
 public class ChangePasswordRequest {
 
     @NotBlank(message = "Mật khẩu cũ không được để trống")
-    @JsonAlias({"oldPassword", "currentPassword"})
     @JsonProperty("oldPassword")
+    @JsonAlias({"oldPassword", "old_password", "currentPassword", "current_password"})
     private String oldPassword;
 
     @NotBlank(message = "Mật khẩu mới không được để trống")
+    @JsonProperty("newPassword")
+    @JsonAlias({"newPassword", "new_password"})
     private String newPassword;
 
     @NotBlank(message = "Xác nhận mật khẩu không được để trống")
+    @JsonProperty("confirmPassword")
+    @JsonAlias({"confirmPassword", "confirm_password"})
     private String confirmPassword;
 
     public String getCurrentPassword() {

@@ -67,12 +67,21 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/data.js"></script>
-    <script src="js/storage.js"></script>
-    <script src="js/toast.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/admin.js"></script>
+    <script src="js/data.js?v=3.5"></script>
+    <script src="js/storage.js?v=3.5"></script>
+    <script src="js/toast.js?v=3.5"></script>
+    <script src="js/auth.js?v=3.5"></script>
+    <script src="js/api.js?v=3.5"></script>
+    <script src="js/admin.js?v=3.5"></script>
     <script>
+      // Shim toàn cục tương thích ngược cho window.App trong Admin Portal
+      window.App = window.App || {
+        openModal: (t, c) => AdminService.openModal(t, c),
+        closeModal: () => AdminService.closeModal(),
+        openCarDetailModal: (id) => AdminService.openCarDetailModal(id),
+        showToast: (m, type) => AdminService.showToast(m, type)
+      };
+
       document.addEventListener("DOMContentLoaded", () => {
         StorageService.init();
         if (checkAuth("ADMIN")) {

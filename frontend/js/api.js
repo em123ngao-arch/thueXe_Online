@@ -22,13 +22,21 @@ const API_CONFIG = {
 
 const TokenService = {
   getToken() {
-    return localStorage.getItem('ds_access_token') || localStorage.getItem('driveshare_access_token');
+    return (
+      (typeof getAccessToken === 'function' ? getAccessToken() : null) ||
+      localStorage.getItem('access_token') ||
+      localStorage.getItem('ds_access_token') ||
+      localStorage.getItem('driveshare_access_token') ||
+      ''
+    );
   },
   setToken(token) {
+    localStorage.setItem('access_token', token);
     localStorage.setItem('ds_access_token', token);
     localStorage.setItem('driveshare_access_token', token);
   },
   clearToken() {
+    localStorage.removeItem('access_token');
     localStorage.removeItem('ds_access_token');
     localStorage.removeItem('driveshare_access_token');
   },
@@ -415,6 +423,232 @@ const ApiService = {
         }
       }
       return { success: false, message: 'Lỗi cập nhật trạng thái người dùng' };
+    }
+  },
+
+  /**
+   * API: Lấy thống kê tổng quan hệ thống (Admin)
+   * GET /api/v1/admin/stats
+   */
+  async getAdminStats() {
+    const url = `${API_CONFIG.BASE_URL}/admin/stats`;
+    try {
+      const res = await this.fetchWithTimeout(url);
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.success && json.data) {
+          return { success: true, source: 'BACKEND_API', data: json.data };
+        }
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      console.warn('DriveShare: Lỗi lấy thống kê admin:', e.message);
+      return { success: false, source: 'ERROR' };
+    }
+  },
+
+  /**
+   * API: Lấy danh sách xe chờ duyệt (Admin)
+   * GET /api/v1/admin/cars/pending
+   */
+  async getAdminPendingCars(params = {}) {
+    const query = new URLSearchParams();
+    if (params.page) query.append('page', params.page);
+    if (params.limit) query.append('limit', params.limit);
+    const url = `${API_CONFIG.BASE_URL}/admin/cars/pending?${query.toString()}`;
+    try {
+      const res = await this.fetchWithTimeout(url);
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.success && json.data) {
+          return { success: true, source: 'BACKEND_API', ...json.data };
+        }
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      console.warn('DriveShare: Lỗi lấy xe chờ duyệt:', e.message);
+      return { success: false, source: 'ERROR', items: [] };
+    }
+  },
+
+  /**
+   * API: Lấy danh sách tất cả xe (Admin)
+   * GET /api/v1/admin/cars
+   */
+  async getAdminCars(params = {}) {
+    const query = new URLSearchParams();
+    if (params.page) query.append('page', params.page);
+    if (params.limit) query.append('limit', params.limit);
+    if (params.status) query.append('status', params.status);
+    if (params.search) query.append('search', params.search);
+    const url = `${API_CONFIG.BASE_URL}/admin/cars?${query.toString()}`;
+    try {
+      const res = await this.fetchWithTimeout(url);
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.success && json.data) {
+          return { success: true, source: 'BACKEND_API', ...json.data };
+        }
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      console.warn('DriveShare: Lỗi lấy danh sách xe:', e.message);
+      return { success: false, source: 'ERROR', items: [] };
+    }
+  },
+
+  /**
+   * API: Duyệt hoặc Từ chối xe (Admin)
+   * PUT /api/v1/admin/cars/{carId}/approve
+   */
+  async approveCar(carId, status = 'APPROVED', reason = '') {
+    const url = `${API_CONFIG.BASE_URL}/admin/cars/${carId}/approve`;
+    try {
+      const body = { status };
+      if (reason) body.reason = reason;
+      const res = await this.fetchWithTimeout(url, {
+        method: 'PUT',
+        body: JSON.stringify(body)
+      });
+      const json = await res.json().catch(() => null);
+      if (res.ok) {
+        return { success: true, source: 'BACKEND_API', message: json?.message || 'Cập nhật trạng thái duyệt xe thành công', data: json?.data };
+      }
+      return { success: false, message: json?.message || `Lỗi HTTP ${res.status}` };
+    } catch (e) {
+      console.warn('DriveShare: Lỗi duyệt xe:', e.message);
+      return { success: false, message: e.message };
+    }
+  },
+
+  /**
+   * API: Lấy chi tiết xe cho Admin
+   * GET /api/v1/admin/cars/{carId}
+   */
+  async getAdminCarById(carId) {
+    const url = `${API_CONFIG.BASE_URL}/admin/cars/${carId}`;
+    try {
+      const res = await this.fetchWithTimeout(url);
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.success) {
+          return { success: true, source: 'BACKEND_API', data: json.data || json.result };
+        }
+      }
+      return { success: false, message: `Lỗi HTTP ${res.status}` };
+    } catch (e) {
+      console.warn('DriveShare: Lỗi lấy chi tiết xe admin:', e.message);
+      return { success: false, message: e.message };
+    }
+  },
+
+  /**
+   * API: Lấy danh sách CMND/CCCD chờ duyệt (Admin)
+   * GET /api/v1/admin/users/pending-cccd
+   */
+  async getAdminPendingCccd() {
+    const url = `${API_CONFIG.BASE_URL}/admin/users/pending-cccd`;
+    try {
+      const res = await this.fetchWithTimeout(url);
+      if (res.ok) {
+        const json = await res.json();
+        const list = json?.data || json?.result || [];
+        return { success: true, source: 'BACKEND_API', data: list };
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      console.warn('DriveShare: Lỗi lấy CCCD chờ duyệt:', e.message);
+      return { success: false, source: 'ERROR', data: [] };
+    }
+  },
+
+  /**
+   * API: Phê duyệt hoặc từ chối CMND/CCCD (Admin)
+   * PUT /api/v1/admin/users/{userId}/verify-cccd
+   */
+  async verifyCccd(userId, status = 'APPROVED', reason = '') {
+    const url = `${API_CONFIG.BASE_URL}/admin/users/${userId}/verify-cccd`;
+    try {
+      const body = { status };
+      if (reason) body.reason = reason;
+      const res = await this.fetchWithTimeout(url, {
+        method: 'PUT',
+        body: JSON.stringify(body)
+      });
+      const json = await res.json().catch(() => null);
+      if (res.ok) {
+        return { success: true, source: 'BACKEND_API', message: json?.message || 'Thao tác CCCD thành công' };
+      }
+      return { success: false, message: json?.message || `Lỗi HTTP ${res.status}` };
+    } catch (e) {
+      console.warn('DriveShare: Lỗi duyệt CCCD:', e.message);
+      return { success: false, message: e.message };
+    }
+  },
+
+  /**
+   * API: Lấy danh sách hồ sơ GPLX cần xác thực (Admin)
+   * GET /api/v1/admin/users/pending-licenses
+   */
+  async getAdminLicenses() {
+    const url = `${API_CONFIG.BASE_URL}/admin/users/pending-licenses`;
+    try {
+      const res = await this.fetchWithTimeout(url);
+      if (res.ok) {
+        const json = await res.json();
+        const list = json?.data || json?.result || [];
+        return { success: true, source: 'BACKEND_API', data: list };
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      console.warn('DriveShare: Lỗi lấy GPLX chờ duyệt:', e.message);
+      return { success: false, source: 'ERROR', data: [] };
+    }
+  },
+
+  /**
+   * API: Phê duyệt hoặc từ chối GPLX của khách thuê (Admin)
+   * PATCH /api/v1/admin/users/{userId}/approve-license
+   */
+  async approveLicense(userId, verificationStatus = 'verified', reason = '') {
+    const url = `${API_CONFIG.BASE_URL}/admin/users/${userId}/approve-license`;
+    try {
+      const body = { verification_status: verificationStatus };
+      if (reason) body.rejection_reason = reason;
+      const res = await this.fetchWithTimeout(url, {
+        method: 'PATCH',
+        body: JSON.stringify(body)
+      });
+      const json = await res.json().catch(() => null);
+      if (res.ok) {
+        return { success: true, source: 'BACKEND_API', message: json?.message || 'Cập nhật GPLX thành công' };
+      }
+      return { success: false, message: json?.message || `Lỗi HTTP ${res.status}` };
+    } catch (e) {
+      console.warn('DriveShare: Lỗi duyệt GPLX:', e.message);
+      return { success: false, message: e.message };
+    }
+  },
+
+  /**
+   * API: Lấy toàn bộ đơn đặt xe trên sàn (Admin)
+   * GET /api/v1/admin/rentals
+   */
+  async getAdminRentals(params = {}) {
+    const query = new URLSearchParams();
+    if (params.status) query.append('status', params.status);
+    const url = `${API_CONFIG.BASE_URL}/admin/rentals?${query.toString()}`;
+    try {
+      const res = await this.fetchWithTimeout(url);
+      if (res.ok) {
+        const json = await res.json();
+        const list = json?.data || json?.result || [];
+        return { success: true, source: 'BACKEND_API', data: list };
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      console.warn('DriveShare: Lỗi lấy danh sách đơn thuê:', e.message);
+      return { success: false, source: 'ERROR', data: [] };
     }
   }
 };

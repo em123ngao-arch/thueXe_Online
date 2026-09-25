@@ -71,4 +71,9 @@ public interface CarRepository extends JpaRepository<Car, Long>, JpaSpecificatio
      * Đếm số xe đang ACTIVE của một Owner (dùng cho thống kê dashboard).
      */
     long countByOwnerIdAndStatusAndDeletedAtIsNull(Long ownerId, ECarStatus status);
+
+    /**
+     * Đếm số xe theo trạng thái toàn sàn (bỏ qua xe xóa mềm).
+     */
+    long countByStatusAndDeletedAtIsNull(ECarStatus status);
 }

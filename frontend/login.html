@@ -204,6 +204,128 @@
         background: #f8fafc;
         border-color: #cbd5e1;
       }
+
+      /* Demo Accounts Switcher (BR-Demo) */
+      .demo-accounts-box {
+        margin-top: 1.25rem;
+        padding-top: 1.15rem;
+        border-top: 1px dashed #e2e8f0;
+      }
+      .demo-accounts-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin-bottom: 0.65rem;
+      }
+      .demo-accounts-badge {
+        font-size: 0.65rem;
+        font-weight: 800;
+        color: #059669;
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        padding: 2px 6px;
+        border-radius: 4px;
+        letter-spacing: 0.5px;
+      }
+      .demo-accounts-title {
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #64748b;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+      .demo-buttons-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .btn-demo-pill {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 9px 6px;
+        border-radius: 12px;
+        border: 1.5px solid;
+        background: #ffffff;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-align: center;
+        gap: 2px;
+        user-select: none;
+        outline: none;
+      }
+      .btn-demo-pill:hover {
+        transform: translateY(-2px);
+      }
+      .btn-demo-pill:active {
+        transform: translateY(0) scale(0.97);
+      }
+      .btn-demo-pill .demo-pill-icon {
+        font-size: 1.2rem;
+        line-height: 1;
+        margin-bottom: 2px;
+      }
+      .btn-demo-pill .demo-pill-name {
+        font-size: 0.82rem;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+      .btn-demo-pill .demo-pill-role {
+        font-size: 0.68rem;
+        font-weight: 500;
+        opacity: 0.8;
+        line-height: 1;
+      }
+
+      /* Role colors */
+      .btn-demo-pill.demo-renter {
+        border-color: #bfdbfe;
+        color: #1d4ed8;
+        background: linear-gradient(180deg, #ffffff 0%, #f0f7ff 100%);
+      }
+      .btn-demo-pill.demo-renter:hover,
+      .btn-demo-pill.demo-renter.active {
+        border-color: #3b82f6;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        background: #e0f2fe;
+      }
+
+      .btn-demo-pill.demo-owner {
+        border-color: #fed7aa;
+        color: #c2410c;
+        background: linear-gradient(180deg, #ffffff 0%, #fffaf0 100%);
+      }
+      .btn-demo-pill.demo-owner:hover,
+      .btn-demo-pill.demo-owner.active {
+        border-color: #f97316;
+        box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
+        background: #ffedd5;
+      }
+
+      .btn-demo-pill.demo-admin {
+        border-color: #fecaca;
+        color: #b91c1c;
+        background: linear-gradient(180deg, #ffffff 0%, #fef8f8 100%);
+      }
+      .btn-demo-pill.demo-admin:hover,
+      .btn-demo-pill.demo-admin.active {
+        border-color: #ef4444;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+        background: #fee2e2;
+      }
+
+      .demo-caption {
+        font-size: 0.72rem;
+        color: #94a3b8;
+        text-align: center;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
     </style>
   </head>
   <body>
@@ -322,6 +444,59 @@
               </svg>
               <span>Đăng nhập bằng Google</span>
             </a>
+
+            <!-- 3 nút chuyển nhanh tài khoản Demo (Renter, Owner, Admin) -->
+            <div class="demo-accounts-box">
+              <div class="demo-accounts-header">
+                <span class="demo-accounts-badge">DEMO</span>
+                <span class="demo-accounts-title">Chuyển nhanh tài khoản mẫu:</span>
+              </div>
+              <div class="demo-buttons-grid">
+                <button
+                  type="button"
+                  id="btnDemoRenter"
+                  class="btn-demo-pill demo-renter"
+                  onclick="selectDemoAccount('renter', event)"
+                  title="Khách thuê: renter@driveshare.com (Nhấp để đăng nhập ngay)"
+                >
+                  <span class="demo-pill-icon">🚗</span>
+                  <span class="demo-pill-name">Renter</span>
+                  <span class="demo-pill-role">Khách thuê</span>
+                </button>
+
+                <button
+                  type="button"
+                  id="btnDemoOwner"
+                  class="btn-demo-pill demo-owner"
+                  onclick="selectDemoAccount('owner', event)"
+                  title="Chủ xe: owner@driveshare.com (Nhấp để đăng nhập ngay)"
+                >
+                  <span class="demo-pill-icon">🔑</span>
+                  <span class="demo-pill-name">Owner</span>
+                  <span class="demo-pill-role">Chủ xe</span>
+                </button>
+
+                <button
+                  type="button"
+                  id="btnDemoAdmin"
+                  class="btn-demo-pill demo-admin"
+                  onclick="selectDemoAccount('admin', event)"
+                  title="Quản trị viên: admin@driveshare.com (Nhấp để đăng nhập ngay)"
+                >
+                  <span class="demo-pill-icon">🛡️</span>
+                  <span class="demo-pill-name">Admin</span>
+                  <span class="demo-pill-role">Quản trị</span>
+                </button>
+              </div>
+              <div class="demo-caption">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Nhấp 1-chạm để tự động điền &amp; đăng nhập</span>
+              </div>
+            </div>
           </div>
 
           <!-- ==================== TAB 2: ĐĂNG KÝ ==================== -->
@@ -440,6 +615,72 @@
           console.warn('Lỗi khi xóa session cũ:', err);
         }
         window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+      }
+
+      // Xử lý 3 nút chuyển nhanh tài khoản Demo (Renter, Owner, Admin)
+      const DEMO_ACCOUNTS = {
+        renter: {
+          email: "renter@driveshare.com",
+          password: "Renter123@",
+          label: "Khách thuê (Renter)",
+        },
+        owner: {
+          email: "owner@driveshare.com",
+          password: "Owner123@",
+          label: "Chủ xe (Owner)",
+        },
+        admin: {
+          email: "admin@driveshare.com",
+          password: "Admin123@",
+          label: "Quản trị viên (Admin)",
+        },
+      };
+
+      function selectDemoAccount(role, event) {
+        if (event) {
+          event.preventDefault();
+        }
+        const acc = DEMO_ACCOUNTS[role];
+        if (!acc) return;
+
+        // Nếu đang ở tab đăng ký, chuyển ngay về tab đăng nhập
+        if (typeof RegisterController !== "undefined" && typeof RegisterController.switchTab === "function") {
+          RegisterController.switchTab("login");
+        }
+
+        const idInput = document.getElementById("loginIdentifier");
+        const pwInput = document.getElementById("loginPassword");
+        const formLogin = document.getElementById("formLogin");
+
+        if (idInput) idInput.value = acc.email;
+        if (pwInput) pwInput.value = acc.password;
+
+        // Highlight nút đang chọn
+        document.querySelectorAll(".btn-demo-pill").forEach((btn) => btn.classList.remove("active"));
+        const activeBtn = document.getElementById(`btnDemo${role.charAt(0).toUpperCase() + role.slice(1)}`);
+        if (activeBtn) activeBtn.classList.add("active");
+
+        const isQuickLogin = !event || (!event.shiftKey && !event.ctrlKey);
+
+        if (isQuickLogin) {
+          if (typeof showToast === "function") {
+            showToast(`Đang chuyển sang tài khoản ${acc.label}...`, "info", 1500);
+          }
+          if (formLogin) {
+            setTimeout(() => {
+              if (typeof formLogin.requestSubmit === "function") {
+                formLogin.requestSubmit();
+              } else {
+                const btnSubmit = document.getElementById("btnSubmitLogin");
+                if (btnSubmit) btnSubmit.click();
+              }
+            }, 180);
+          }
+        } else {
+          if (typeof showToast === "function") {
+            showToast(`Đã điền thông tin tài khoản ${acc.label}!`, "success", 2000);
+          }
+        }
       }
     </script>
   </body>

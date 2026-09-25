@@ -32,6 +32,13 @@ import com.driveshare.modules.admin.repository.AuditLogRepository;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
+import com.driveshare.modules.admin.dto.response.AdminStatsResponse;
+import com.driveshare.modules.admin.dto.response.PendingLicenseResponse;
+import com.driveshare.modules.car.repository.CarRepository;
+import com.driveshare.modules.rental.repository.RentalRepository;
+import com.driveshare.common.enums.ECarStatus;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -43,6 +50,8 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     private final UserRepository userRepository;
     private final AuditLogRepository auditLogRepository;
+    private final CarRepository carRepository;
+    private final RentalRepository rentalRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -417,5 +426,63 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .createdAt(Instant.now())
                 .build();
         auditLogRepository.save(logEntry);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PendingLicenseResponse> getPendingLicenses() {
+        List<User> users = userRepository.findAll();
+        List<PendingLicenseResponse> result = new ArrayList<>();
+        for (User u : users) {
+            if (u.getRenterProfile() != null && u.getRenterProfile().getLicenseNumber() != null && !u.getRenterProfile().getLicenseNumber().trim().isEmpty()) {
+                RenterProfile rp = u.getRenterProfile();
+                result.add(PendingLicenseResponse.builder()
+                        .userId(u.getUserId())
+                        .fullName(rp.getLicenseFullName() != null ? rp.getLicenseFullName() : (u.getFullName() != null ? u.getFullName() : u.getUsername()))
+                        .email(u.getEmail())
+                        .phone(u.getPhone())
+                        .licenseNumber(rp.getLicenseNumber())
+                        .licenseFullName(rp.getLicenseFullName())
+                        .licenseFrontUrl(rp.getLicenseFrontUrl())
+                        .licenseBackUrl(rp.getLicenseBackUrl())
+                        .licenseVerificationStatus(rp.getLicenseVerificationStatus() != null ? rp.getLicenseVerificationStatus() : EVerificationStatus.PENDING)
+                        .submittedAt(rp.getUpdatedAt() != null ? rp.getUpdatedAt() : (u.getCreatedAt() != null ? u.getCreatedAt() : Instant.now()))
+                        .build());
+            }
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AdminStatsResponse getAdminStats() {
+        long pendingCars = carRepository.countByStatusAndDeletedAtIsNull(ECarStatus.PENDING_REVIEW);
+        long activeCars = carRepository.countByStatusAndDeletedAtIsNull(ECarStatus.ACTIVE);
+        long totalUsers = userRepository.count();
+        long totalRentals = rentalRepository.count();
+
+        List<User> allUsers = userRepository.findAll();
+
+        long pendingCccd = allUsers.stream()
+                .filter(u -> (u.getOwnerProfile() != null && u.getOwnerProfile().getVerificationStatus() == EVerificationStatus.PENDING)
+                        || (u.getRenterProfile() != null && u.getRenterProfile().getVerificationStatus() == EVerificationStatus.PENDING))
+                .count();
+
+        long pendingLicenses = allUsers.stream()
+                .filter(u -> u.getRenterProfile() != null 
+                        && u.getRenterProfile().getLicenseNumber() != null
+                        && !u.getRenterProfile().getLicenseNumber().trim().isEmpty()
+                        && (u.getRenterProfile().getLicenseVerificationStatus() == EVerificationStatus.PENDING 
+                            || u.getRenterProfile().getLicenseVerificationStatus() == null))
+                .count();
+
+        return AdminStatsResponse.builder()
+                .pendingCarsCount(pendingCars)
+                .pendingCccdCount(pendingCccd)
+                .pendingLicensesCount(pendingLicenses)
+                .activeCarsCount(activeCars)
+                .totalBookingsCount(totalRentals)
+                .totalUsersCount(totalUsers)
+                .build();
     }
 }
