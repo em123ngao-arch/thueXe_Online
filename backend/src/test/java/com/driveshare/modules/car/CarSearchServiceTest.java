@@ -27,12 +27,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.mockito.ArgumentMatchers;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings({"unchecked", "rawtypes"})
 class CarSearchServiceTest {
 
     @Mock
@@ -63,12 +64,11 @@ class CarSearchServiceTest {
 
     @Test
     @DisplayName("CRP-35: Tìm kiếm xe mặc định trả về danh sách xe ACTIVE")
-    @SuppressWarnings({"unchecked", "rawtypes"})
     void searchPublicCars_DefaultFilter_Success() {
         CarSearchFilterRequest request = new CarSearchFilterRequest();
         Page<Car> page = new PageImpl<>(List.of(sampleCar));
 
-        when(carRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(carRepository.findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class))).thenReturn(page);
 
         PageResponse<CarResponse> result = carSearchService.searchPublicCars(request);
 
@@ -76,12 +76,11 @@ class CarSearchServiceTest {
         assertEquals(1, result.getItems().size());
         assertEquals("Toyota", result.getItems().get(0).getBrand());
         assertEquals("Camry", result.getItems().get(0).getModel());
-        verify(carRepository).findAll(any(Specification.class), any(Pageable.class));
+        verify(carRepository).findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class));
     }
 
     @Test
     @DisplayName("CRP-38: Tìm kiếm xe với ngày kết thúc trước ngày bắt đầu ném INVALID_RENTAL_DATES")
-    @SuppressWarnings({"unchecked", "rawtypes"})
     void searchPublicCars_InvalidDates_ThrowsException() {
         CarSearchFilterRequest request = CarSearchFilterRequest.builder()
                 .startDate(LocalDate.now().plusDays(5))
@@ -90,12 +89,11 @@ class CarSearchServiceTest {
 
         AppException ex = assertThrows(AppException.class, () -> carSearchService.searchPublicCars(request));
         assertEquals(ErrorCode.INVALID_RENTAL_DATES, ex.getErrorCode());
-        verify(carRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+        verify(carRepository, never()).findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class));
     }
 
     @Test
     @DisplayName("CRP-35 & CRP-38: Tìm kiếm xe với đầy đủ bộ lọc đa tiêu chí và khoảng ngày hợp lệ")
-    @SuppressWarnings({"unchecked", "rawtypes"})
     void searchPublicCars_WithAllFilters_Success() {
         CarSearchFilterRequest request = CarSearchFilterRequest.builder()
                 .brand("Toyota")
@@ -114,7 +112,7 @@ class CarSearchServiceTest {
                 .build();
 
         Page<Car> page = new PageImpl<>(List.of(sampleCar));
-        when(carRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(carRepository.findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class))).thenReturn(page);
 
         PageResponse<CarResponse> result = carSearchService.searchPublicCars(request);
 
@@ -125,33 +123,31 @@ class CarSearchServiceTest {
 
     @Test
     @DisplayName("CRP-36: Sắp xếp theo giá tăng dần (price_asc)")
-    @SuppressWarnings({"unchecked", "rawtypes"})
     void searchPublicCars_SortPriceAsc_Success() {
         CarSearchFilterRequest request = CarSearchFilterRequest.builder()
                 .sortBy("price_asc")
                 .build();
 
         Page<Car> page = new PageImpl<>(List.of(sampleCar));
-        when(carRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(carRepository.findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class))).thenReturn(page);
 
         PageResponse<CarResponse> result = carSearchService.searchPublicCars(request);
         assertNotNull(result);
-        verify(carRepository).findAll(any(Specification.class), any(Pageable.class));
+        verify(carRepository).findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class));
     }
 
     @Test
     @DisplayName("CRP-36: Sắp xếp theo năm sản xuất giảm dần (year_desc)")
-    @SuppressWarnings({"unchecked", "rawtypes"})
     void searchPublicCars_SortYearDesc_Success() {
         CarSearchFilterRequest request = CarSearchFilterRequest.builder()
                 .sortBy("year_desc")
                 .build();
 
         Page<Car> page = new PageImpl<>(List.of(sampleCar));
-        when(carRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(carRepository.findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class))).thenReturn(page);
 
         PageResponse<CarResponse> result = carSearchService.searchPublicCars(request);
         assertNotNull(result);
-        verify(carRepository).findAll(any(Specification.class), any(Pageable.class));
+        verify(carRepository).findAll(ArgumentMatchers.<Specification<Car>>any(), any(Pageable.class));
     }
 }

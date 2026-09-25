@@ -167,7 +167,6 @@ class CarServiceImplTest {
 
     @Test
     @DisplayName("CRP-39: Tìm kiếm danh sách xe theo nhiều tiêu chí (Filter & Sort)")
-    @SuppressWarnings({"unchecked", "rawtypes"})
     void searchCars_Success() {
         // Arrange
         com.driveshare.modules.car.dto.request.CarSearchRequest searchRequest = new com.driveshare.modules.car.dto.request.CarSearchRequest();
@@ -191,7 +190,7 @@ class CarServiceImplTest {
                 1
         );
 
-        when(carRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Pageable.class)))
+        when(carRepository.findAll(org.mockito.ArgumentMatchers.<org.springframework.data.jpa.domain.Specification<Car>>any(), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(mockPage);
 
         // Act
@@ -204,7 +203,7 @@ class CarServiceImplTest {
         assertThat(result.getPagination().getTotalItems()).isEqualTo(1);
 
 
-        verify(carRepository, times(1)).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Pageable.class));
+        verify(carRepository, times(1)).findAll(org.mockito.ArgumentMatchers.<org.springframework.data.jpa.domain.Specification<Car>>any(), any(org.springframework.data.domain.Pageable.class));
     }
 
     @Test
