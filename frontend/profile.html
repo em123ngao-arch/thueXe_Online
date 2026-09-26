@@ -189,6 +189,7 @@
           <span>DriveShare</span>
         </a>
         <div class="nav-actions">
+          <div id="navAuthContainer" style="display: flex; align-items: center; gap: 0.5rem"></div>
           <a href="index.html" class="btn btn-outline btn-sm" style="font-weight: 600;">
             Trang chủ
           </a>
@@ -358,6 +359,7 @@
 
           <!-- Form CCCD 2 mặt -->
           <form id="formUploadCccd" style="margin-bottom: 2rem;">
+            <div id="cccdSubmittedAlert" style="display: none; margin-bottom: 1rem; padding: 10px 14px; border-radius: 8px; font-size: 0.86rem; font-weight: 600;"></div>
             <p style="font-size: 0.88rem; color: #64748b; margin-bottom: 1rem;">
               Yêu cầu upload <strong>đầy đủ cả 2 mặt</strong> (Mặt trước & Mặt sau) của CMND/CCCD. Hỗ trợ kéo & thả file. Định dạng JPG, PNG, WEBP (tối đa 10MB/mặt).
             </p>
@@ -392,6 +394,7 @@
 
           <!-- Form Upload GPLX (Hiển thị cho Khách thuê hoặc Chủ xe muốn lái) -->
           <form id="formUploadGplx" style="padding-top: 1.5rem; border-top: 1px solid #f1f5f9;">
+            <div id="gplxSubmittedAlert" style="display: none; margin-bottom: 1rem; padding: 10px 14px; border-radius: 8px; font-size: 0.86rem; font-weight: 600;"></div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 8px;">
               <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0;">
                 Ảnh chụp Giấy phép lái xe (GPLX)
@@ -406,6 +409,7 @@
               <div style="font-size: 0.78rem; color: #64748b;">Kéo thả ảnh vào đây hoặc bấm để chọn</div>
               <div id="gplxPreviewWrapper" style="display: none; position: relative; margin-top: 10px;">
                 <img id="gplxPreview" class="upload-preview" style="display: block; cursor: zoom-in;" title="Bấm để phóng to xem ảnh" onclick="event.stopPropagation(); ProfileController.zoomImage(this.src, 'Giấy phép lái xe (GPLX)')" />
+                <span class="badge" id="gplxImageStatusBadge" style="position: absolute; top: 6px; left: 6px; font-size: 11px; display: none;"></span>
                 <button type="button" class="btn btn-danger btn-xs" style="position: absolute; top: 6px; right: 6px; padding: 2px 7px; font-size: 10px;" onclick="event.stopPropagation(); ProfileController.clearGplxPreview()">Đổi ảnh</button>
               </div>
               <input type="file" id="gplxFile" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />

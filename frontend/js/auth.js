@@ -437,64 +437,95 @@ const AuthService = {
   // Cập nhật UI thanh Navbar
   updateAuthUI() {
     const user = this.getCurrentUser();
-    const navAuthContainer = document.getElementById("navAuthContainer");
-    if (!navAuthContainer) return;
+    const navAuthContainers = document.querySelectorAll("#navAuthContainer, .nav-auth-container");
+    if (!navAuthContainers || navAuthContainers.length === 0) return;
 
-    if (user && this.isAuthenticated()) {
-      const roleName = (user.role || (user.roles && user.roles[0]) || "RENTER")
-        .replace("ROLE_", "")
-        .toUpperCase();
+    navAuthContainers.forEach((navAuthContainer) => {
+      if (user && this.isAuthenticated()) {
+        const roleName = (user.role || (user.roles && user.roles[0]) || "RENTER")
+          .replace("ROLE_", "")
+          .toUpperCase();
 
-      const roleBadgeText =
-        roleName === "ADMIN" ? "Quản trị" : roleName === "OWNER" ? "Chủ xe" : "Khách thuê";
-      const roleColor =
-        roleName === "ADMIN" ? "#ef4444" : roleName === "OWNER" ? "#f59e0b" : "#3b82f6";
+        const roleBadgeText =
+          roleName === "ADMIN" ? "Quản trị" : roleName === "OWNER" ? "Chủ xe" : "Khách thuê";
+        const roleColor =
+          roleName === "ADMIN" ? "#ef4444" : roleName === "OWNER" ? "#f59e0b" : "#3b82f6";
 
-      navAuthContainer.innerHTML = `
-        <div class="user-profile-badge" style="display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 4px 10px; border-radius: 9999px; border: 1px solid #e2e8f0;">
-          <a href="profile.html" title="Xem hồ sơ cá nhân" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit;">
-            <img src="${user.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"}" alt="${user.fullName || user.name}" class="nav-avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid ${roleColor};" />
-            <div class="nav-user-info" style="display: flex; flex-direction: column; line-height: 1.2;">
-              <span class="nav-user-name" style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">${user.fullName || user.name}</span>
-              <span class="nav-user-role" style="font-size: 0.72rem; font-weight: 600; color: ${roleColor};">${roleBadgeText}</span>
-            </div>
-          </a>
-          <div style="display: flex; align-items: center; gap: 4px; margin-left: 4px;">
-            <a href="profile.html" class="btn btn-ghost btn-sm" title="Hồ sơ cá nhân" style="padding: 4px; color: #64748b; border-radius: 6px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        const userAvatar =
+          user.avatar ||
+          user.avatarUrl ||
+          "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
+
+        navAuthContainer.innerHTML = `
+          <div class="user-profile-badge" style="display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 4px 10px; border-radius: 9999px; border: 1px solid #e2e8f0;">
+            <a href="profile.html" title="Xem hồ sơ cá nhân" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit;">
+              <img src="${userAvatar}" alt="${user.fullName || user.name}" class="nav-avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid ${roleColor};" />
+              <div class="nav-user-info" style="display: flex; flex-direction: column; line-height: 1.2;">
+                <span class="nav-user-name" style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">${user.fullName || user.name}</span>
+                <span class="nav-user-role" style="font-size: 0.72rem; font-weight: 600; color: ${roleColor};">${roleBadgeText}</span>
+              </div>
             </a>
-            ${
-              roleName === "ADMIN"
-                ? `<a href="admin.html" class="btn btn-sm" title="Kênh Quản trị" style="padding: 4px 8px; font-size: 0.75rem; background: #ef4444; color: white; border-radius: 6px; text-decoration: none; font-weight: 700;">Admin</a>`
-                : roleName === "OWNER"
-                ? `<a href="owner-cars.html" class="btn btn-sm" title="Quản lý xe" style="padding: 4px 8px; font-size: 0.75rem; background: #f59e0b; color: white; border-radius: 6px; text-decoration: none; font-weight: 700;">Xe của tôi</a>`
-                : ""
-            }
-            <button class="btn btn-ghost btn-sm" onclick="AuthService.logout()" title="Đăng xuất" style="padding: 4px; color: #94a3b8; border: none; background: transparent; cursor: pointer; border-radius: 6px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-            </button>
+            <div style="display: flex; align-items: center; gap: 4px; margin-left: 4px;">
+              <a href="profile.html" class="btn btn-ghost btn-sm" title="Hồ sơ cá nhân" style="padding: 4px; color: #64748b; border-radius: 6px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              </a>
+              ${
+                roleName === "ADMIN"
+                  ? `<a href="admin.html" class="btn btn-sm" title="Kênh Quản trị" style="padding: 4px 8px; font-size: 0.75rem; background: #ef4444; color: white; border-radius: 6px; text-decoration: none; font-weight: 700;">Admin</a>`
+                  : roleName === "OWNER"
+                  ? `<a href="owner-cars.html" class="btn btn-sm" title="Quản lý xe" style="padding: 4px 8px; font-size: 0.75rem; background: #f59e0b; color: white; border-radius: 6px; text-decoration: none; font-weight: 700;">Xe của tôi</a>`
+                  : ""
+              }
+              <button class="btn btn-ghost btn-sm" onclick="AuthService.logout()" title="Đăng xuất" style="padding: 4px; color: #94a3b8; border: none; background: transparent; cursor: pointer; border-radius: 6px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+              </button>
+            </div>
           </div>
-        </div>
-      `;
-    } else {
-      navAuthContainer.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <a href="login.html" class="btn btn-outline btn-sm" style="font-weight: 600; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; padding: 6px 14px; border-radius: 8px;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            <span>Đăng nhập</span>
-          </a>
-          <a href="login.html?tab=register" class="btn btn-primary btn-sm" style="font-weight: 600; display: inline-flex; align-items: center; text-decoration: none; padding: 6px 14px; border-radius: 8px;">
-            <span>Đăng ký</span>
-          </a>
-        </div>
-      `;
+        `;
+      } else {
+        navAuthContainer.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <a href="login.html" class="btn btn-outline btn-sm" style="font-weight: 600; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; padding: 6px 14px; border-radius: 8px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span>Đăng nhập</span>
+            </a>
+            <a href="login.html?tab=register" class="btn btn-primary btn-sm" style="font-weight: 600; display: inline-flex; align-items: center; text-decoration: none; padding: 6px 14px; border-radius: 8px;">
+              <span>Đăng ký</span>
+            </a>
+          </div>
+        `;
+      }
+    });
+  },
+
+  async syncCurrentUserProfile() {
+    if (!this.isAuthenticated()) return;
+    try {
+      const res = await this.request("/users/me", { method: "GET" });
+      if (res.success && res.data) {
+        const d = res.data;
+        const cur = this.getCurrentUser() || {};
+        if (d.avatarUrl) {
+          cur.avatar = d.avatarUrl;
+          cur.avatarUrl = d.avatarUrl;
+        }
+        if (d.fullName) cur.fullName = d.fullName;
+        if (d.phoneNumber) cur.phone = d.phoneNumber;
+        if (d.address) cur.address = d.address;
+        localStorage.setItem(KEY_USER, JSON.stringify(cur));
+        localStorage.setItem("ds_user", JSON.stringify(cur));
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(cur));
+        this.updateAuthUI();
+      }
+    } catch (e) {
+      // offline / quiet
     }
   },
 };
@@ -519,4 +550,7 @@ const AuthModal = {
 // Khởi tạo trạng thái khi load trang
 document.addEventListener("DOMContentLoaded", function () {
   AuthService.updateAuthUI();
+  if (AuthService.isAuthenticated()) {
+    AuthService.syncCurrentUserProfile();
+  }
 });

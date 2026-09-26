@@ -50,13 +50,10 @@
   text-transform: uppercase;
 }
 
-/* Role Switcher Pill */
-.role-switcher-wrapper {
-  background-color: var(--slate-100);
-  padding: 3px;
-  border-radius: var(--radius-full);
-  display: inline-flex;
-  border: 1px solid var(--slate-200);
+/* Role Switcher Pill (Hidden according to user request) */
+.role-switcher-wrapper,
+.mobile-role-bar {
+  display: none !important;
 }
 
 .role-pill {

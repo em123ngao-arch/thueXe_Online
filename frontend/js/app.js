@@ -82,45 +82,28 @@ const App = {
     const btnAddCar  = document.getElementById('btnAddCar');
     const navBookings = document.getElementById('navMyBookings');
 
+    // Ẩn hoàn toàn role-switcher ở giữa theo yêu cầu người dùng
+    document.querySelectorAll('.role-switcher-wrapper, .mobile-role-bar').forEach(el => {
+      el.style.display = 'none';
+    });
+    if (pillRenter) pillRenter.style.display = 'none';
+    if (pillOwner)  pillOwner.style.display  = 'none';
+    if (pillAdmin)  pillAdmin.style.display  = 'none';
+    if (mobRenter)  mobRenter.style.display  = 'none';
+    if (mobOwner)   mobOwner.style.display   = 'none';
+    if (mobAdmin)   mobAdmin.style.display   = 'none';
+
     if (userRole === 'RENTER') {
-      // Renter: chỉ thấy pill Khách thuê xe, ẩn Owner + Admin
-      if (pillRenter) pillRenter.style.display = '';
-      if (pillOwner)  pillOwner.style.display  = 'none';
-      if (pillAdmin)  pillAdmin.style.display  = 'none';
-      if (mobRenter)  mobRenter.style.display  = '';
-      if (mobOwner)   mobOwner.style.display   = 'none';
-      if (mobAdmin)   mobAdmin.style.display   = 'none';
-      if (btnAddCar)  btnAddCar.style.display  = 'none';
+      if (btnAddCar)   btnAddCar.style.display   = 'none';
       if (navBookings) navBookings.style.display = '';
     } else if (userRole === 'OWNER') {
-      // Owner: chỉ thấy pill Chủ xe, ẩn Renter + Admin
-      if (pillRenter) pillRenter.style.display = 'none';
-      if (pillOwner)  pillOwner.style.display  = '';
-      if (pillAdmin)  pillAdmin.style.display  = 'none';
-      if (mobRenter)  mobRenter.style.display  = 'none';
-      if (mobOwner)   mobOwner.style.display   = '';
-      if (mobAdmin)   mobAdmin.style.display   = 'none';
-      if (btnAddCar)  btnAddCar.style.display  = '';
+      if (btnAddCar)   btnAddCar.style.display   = '';
       if (navBookings) navBookings.style.display = 'none';
     } else if (userRole === 'ADMIN') {
-      // Admin: chỉ thấy pill Nhân viên/Admin, ẩn Renter + Owner
-      if (pillRenter) pillRenter.style.display = 'none';
-      if (pillOwner)  pillOwner.style.display  = 'none';
-      if (pillAdmin)  pillAdmin.style.display  = '';
-      if (mobRenter)  mobRenter.style.display  = 'none';
-      if (mobOwner)   mobOwner.style.display   = 'none';
-      if (mobAdmin)   mobAdmin.style.display   = '';
-      if (btnAddCar)  btnAddCar.style.display  = 'none';
+      if (btnAddCar)   btnAddCar.style.display   = 'none';
       if (navBookings) navBookings.style.display = 'none';
     } else {
-      // Guest: thấy cả 3 pill (để xem demo), nút Đăng xe hỏi đăng nhập
-      if (pillRenter) pillRenter.style.display = '';
-      if (pillOwner)  pillOwner.style.display  = '';
-      if (pillAdmin)  pillAdmin.style.display  = '';
-      if (mobRenter)  mobRenter.style.display  = '';
-      if (mobOwner)   mobOwner.style.display   = '';
-      if (mobAdmin)   mobAdmin.style.display   = '';
-      if (btnAddCar)  btnAddCar.style.display  = '';
+      if (btnAddCar)   btnAddCar.style.display   = '';
       if (navBookings) navBookings.style.display = '';
     }
   },

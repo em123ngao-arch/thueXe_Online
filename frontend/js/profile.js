@@ -56,22 +56,55 @@ const ProfileController = {
     this.renderProfile();
   },
 
+  applyStatusBadge(badgeEl, status) {
+    if (!badgeEl) return;
+    badgeEl.style.display = "inline-block";
+    const s = String(status || "PENDING").toUpperCase();
+    if (s === "APPROVED" || s === "VERIFIED") {
+      badgeEl.className = "badge badge-success";
+      badgeEl.innerText = "Đã duyệt";
+    } else if (s === "REJECTED") {
+      badgeEl.className = "badge badge-danger";
+      badgeEl.innerText = "Bị từ chối";
+    } else {
+      badgeEl.className = "badge badge-warning";
+      badgeEl.innerText = "Đang chờ duyệt";
+    }
+  },
+
   renderProfile() {
     const u = this.userData || {};
+    const curUser = (typeof AuthService !== "undefined" && AuthService.getCurrentUser()) || {};
+    const userId = curUser.id || curUser.userId || "me";
+
+    let cachedCccd = null;
+    try {
+      cachedCccd = JSON.parse(localStorage.getItem(`ds_cccd_${userId}`));
+    } catch (e) {}
+
+    let cachedGplx = null;
+    try {
+      cachedGplx = JSON.parse(localStorage.getItem(`ds_gplx_${userId}`));
+    } catch (e) {}
+
     const roles = Array.from(u.roles || (u.role ? [u.role] : []));
     const isOwner = roles.some(r => r.toUpperCase().includes("OWNER"));
     const isRenter = roles.some(r => r.toUpperCase().includes("RENTER")) || !isOwner;
     const isVerified = (u.renterProfile?.verificationStatus === "APPROVED") || (u.ownerProfile?.verificationStatus === "APPROVED") || (u.verificationStatus === "APPROVED");
 
-    // Avatar & Header
+    // Avatar & Header (hiển thị ngay tức thì từ API hoặc LocalStorage)
     const avatarEl = document.getElementById("profileAvatarImg");
-    if (avatarEl) avatarEl.src = u.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
+    const resolvedAvatar = u.avatarUrl || curUser.avatar || curUser.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
+    if (avatarEl) avatarEl.src = resolvedAvatar;
+    document.querySelectorAll(".nav-avatar, .user-avatar, #navAuthContainer img").forEach(img => {
+      img.src = resolvedAvatar;
+    });
 
     const nameHeaderEl = document.getElementById("profileHeaderName");
-    if (nameHeaderEl) nameHeaderEl.innerText = u.fullName || "Người dùng";
+    if (nameHeaderEl) nameHeaderEl.innerText = u.fullName || curUser.fullName || curUser.name || "Người dùng";
 
     const emailHeaderEl = document.getElementById("profileHeaderEmail");
-    if (emailHeaderEl) emailHeaderEl.innerText = u.email || "";
+    if (emailHeaderEl) emailHeaderEl.innerText = u.email || curUser.email || "";
 
     const roleBadgeEl = document.getElementById("profileRoleBadge");
     if (roleBadgeEl) {
@@ -89,7 +122,7 @@ const ProfileController = {
 
     const verifyBadgeEl = document.getElementById("profileVerifyBadge");
     if (verifyBadgeEl) {
-      const status = u.renterProfile?.verificationStatus || u.ownerProfile?.verificationStatus || u.verificationStatus || "NOT_SUBMITTED";
+      const status = u.renterProfile?.verificationStatus || u.ownerProfile?.verificationStatus || u.verificationStatus || (cachedCccd ? cachedCccd.status : "NOT_SUBMITTED");
       if (status === "APPROVED" || status === "VERIFIED") {
         verifyBadgeEl.innerText = "Đã xác thực";
         verifyBadgeEl.className = "badge badge-success";
@@ -106,7 +139,7 @@ const ProfileController = {
     const nameInput = document.getElementById("profFullName");
     const nameLockIcon = document.getElementById("nameLockIcon");
     if (nameInput) {
-      nameInput.value = u.fullName || "";
+      nameInput.value = u.fullName || curUser.fullName || curUser.name || "";
       if (isVerified || (u.lockedFields && u.lockedFields.includes("fullName"))) {
         nameInput.readOnly = true;
         nameInput.classList.add("input-readonly");
@@ -116,10 +149,10 @@ const ProfileController = {
 
     // SĐT & Địa chỉ (luôn sửa được)
     const phoneInput = document.getElementById("profPhone");
-    if (phoneInput) phoneInput.value = u.phone || u.phoneNumber || "";
+    if (phoneInput) phoneInput.value = u.phone || u.phoneNumber || curUser.phone || curUser.phoneNumber || "";
 
     const addressInput = document.getElementById("profAddress");
-    if (addressInput) addressInput.value = u.address || "";
+    if (addressInput) addressInput.value = u.address || curUser.address || "";
 
     // CMND / CCCD
     const cccdInput = document.getElementById("profNationalId");
@@ -133,20 +166,49 @@ const ProfileController = {
       }
     }
 
-    // Hiển thị ảnh CCCD đã upload trước đó (nếu có)
-    const cccdFrontUrl = u.renterProfile?.idCardFrontUrl || u.ownerProfile?.idCardFrontUrl;
+    // Hiển thị ảnh CCCD đã upload trước đó (nếu có từ BE hoặc LocalStorage)
+    const cccdFrontUrl = u.idCardFrontUrl || u.profile?.idCardFrontUrl || u.renterProfile?.idCardFrontUrl || u.ownerProfile?.idCardFrontUrl || cachedCccd?.frontUrl;
+    const cccdBackUrl = u.idCardBackUrl || u.profile?.idCardBackUrl || u.renterProfile?.idCardBackUrl || u.ownerProfile?.idCardBackUrl || cachedCccd?.backUrl;
+    const cccdStatus = u.idCardVerificationStatus || u.renterProfile?.verificationStatus || u.ownerProfile?.verificationStatus || cachedCccd?.status || ((cccdFrontUrl && cccdBackUrl) ? "PENDING" : null);
+
     if (cccdFrontUrl) {
       const frontImg = document.getElementById("cccdFrontPreview");
       const frontWrap = document.getElementById("cccdFrontPreviewWrapper");
+      const frontBadge = document.getElementById("cccdFrontStatusBadge");
       if (frontImg) frontImg.src = cccdFrontUrl;
       if (frontWrap) frontWrap.style.display = "block";
+      if (frontBadge && cccdStatus) {
+        this.applyStatusBadge(frontBadge, cccdStatus);
+      }
     }
-    const cccdBackUrl = u.renterProfile?.idCardBackUrl || u.ownerProfile?.idCardBackUrl;
+
     if (cccdBackUrl) {
       const backImg = document.getElementById("cccdBackPreview");
       const backWrap = document.getElementById("cccdBackPreviewWrapper");
+      const backBadge = document.getElementById("cccdBackStatusBadge");
       if (backImg) backImg.src = cccdBackUrl;
       if (backWrap) backWrap.style.display = "block";
+      if (backBadge && cccdStatus) {
+        this.applyStatusBadge(backBadge, cccdStatus);
+      }
+    }
+
+    // Hiển thị thông báo lưu trữ hồ sơ CCCD
+    const cccdAlert = document.getElementById("cccdSubmittedAlert");
+    const btnCccd = document.getElementById("btnUploadCccd");
+    if (cccdFrontUrl && cccdBackUrl) {
+      if (cccdAlert) {
+        cccdAlert.style.display = "block";
+        const isAppr = cccdStatus === "APPROVED" || cccdStatus === "VERIFIED";
+        cccdAlert.style.background = isAppr ? "#f0fdf4" : "#fefce8";
+        cccdAlert.style.border = isAppr ? "1px solid #bbf7d0" : "1px solid #fef08a";
+        cccdAlert.style.color = isAppr ? "#166534" : "#854d0e";
+        cccdAlert.innerHTML = `📁 <strong>CMND/CCCD (2 mặt):</strong> Đã tải lên và lưu trữ trên hệ thống. Trạng thái: <span class="badge ${isAppr ? 'badge-success' : 'badge-warning'}">${isAppr ? 'Đã duyệt' : 'Đang chờ Admin xét duyệt'}</span>`;
+      }
+      if (btnCccd) {
+        btnCccd.innerText = "Tải lên lại để thay đổi CMND / CCCD";
+        btnCccd.className = "btn btn-outline";
+      }
     }
 
     // Role-specific sections (BR-09-3 & BR-09-4)
@@ -167,7 +229,7 @@ const ProfileController = {
     const licenseInput = document.getElementById("profLicenseNumber");
     const gplxLockIcon = document.getElementById("gplxLockIcon");
     if (licenseInput) {
-      licenseInput.value = u.renterProfile?.licenseNumber || u.profile?.licenseNumber || "";
+      licenseInput.value = u.licenseNumber || u.renterProfile?.licenseNumber || u.profile?.licenseNumber || "";
       if (isVerified || (u.lockedFields && u.lockedFields.includes("licenseNumber"))) {
         licenseInput.readOnly = true;
         licenseInput.classList.add("input-readonly");
@@ -175,28 +237,37 @@ const ProfileController = {
       }
     }
 
-    // Hiển thị ảnh GPLX đã upload trước đó (nếu có)
-    const gplxUrl = u.renterProfile?.licenseFrontUrl || u.profile?.licenseImageUrl;
-    const gplxStatus = u.renterProfile?.licenseVerificationStatus;
+    // Hiển thị ảnh GPLX đã upload trước đó (nếu có từ BE hoặc LocalStorage)
+    const gplxUrl = u.licenseImageUrl || u.profile?.licenseImageUrl || u.renterProfile?.licenseFrontUrl || cachedGplx?.licenseUrl;
+    const gplxStatus = u.licenseVerificationStatus || u.renterProfile?.licenseVerificationStatus || cachedGplx?.status || (gplxUrl ? "PENDING" : null);
     const gplxPreview = document.getElementById("gplxPreview");
     const gplxWrap = document.getElementById("gplxPreviewWrapper");
     const gplxBadge = document.getElementById("gplxStatusBadge");
+    const gplxImgBadge = document.getElementById("gplxImageStatusBadge");
+    const gplxAlert = document.getElementById("gplxSubmittedAlert");
+    const btnGplx = document.getElementById("btnUploadGplx");
 
     if (gplxUrl && gplxPreview) {
       gplxPreview.src = gplxUrl;
       if (gplxWrap) gplxWrap.style.display = "block";
     }
     if (gplxBadge && gplxStatus) {
-      gplxBadge.style.display = "inline-block";
-      if (gplxStatus === "APPROVED" || gplxStatus === "VERIFIED") {
-        gplxBadge.className = "badge badge-success";
-        gplxBadge.innerText = "Đã duyệt";
-      } else if (gplxStatus === "REJECTED") {
-        gplxBadge.className = "badge badge-danger";
-        gplxBadge.innerText = "Từ chối";
-      } else {
-        gplxBadge.className = "badge badge-warning";
-        gplxBadge.innerText = "Đang chờ duyệt";
+      this.applyStatusBadge(gplxBadge, gplxStatus);
+    }
+    if (gplxImgBadge && gplxStatus) {
+      this.applyStatusBadge(gplxImgBadge, gplxStatus);
+    }
+    if (gplxUrl) {
+      if (gplxAlert) {
+        gplxAlert.style.display = "block";
+        const isAppr = gplxStatus === "APPROVED" || gplxStatus === "VERIFIED";
+        gplxAlert.style.background = isAppr ? "#f0fdf4" : "#fefce8";
+        gplxAlert.style.border = isAppr ? "1px solid #bbf7d0" : "1px solid #fef08a";
+        gplxAlert.style.color = isAppr ? "#166534" : "#854d0e";
+        gplxAlert.innerHTML = `📁 <strong>Giấy phép lái xe:</strong> Đã tải lên và lưu trữ trên hệ thống. Trạng thái: <span class="badge ${isAppr ? 'badge-success' : 'badge-warning'}">${isAppr ? 'Đã duyệt' : 'Đang chờ Admin xét duyệt'}</span>`;
+      }
+      if (btnGplx) {
+        btnGplx.innerText = "Tải lên lại để thay đổi GPLX";
       }
     }
   },
@@ -393,9 +464,9 @@ const ProfileController = {
     const file = e.target.files[0];
     if (!file) return;
 
-    // BR-08-2 & BR-08-3: JPG/PNG, max 5MB
-    if (!["image/jpeg", "image/png", "image/jpg"].includes(file.type)) {
-      showToast("Định dạng không hợp lệ. Chỉ chấp nhận ảnh JPG hoặc PNG!", "error", 2500);
+    // BR-08-2 & BR-08-3: JPG/PNG/WEBP, max 5MB
+    if (!["image/jpeg", "image/png", "image/jpg", "image/webp"].includes(file.type)) {
+      showToast("Định dạng không hợp lệ. Chỉ chấp nhận ảnh JPG, PNG hoặc WEBP!", "error", 2500);
       return;
     }
 
@@ -404,17 +475,23 @@ const ProfileController = {
       return;
     }
 
-    // Preview trước khi gửi
+    // 1. Hiển thị tức thì ngay trên giao diện khi vừa chọn file (Không cần đợi tải lên hoàn tất)
     const reader = new FileReader();
     reader.onload = async (event) => {
+      const immediatePreviewUrl = event.target.result;
       const avatarEl = document.getElementById("profileAvatarImg");
-      if (avatarEl) avatarEl.src = event.target.result;
+      if (avatarEl) avatarEl.src = immediatePreviewUrl;
 
-      // Gửi API
+      // Cập nhật ngay tất cả avatar trên navbar và header
+      document.querySelectorAll(".nav-avatar, .user-avatar, #navAuthContainer img").forEach(img => {
+        img.src = immediatePreviewUrl;
+      });
+
+      // 2. Gửi API lên máy chủ backend
       const formData = new FormData();
       formData.append("file", file);
 
-      showToast("Đang tải ảnh đại diện lên...", "info", 1500);
+      showToast("Đang tải ảnh đại diện lên máy chủ...", "info", 1500);
       try {
         const res = await fetch("http://localhost:8080/api/v1/users/me/avatar", {
           method: "POST",
@@ -425,12 +502,24 @@ const ProfileController = {
 
         if (res.ok) {
           showToast("Cập nhật ảnh đại diện thành công!", "success", 2000);
-          const newAvatarUrl = data?.data?.avatarUrl || data?.result?.avatarUrl;
+          const newAvatarUrl = data?.data?.avatarUrl || data?.result?.avatarUrl || data?.avatarUrl;
           if (newAvatarUrl) {
-            const user = AuthService.getCurrentUser() || {};
-            user.avatar = newAvatarUrl;
-            localStorage.setItem("user_info", JSON.stringify(user));
-            AuthService.updateAuthUI();
+            if (avatarEl) avatarEl.src = newAvatarUrl;
+            document.querySelectorAll(".nav-avatar, .user-avatar, #navAuthContainer img").forEach(img => {
+              img.src = newAvatarUrl;
+            });
+
+            const curUser = (typeof AuthService !== "undefined" && AuthService.getCurrentUser()) || {};
+            curUser.avatar = newAvatarUrl;
+            curUser.avatarUrl = newAvatarUrl;
+            localStorage.setItem("user_info", JSON.stringify(curUser));
+            localStorage.setItem("ds_user", JSON.stringify(curUser));
+            localStorage.setItem("driveshare_current_auth_user", JSON.stringify(curUser));
+            if (this.userData) this.userData.avatarUrl = newAvatarUrl;
+
+            if (typeof AuthService !== "undefined" && AuthService.updateAuthUI) {
+              AuthService.updateAuthUI();
+            }
           }
           return;
         }
@@ -438,12 +527,18 @@ const ProfileController = {
         console.warn("Avatar API offline:", err);
       }
 
-      // Mock update
-      showToast("Cập nhật ảnh đại diện thành công!", "success", 2000);
-      const user = AuthService.getCurrentUser() || {};
-      user.avatar = event.target.result;
-      localStorage.setItem("user_info", JSON.stringify(user));
-      AuthService.updateAuthUI();
+      // Offline fallback: lưu data URL vào bộ nhớ
+      showToast("Cập nhật ảnh đại diện thành công (Offline)!", "success", 2000);
+      const curUser = (typeof AuthService !== "undefined" && AuthService.getCurrentUser()) || {};
+      curUser.avatar = immediatePreviewUrl;
+      curUser.avatarUrl = immediatePreviewUrl;
+      localStorage.setItem("user_info", JSON.stringify(curUser));
+      localStorage.setItem("ds_user", JSON.stringify(curUser));
+      localStorage.setItem("driveshare_current_auth_user", JSON.stringify(curUser));
+      if (this.userData) this.userData.avatarUrl = immediatePreviewUrl;
+      if (typeof AuthService !== "undefined" && AuthService.updateAuthUI) {
+        AuthService.updateAuthUI();
+      }
     };
     reader.readAsDataURL(file);
   },
@@ -619,25 +714,25 @@ const ProfileController = {
 
       if (res.ok) {
         showToast("Upload CCCD thành công. Hồ sơ đang chờ Admin xét duyệt!", "success", 2500);
-        const pBadge = document.getElementById("profileVerifyBadge");
-        if (pBadge) {
-          pBadge.innerText = "Đang chờ duyệt";
-          pBadge.className = "badge badge-warning";
+        const frontUrl = data?.data?.frontImageUrl || data?.result?.frontImageUrl;
+        const backUrl = data?.data?.backImageUrl || data?.result?.backImageUrl;
+        const curUser = (typeof AuthService !== "undefined" && AuthService.getCurrentUser()) || {};
+        const userId = curUser.id || curUser.userId || "me";
+
+        const cccdCache = {
+          frontUrl: frontUrl || "",
+          backUrl: backUrl || "",
+          status: "PENDING",
+          updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem(`ds_cccd_${userId}`, JSON.stringify(cccdCache));
+
+        if (this.userData) {
+          this.userData.idCardFrontUrl = cccdCache.frontUrl;
+          this.userData.idCardBackUrl = cccdCache.backUrl;
+          this.userData.idCardVerificationStatus = "PENDING";
         }
-        const frontUrl = data?.data?.frontImageUrl;
-        const backUrl = data?.data?.backImageUrl;
-        if (frontUrl) {
-          const fImg = document.getElementById("cccdFrontPreview");
-          const fWrap = document.getElementById("cccdFrontPreviewWrapper");
-          if (fImg) fImg.src = frontUrl;
-          if (fWrap) fWrap.style.display = "block";
-        }
-        if (backUrl) {
-          const bImg = document.getElementById("cccdBackPreview");
-          const bWrap = document.getElementById("cccdBackPreviewWrapper");
-          if (bImg) bImg.src = backUrl;
-          if (bWrap) bWrap.style.display = "block";
-        }
+        this.renderProfile();
         return;
       } else {
         showToast(data?.message || "Lỗi tải ảnh CCCD!", "error", 3000);
@@ -687,19 +782,22 @@ const ProfileController = {
 
       if (res.ok) {
         showToast("Upload GPLX thành công. Đang chờ Admin xét duyệt!", "success", 2500);
-        const uploadedUrl = data?.data?.licenseImageUrl;
-        if (uploadedUrl) {
-          const gplxPreview = document.getElementById("gplxPreview");
-          const gplxWrap = document.getElementById("gplxPreviewWrapper");
-          if (gplxPreview) gplxPreview.src = uploadedUrl;
-          if (gplxWrap) gplxWrap.style.display = "block";
+        const uploadedUrl = data?.data?.licenseImageUrl || data?.result?.licenseImageUrl;
+        const curUser = (typeof AuthService !== "undefined" && AuthService.getCurrentUser()) || {};
+        const userId = curUser.id || curUser.userId || "me";
+
+        const gplxCache = {
+          licenseUrl: uploadedUrl || "",
+          status: "PENDING",
+          updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem(`ds_gplx_${userId}`, JSON.stringify(gplxCache));
+
+        if (this.userData) {
+          this.userData.licenseImageUrl = gplxCache.licenseUrl;
+          this.userData.licenseVerificationStatus = "PENDING";
         }
-        const badge = document.getElementById("gplxStatusBadge");
-        if (badge) {
-          badge.style.display = "inline-block";
-          badge.className = "badge badge-warning";
-          badge.innerText = "Đang chờ duyệt";
-        }
+        this.renderProfile();
         return;
       } else {
         const errorMsg = data?.message || "Tải lên GPLX thất bại! Vui lòng thử lại.";
