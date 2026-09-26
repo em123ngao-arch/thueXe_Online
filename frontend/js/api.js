@@ -202,6 +202,48 @@ const CarAPI = {
 
     const queryString = query.toString();
     return apiCall(`/public/cars/search${queryString ? '?' + queryString : ''}`, 'GET');
+  },
+
+  /**
+   * POST /api/v1/cars/{carId}/photos — Tải lên hình ảnh xe (CRP-33)
+   */
+  async uploadCarPhoto(carId, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = typeof TokenService !== 'undefined' ? TokenService.getToken() : localStorage.getItem('access_token');
+    const res = await fetch(`http://localhost:8080/api/v1/cars/${carId}/photos`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw data || new Error(`Upload ảnh xe thất bại (HTTP ${res.status})`);
+    }
+    return data;
+  },
+
+  /**
+   * GET /api/v1/cars/{carId}/photos — Lấy danh sách ảnh của xe
+   */
+  getCarPhotos(carId) {
+    return apiCall(`/cars/${carId}/photos`, 'GET');
+  },
+
+  /**
+   * DELETE /api/v1/cars/{carId}/photos/{photoId} — Xóa ảnh của xe
+   */
+  deleteCarPhoto(carId, photoId) {
+    return apiCall(`/cars/${carId}/photos/${photoId}`, 'DELETE');
+  },
+
+  /**
+   * PATCH /api/v1/cars/{carId}/photos/{photoId}/set-primary — Đặt làm ảnh đại diện xe
+   */
+  setCarThumbnail(carId, photoId) {
+    return apiCall(`/cars/${carId}/photos/${photoId}/set-primary`, 'PATCH');
   }
 };
 

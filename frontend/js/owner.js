@@ -210,8 +210,9 @@ const OwnerService = {
                               : '<span class="badge badge-warning">Chờ Admin duyệt</span>')}
                       </td>
                       <td>
-                        <div class="table-actions">
+                        <div class="table-actions" style="display: flex; gap: 6px;">
                           <button class="btn btn-outline btn-sm" onclick="OwnerService.viewCarDetail(${c.id})">Chi tiết</button>
+                          <button class="btn btn-outline btn-sm" style="color: #0f766e; border-color: #0f766e;" onclick="OwnerService.openPhotosModal(${c.id}, '${c.brand} ${c.model}')">Ảnh xe</button>
                         </div>
                       </td>
                     </tr>
@@ -394,18 +395,33 @@ const OwnerService = {
               </div>
 
               <div class="form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
-                  <label class="form-label" style="margin-bottom: 0;">Link ảnh xe (URL ảnh nét hoặc chọn mẫu)</label>
-                  <div style="display: flex; gap: 4px;">
-                    <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.72rem; padding: 2px 7px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setCarSampleImage('SEDAN')">Mẫu Sedan</button>
-                    <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.72rem; padding: 2px 7px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setCarSampleImage('SUV')">Mẫu SUV</button>
-                    <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.72rem; padding: 2px 7px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setCarSampleImage('EV')">Mẫu Xe Điện</button>
-                  </div>
+                <label class="form-label">
+                  Hình ảnh xe thực tế <span style="color: #0f766e; font-size: 0.8rem; font-weight: 600;">(Khuyên dùng: Chọn ảnh thật từ máy)</span>
+                </label>
+                <div style="margin-bottom: 8px;">
+                  <input type="file" class="form-control" id="newCarPhotoFile" accept="image/png, image/jpeg, image/jpg, image/webp" onchange="OwnerService.previewCarPhoto(this)" />
+                  <span style="font-size: 0.74rem; color: var(--slate-500); display: block; margin-top: 3px;">
+                    Định dạng: JPG, PNG, WEBP. Dung lượng tối đa: 5MB.
+                  </span>
                 </div>
-                <input type="text" class="form-control" id="newCarImageUrl" placeholder="Nếu để trống, hệ thống sẽ tự động gán hình ảnh xe minh họa đẹp mắt" value="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=900&q=80" />
-                <span style="font-size: 0.72rem; color: var(--slate-500); display: block; margin-top: 3px;">
-                  Bạn có thể dán link ảnh xe thật hoặc bấm các nút chọn mẫu ở trên.
-                </span>
+                <div id="newCarPhotoPreviewContainer" style="display: none; margin-bottom: 10px; position: relative; width: fit-content;">
+                  <img id="newCarPhotoPreview" src="" alt="Xem trước ảnh xe" style="max-height: 160px; border-radius: 8px; border: 1px solid #cbd5e1; object-fit: cover;" />
+                  <button type="button" class="btn btn-danger btn-xs" style="position: absolute; top: 6px; right: 6px; padding: 2px 7px; font-size: 11px; background: rgba(239, 68, 68, 0.9);" onclick="OwnerService.clearCarPhotoPreview()">Xóa ảnh</button>
+                </div>
+                <details style="font-size: 0.82rem; color: var(--slate-600); margin-top: 6px;">
+                  <summary style="cursor: pointer; color: #0f766e; font-weight: 600;">Hoặc dán URL ảnh / chọn ảnh mẫu có sẵn</summary>
+                  <div style="padding-top: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
+                      <label class="form-label" style="margin-bottom: 0; font-size: 0.78rem;">Link ảnh URL:</label>
+                      <div style="display: flex; gap: 4px;">
+                        <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.72rem; padding: 2px 7px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setCarSampleImage('SEDAN')">Mẫu Sedan</button>
+                        <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.72rem; padding: 2px 7px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setCarSampleImage('SUV')">Mẫu SUV</button>
+                        <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.72rem; padding: 2px 7px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setCarSampleImage('EV')">Mẫu Xe Điện</button>
+                      </div>
+                    </div>
+                    <input type="text" class="form-control" id="newCarImageUrl" placeholder="Nếu để trống, hệ thống sẽ tự động gán hình ảnh xe minh họa đẹp mắt" value="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=900&q=80" />
+                  </div>
+                </details>
               </div>
 
               <div class="form-group">
@@ -567,12 +583,29 @@ const OwnerService = {
       };
 
       // 1. Gửi lên Backend REST API (POST /api/v1/cars)
+      let createdCarId = null;
       if (typeof CarAPI !== 'undefined' && CarAPI.createCar) {
         try {
-          await CarAPI.createCar(payload);
+          const apiRes = await CarAPI.createCar(payload);
+          createdCarId = apiRes?.data?.carId || apiRes?.data?.car_id || apiRes?.data?.id;
         } catch (apiErr) {
           console.warn('Backend API createCar trả về lỗi:', apiErr);
           throw apiErr;
+        }
+      }
+
+      // 1.1 Upload ảnh xe thực tế nếu có chọn file (POST /api/v1/cars/{carId}/photos)
+      const photoFile = document.getElementById('newCarPhotoFile')?.files?.[0];
+      if (createdCarId && photoFile && typeof CarAPI !== 'undefined' && CarAPI.uploadCarPhoto) {
+        try {
+          btnSubmit.innerHTML = 'Đang tải ảnh xe lên...';
+          const uploadRes = await CarAPI.uploadCarPhoto(createdCarId, photoFile);
+          if (uploadRes?.data?.imageUrl) {
+            imageUrl = uploadRes.data.imageUrl;
+          }
+        } catch (uploadErr) {
+          console.warn('Lỗi khi upload ảnh xe:', uploadErr);
+          this.showToast('Tạo xe thành công nhưng ảnh xe chưa upload được. Bạn có thể thêm ảnh trong phần Quản lý ảnh xe.', 'warning', 3000);
         }
       }
 
@@ -619,6 +652,172 @@ const OwnerService = {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = 'Gửi xe lên phê duyệt';
       }
+    }
+  },
+
+  previewCarPhoto(input) {
+    const file = input?.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(file.type)) {
+      this.showToast('Chỉ chấp nhận file ảnh định dạng JPG, PNG hoặc WEBP!', 'error');
+      input.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.showToast('Dung lượng ảnh vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn!', 'error');
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.getElementById('newCarPhotoPreview');
+      const container = document.getElementById('newCarPhotoPreviewContainer');
+      if (img) img.src = e.target.result;
+      if (container) container.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  },
+
+  clearCarPhotoPreview() {
+    const input = document.getElementById('newCarPhotoFile');
+    if (input) input.value = '';
+    const container = document.getElementById('newCarPhotoPreviewContainer');
+    if (container) container.style.display = 'none';
+    const img = document.getElementById('newCarPhotoPreview');
+    if (img) img.src = '';
+  },
+
+  // CRP-33: Quản lý thư viện ảnh xe của Owner
+  async openPhotosModal(carId, carTitle = '') {
+    const overlay = document.getElementById('carPhotosModalOverlay');
+    const body = document.getElementById('carPhotosModalBody');
+    const title = document.getElementById('carPhotosModalTitle');
+    if (!overlay || !body) return;
+
+    if (title) title.innerText = `Quản lý hình ảnh xe: ${carTitle || '#' + carId}`;
+    body.innerHTML = `
+      <div style="text-align: center; padding: 2rem;">
+        <span class="spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid #cbd5e1; border-top-color: #0f766e; border-radius: 50%; animation: spin 0.8s linear infinite;"></span>
+        <p style="margin-top: 8px; color: var(--slate-600);">Đang tải danh sách hình ảnh...</p>
+      </div>
+    `;
+    overlay.classList.add('open');
+
+    try {
+      let photos = [];
+      if (typeof CarAPI !== 'undefined' && CarAPI.getCarPhotos) {
+        const res = await CarAPI.getCarPhotos(carId);
+        if (res && res.data && Array.isArray(res.data)) {
+          photos = res.data;
+        }
+      }
+
+      body.innerHTML = `
+        <div style="margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong style="color: var(--slate-800);">Danh sách ảnh (${photos.length}/10 ảnh)</strong>
+            <label class="btn btn-primary btn-sm" style="margin-bottom: 0; cursor: pointer; ${photos.length >= 10 ? 'opacity: 0.5; pointer-events: none;' : ''}">
+              + Thêm ảnh mới
+              <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" onchange="OwnerService.handleUploadAdditionalPhoto(${carId}, this, '${carTitle}')" />
+            </label>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--slate-500); margin: 0;">Mỗi xe có tối đa 10 ảnh, dung lượng tối đa 5MB/ảnh. Bấm "Đặt làm đại diện" để chọn ảnh hiển thị chính.</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; max-height: 380px; overflow-y: auto; padding: 4px;">
+          ${photos.length === 0 ? `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem; color: var(--slate-500); background: #f8fafc; border-radius: 8px;">
+              Xe này chưa có hình ảnh nào được tải lên máy chủ. Hãy tải lên tấm ảnh đầu tiên!
+            </div>
+          ` : photos.map(p => {
+            const imgUrl = p.imageUrl || p.image_url || '';
+            const imgId = p.imageId || p.image_id || p.id;
+            const isThumb = p.isThumbnail || p.is_thumbnail || false;
+            return `
+            <div style="position: relative; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+              <img src="${imgUrl}" alt="Ảnh xe" style="width: 100%; height: 110px; object-fit: cover;" />
+              ${isThumb ? `
+                <span style="position: absolute; top: 6px; left: 6px; background: #0f766e; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
+                  Đại diện
+                </span>
+              ` : ''}
+              <div style="padding: 6px; display: flex; flex-direction: column; gap: 4px;">
+                ${!isThumb ? `
+                  <button class="btn btn-outline btn-xs" style="font-size: 11px; padding: 2px 6px;" onclick="OwnerService.setPrimaryPhoto(${carId}, ${imgId}, '${carTitle}')">
+                    Đặt làm đại diện
+                  </button>
+                ` : `
+                  <span style="font-size: 11px; color: #0f766e; font-weight: 600; text-align: center; padding: 2px;">Ảnh chính</span>
+                `}
+                <button class="btn btn-ghost btn-xs" style="font-size: 11px; color: #ef4444; padding: 2px 6px;" onclick="OwnerService.deleteCarPhoto(${carId}, ${imgId}, '${carTitle}')">
+                  Xóa ảnh
+                </button>
+              </div>
+            </div>
+          `}).join('')}
+        </div>
+      `;
+    } catch (err) {
+      console.error('Lỗi khi tải ảnh xe:', err);
+      body.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: #ef4444;">
+          Không thể tải danh sách ảnh xe. Vui lòng thử lại sau!
+        </div>
+      `;
+    }
+  },
+
+  async handleUploadAdditionalPhoto(carId, input, carTitle = '') {
+    const file = input?.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(file.type)) {
+      this.showToast('Chỉ chấp nhận file ảnh định dạng JPG, PNG hoặc WEBP!', 'error');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.showToast('Dung lượng ảnh vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn!', 'error');
+      return;
+    }
+
+    this.showToast('Đang tải ảnh xe lên...', 'info', 1500);
+    try {
+      await CarAPI.uploadCarPhoto(carId, file);
+      this.showToast('Tải ảnh xe lên thành công!', 'success');
+      await this.openPhotosModal(carId, carTitle);
+      await this.renderOwnerPortal();
+    } catch (err) {
+      console.error('Lỗi khi upload ảnh:', err);
+      this.showToast(err?.message || 'Tải ảnh thất bại!', 'error');
+    }
+  },
+
+  async setPrimaryPhoto(carId, photoId, carTitle = '') {
+    try {
+      await CarAPI.setCarThumbnail(carId, photoId);
+      this.showToast('Đã đặt làm ảnh đại diện thành công!', 'success');
+      await this.openPhotosModal(carId, carTitle);
+      await this.renderOwnerPortal();
+    } catch (err) {
+      console.error('Lỗi khi đặt ảnh đại diện:', err);
+      this.showToast(err?.message || 'Thao tác thất bại!', 'error');
+    }
+  },
+
+  async deleteCarPhoto(carId, photoId, carTitle = '') {
+    if (!confirm('Bạn có chắc chắn muốn xóa ảnh này không?')) return;
+    try {
+      await CarAPI.deleteCarPhoto(carId, photoId);
+      this.showToast('Đã xóa hình ảnh thành công!', 'success');
+      await this.openPhotosModal(carId, carTitle);
+      await this.renderOwnerPortal();
+    } catch (err) {
+      console.error('Lỗi khi xóa ảnh:', err);
+      this.showToast(err?.message || 'Xóa ảnh thất bại!', 'error');
     }
   },
 
