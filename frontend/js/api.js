@@ -370,7 +370,13 @@ const ApiService = {
         return { success: true, source: 'BACKEND_API', message: json.message || 'Cập nhật trạng thái duyệt thành công', data: json.data };
       }
       throw new Error(`HTTP ${res.status}`);
-    }   /**
+    } catch (e) {
+      console.warn('DriveShare: Lỗi duyệt hồ sơ chủ xe:', e.message);
+      return { success: false, source: 'ERROR', message: e.message };
+    }
+  },
+
+  /**
    * API: Lấy thống kê tổng quan hệ thống (Admin)
    * GET /api/v1/admin/stats
    */

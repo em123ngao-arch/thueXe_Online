@@ -727,7 +727,7 @@ const AdminService = {
     if (typeof StorageService !== 'undefined') {
       StorageService.updateCarStatus(carId, 'ACTIVE');
     }
-    const msg = Đã duyệt xe #! Xe đã được xuất bản và sẵn sàng cho thuê.;
+    const msg = `Đã duyệt xe #${carId}! Xe đã được xuất bản và sẵn sàng cho thuê.`;
     if (typeof showToast === 'function') showToast(msg, 'success', 2500);
     else if (typeof App !== 'undefined' && App.showToast) App.showToast(msg, 'success');
 
@@ -1313,7 +1313,7 @@ const AdminService = {
     if (typeof StorageService !== 'undefined') {
       StorageService.updateRenterLicense(renterId, 'REJECTED');
     }
-    const msg = Đã yêu cầu khách thuê # chụp lại GPLX.;
+    const msg = `Đã yêu cầu khách thuê #${renterId} chụp lại GPLX.`;
     if (typeof showToast === 'function') showToast(msg, 'warning', 3000);
     else if (typeof App !== 'undefined' && App.showToast) App.showToast(msg, 'warning');
 
