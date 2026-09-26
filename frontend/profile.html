@@ -204,8 +204,9 @@
       <div class="profile-header-card">
         <div
           class="avatar-wrapper"
+          id="profileAvatarBox"
           onclick="document.getElementById('avatarFileInput').click()"
-          title="Nhấp để đổi ảnh đại diện (Max 5MB)"
+          title="Nhấp hoặc kéo thả để đổi ảnh đại diện (Max 5MB)"
         >
           <img
             id="profileAvatarImg"
@@ -358,21 +359,29 @@
           <!-- Form CCCD 2 mặt -->
           <form id="formUploadCccd" style="margin-bottom: 2rem;">
             <p style="font-size: 0.88rem; color: #64748b; margin-bottom: 1rem;">
-              Yêu cầu upload <strong>đầy đủ cả 2 mặt</strong> (Mặt trước & Mặt sau) của CMND/CCCD. Định dạng JPG/PNG, tối đa 10MB mỗi mặt.
+              Yêu cầu upload <strong>đầy đủ cả 2 mặt</strong> (Mặt trước & Mặt sau) của CMND/CCCD. Hỗ trợ kéo & thả file. Định dạng JPG, PNG, WEBP (tối đa 10MB/mặt).
             </p>
             <div class="form-grid-2">
-              <div class="upload-box" onclick="document.getElementById('cccdFrontFile').click()">
+              <div class="upload-box" id="cccdFrontBox" onclick="document.getElementById('cccdFrontFile').click()">
                 <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">Mặt trước CMND/CCCD *</div>
-                <div style="font-size: 0.78rem; color: #94a3b8;">Bấm để chọn file ảnh</div>
-                <img id="cccdFrontPreview" class="upload-preview" />
-                <input type="file" id="cccdFrontFile" accept="image/png, image/jpeg" style="display: none;" />
+                <div style="font-size: 0.78rem; color: #64748b;">Kéo thả ảnh vào đây hoặc bấm để chọn</div>
+                <div id="cccdFrontPreviewWrapper" style="display: none; position: relative; margin-top: 10px;">
+                  <img id="cccdFrontPreview" class="upload-preview" style="display: block; cursor: zoom-in;" title="Bấm để phóng to xem ảnh" onclick="event.stopPropagation(); ProfileController.zoomImage(this.src, 'Mặt trước CMND/CCCD')" />
+                  <span class="badge" id="cccdFrontStatusBadge" style="position: absolute; top: 6px; left: 6px; font-size: 11px; display: none;"></span>
+                  <button type="button" class="btn btn-danger btn-xs" style="position: absolute; top: 6px; right: 6px; padding: 2px 7px; font-size: 10px;" onclick="event.stopPropagation(); ProfileController.clearCccdPreview('front')">Đổi ảnh</button>
+                </div>
+                <input type="file" id="cccdFrontFile" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
               </div>
 
-              <div class="upload-box" onclick="document.getElementById('cccdBackFile').click()">
+              <div class="upload-box" id="cccdBackBox" onclick="document.getElementById('cccdBackFile').click()">
                 <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">Mặt sau CMND/CCCD *</div>
-                <div style="font-size: 0.78rem; color: #94a3b8;">Bấm để chọn file ảnh</div>
-                <img id="cccdBackPreview" class="upload-preview" />
-                <input type="file" id="cccdBackFile" accept="image/png, image/jpeg" style="display: none;" />
+                <div style="font-size: 0.78rem; color: #64748b;">Kéo thả ảnh vào đây hoặc bấm để chọn</div>
+                <div id="cccdBackPreviewWrapper" style="display: none; position: relative; margin-top: 10px;">
+                  <img id="cccdBackPreview" class="upload-preview" style="display: block; cursor: zoom-in;" title="Bấm để phóng to xem ảnh" onclick="event.stopPropagation(); ProfileController.zoomImage(this.src, 'Mặt sau CMND/CCCD')" />
+                  <span class="badge" id="cccdBackStatusBadge" style="position: absolute; top: 6px; left: 6px; font-size: 11px; display: none;"></span>
+                  <button type="button" class="btn btn-danger btn-xs" style="position: absolute; top: 6px; right: 6px; padding: 2px 7px; font-size: 10px;" onclick="event.stopPropagation(); ProfileController.clearCccdPreview('back')">Đổi ảnh</button>
+                </div>
+                <input type="file" id="cccdBackFile" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
               </div>
             </div>
 
@@ -381,19 +390,25 @@
             </button>
           </form>
 
-          <!-- Form Upload GPLX (chỉ hiển thị cho Khách thuê Renter) -->
+          <!-- Form Upload GPLX (Hiển thị cho Khách thuê hoặc Chủ xe muốn lái) -->
           <form id="formUploadGplx" style="padding-top: 1.5rem; border-top: 1px solid #f1f5f9;">
-            <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem;">
-              Ảnh chụp Giấy phép lái xe (GPLX)
-            </h4>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 8px;">
+              <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0;">
+                Ảnh chụp Giấy phép lái xe (GPLX)
+              </h4>
+              <span id="gplxStatusBadge" class="badge badge-secondary" style="display: none; font-size: 11px;">Chưa xác minh</span>
+            </div>
             <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
-              Chỉ áp dụng đối với khách thuê xe. Ảnh chụp rõ nét bằng lái B1/B2/C...
+              Yêu cầu bằng lái xe hợp lệ (hạng B1, B2, C...) để thuê xe tự lái trên hệ thống. Hỗ trợ kéo & thả file JPG, PNG, WEBP (tối đa 10MB).
             </p>
-            <div class="upload-box" onclick="document.getElementById('gplxFile').click()" style="max-width: 480px;">
+            <div class="upload-box" id="gplxBox" onclick="document.getElementById('gplxFile').click()" style="max-width: 520px;">
               <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">Ảnh chụp mặt trước GPLX *</div>
-              <div style="font-size: 0.78rem; color: #94a3b8;">Bấm để chọn file ảnh</div>
-              <img id="gplxPreview" class="upload-preview" />
-              <input type="file" id="gplxFile" accept="image/png, image/jpeg" style="display: none;" />
+              <div style="font-size: 0.78rem; color: #64748b;">Kéo thả ảnh vào đây hoặc bấm để chọn</div>
+              <div id="gplxPreviewWrapper" style="display: none; position: relative; margin-top: 10px;">
+                <img id="gplxPreview" class="upload-preview" style="display: block; cursor: zoom-in;" title="Bấm để phóng to xem ảnh" onclick="event.stopPropagation(); ProfileController.zoomImage(this.src, 'Giấy phép lái xe (GPLX)')" />
+                <button type="button" class="btn btn-danger btn-xs" style="position: absolute; top: 6px; right: 6px; padding: 2px 7px; font-size: 10px;" onclick="event.stopPropagation(); ProfileController.clearGplxPreview()">Đổi ảnh</button>
+              </div>
+              <input type="file" id="gplxFile" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
             </div>
 
             <button type="submit" id="btnUploadGplx" class="btn btn-outline" style="margin-top: 1.25rem; font-weight: 700;">
@@ -454,6 +469,17 @@
         </div>
       </div>
     </main>
+
+    <!-- Modal Phóng to xem ảnh (Lightbox) -->
+    <div class="modal-overlay" id="imagePreviewModalOverlay" onclick="this.classList.remove('open')">
+      <div class="modal-dialog" style="max-width: 720px; background: transparent; box-shadow: none; border: none; text-align: center;" onclick="event.stopPropagation()">
+        <div style="position: relative; display: inline-block; max-width: 100%;">
+          <button class="modal-close-btn" style="position: absolute; top: -14px; right: -14px; background: #0f172a; color: #fff; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff; font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="document.getElementById('imagePreviewModalOverlay').classList.remove('open')">&times;</button>
+          <img id="imagePreviewModalImg" src="" alt="Ảnh phóng to" style="max-width: 100%; max-height: 82vh; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); object-fit: contain; background: #fff;" />
+          <div id="imagePreviewModalCaption" style="margin-top: 10px; color: #fff; font-weight: 700; font-size: 15px; text-shadow: 0 2px 4px rgba(0,0,0,0.9);"></div>
+        </div>
+      </div>
+    </div>
 
     <!-- Scripts -->
     <script src="js/toast.js"></script>

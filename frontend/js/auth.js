@@ -51,12 +51,17 @@ function isAuthenticated() {
 function hasRole(role) {
   const user = getCurrentUser();
   if (!user) return false;
-  const userRole = (user.role || (user.roles && user.roles[0]) || "").replace(
-    "ROLE_",
-    "",
-  );
-  const targetRole = role.replace("ROLE_", "");
-  return userRole.toUpperCase() === targetRole.toUpperCase();
+  const targetRole = role.replace("ROLE_", "").toUpperCase();
+  if (user.role && user.role.replace("ROLE_", "").toUpperCase() === targetRole) {
+    return true;
+  }
+  if (Array.isArray(user.roles)) {
+    return user.roles.some((r) => {
+      const rName = typeof r === "string" ? r : (r.roleName || r.name || "");
+      return rName.replace("ROLE_", "").toUpperCase() === targetRole;
+    });
+  }
+  return false;
 }
 
 function getAuthHeaders(isMultipart = false) {

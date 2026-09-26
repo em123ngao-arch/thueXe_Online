@@ -57,30 +57,40 @@ const ProfileController = {
   },
 
   renderProfile() {
-    const u = this.userData;
-    const isOwner = (u.role || "").toUpperCase() === "OWNER";
-    const isVerified = u.verificationStatus === "APPROVED";
+    const u = this.userData || {};
+    const roles = Array.from(u.roles || (u.role ? [u.role] : []));
+    const isOwner = roles.some(r => r.toUpperCase().includes("OWNER"));
+    const isRenter = roles.some(r => r.toUpperCase().includes("RENTER")) || !isOwner;
+    const isVerified = (u.renterProfile?.verificationStatus === "APPROVED") || (u.ownerProfile?.verificationStatus === "APPROVED") || (u.verificationStatus === "APPROVED");
 
     // Avatar & Header
     const avatarEl = document.getElementById("profileAvatarImg");
     if (avatarEl) avatarEl.src = u.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
 
     const nameHeaderEl = document.getElementById("profileHeaderName");
-    if (nameHeaderEl) nameHeaderEl.innerText = u.fullName;
+    if (nameHeaderEl) nameHeaderEl.innerText = u.fullName || "Người dùng";
 
     const emailHeaderEl = document.getElementById("profileHeaderEmail");
-    if (emailHeaderEl) emailHeaderEl.innerText = u.email;
+    if (emailHeaderEl) emailHeaderEl.innerText = u.email || "";
 
     const roleBadgeEl = document.getElementById("profileRoleBadge");
     if (roleBadgeEl) {
-      roleBadgeEl.innerText = isOwner ? "Chủ xe (Owner)" : "Khách thuê (Renter)";
-      roleBadgeEl.className = isOwner ? "badge badge-warning" : "badge badge-info";
+      if (isOwner && isRenter) {
+        roleBadgeEl.innerText = "Chủ xe & Khách thuê";
+        roleBadgeEl.className = "badge badge-success";
+      } else if (isOwner) {
+        roleBadgeEl.innerText = "Chủ xe (Owner)";
+        roleBadgeEl.className = "badge badge-warning";
+      } else {
+        roleBadgeEl.innerText = "Khách thuê (Renter)";
+        roleBadgeEl.className = "badge badge-info";
+      }
     }
 
     const verifyBadgeEl = document.getElementById("profileVerifyBadge");
     if (verifyBadgeEl) {
-      const status = u.verificationStatus || "NOT_SUBMITTED";
-      if (status === "APPROVED") {
+      const status = u.renterProfile?.verificationStatus || u.ownerProfile?.verificationStatus || u.verificationStatus || "NOT_SUBMITTED";
+      if (status === "APPROVED" || status === "VERIFIED") {
         verifyBadgeEl.innerText = "Đã xác thực";
         verifyBadgeEl.className = "badge badge-success";
       } else if (status === "PENDING") {
@@ -106,7 +116,7 @@ const ProfileController = {
 
     // SĐT & Địa chỉ (luôn sửa được)
     const phoneInput = document.getElementById("profPhone");
-    if (phoneInput) phoneInput.value = u.phoneNumber || "";
+    if (phoneInput) phoneInput.value = u.phone || u.phoneNumber || "";
 
     const addressInput = document.getElementById("profAddress");
     if (addressInput) addressInput.value = u.address || "";
@@ -115,7 +125,7 @@ const ProfileController = {
     const cccdInput = document.getElementById("profNationalId");
     const cccdLockIcon = document.getElementById("cccdLockIcon");
     if (cccdInput) {
-      cccdInput.value = u.nationalId || "";
+      cccdInput.value = u.nationalId || u.idCardNumber || "";
       if (isVerified || (u.lockedFields && u.lockedFields.includes("nationalId"))) {
         cccdInput.readOnly = true;
         cccdInput.classList.add("input-readonly");
@@ -123,32 +133,70 @@ const ProfileController = {
       }
     }
 
+    // Hiển thị ảnh CCCD đã upload trước đó (nếu có)
+    const cccdFrontUrl = u.renterProfile?.idCardFrontUrl || u.ownerProfile?.idCardFrontUrl;
+    if (cccdFrontUrl) {
+      const frontImg = document.getElementById("cccdFrontPreview");
+      const frontWrap = document.getElementById("cccdFrontPreviewWrapper");
+      if (frontImg) frontImg.src = cccdFrontUrl;
+      if (frontWrap) frontWrap.style.display = "block";
+    }
+    const cccdBackUrl = u.renterProfile?.idCardBackUrl || u.ownerProfile?.idCardBackUrl;
+    if (cccdBackUrl) {
+      const backImg = document.getElementById("cccdBackPreview");
+      const backWrap = document.getElementById("cccdBackPreviewWrapper");
+      if (backImg) backImg.src = cccdBackUrl;
+      if (backWrap) backWrap.style.display = "block";
+    }
+
     // Role-specific sections (BR-09-3 & BR-09-4)
     const renterSection = document.getElementById("renterGplxSection");
     const ownerSection = document.getElementById("ownerBankSection");
 
     if (isOwner) {
-      if (renterSection) renterSection.style.display = "none";
       if (ownerSection) ownerSection.style.display = "block";
-
       const bankNameInput = document.getElementById("profBankName");
-      if (bankNameInput) bankNameInput.value = u.profile?.bankName || "";
-
+      if (bankNameInput) bankNameInput.value = u.ownerProfile?.bankName || u.profile?.bankName || "";
       const bankAccountInput = document.getElementById("profBankAccount");
-      if (bankAccountInput) bankAccountInput.value = u.profile?.bankAccountNumber || "";
+      if (bankAccountInput) bankAccountInput.value = u.ownerProfile?.bankAccountNumber || u.profile?.bankAccountNumber || "";
     } else {
-      if (renterSection) renterSection.style.display = "block";
       if (ownerSection) ownerSection.style.display = "none";
+    }
 
-      const licenseInput = document.getElementById("profLicenseNumber");
-      const gplxLockIcon = document.getElementById("gplxLockIcon");
-      if (licenseInput) {
-        licenseInput.value = u.profile?.licenseNumber || "";
-        if (isVerified || (u.lockedFields && u.lockedFields.includes("licenseNumber"))) {
-          licenseInput.readOnly = true;
-          licenseInput.classList.add("input-readonly");
-          if (gplxLockIcon) gplxLockIcon.style.display = "inline-block";
-        }
+    // GPLX Section
+    const licenseInput = document.getElementById("profLicenseNumber");
+    const gplxLockIcon = document.getElementById("gplxLockIcon");
+    if (licenseInput) {
+      licenseInput.value = u.renterProfile?.licenseNumber || u.profile?.licenseNumber || "";
+      if (isVerified || (u.lockedFields && u.lockedFields.includes("licenseNumber"))) {
+        licenseInput.readOnly = true;
+        licenseInput.classList.add("input-readonly");
+        if (gplxLockIcon) gplxLockIcon.style.display = "inline-block";
+      }
+    }
+
+    // Hiển thị ảnh GPLX đã upload trước đó (nếu có)
+    const gplxUrl = u.renterProfile?.licenseFrontUrl || u.profile?.licenseImageUrl;
+    const gplxStatus = u.renterProfile?.licenseVerificationStatus;
+    const gplxPreview = document.getElementById("gplxPreview");
+    const gplxWrap = document.getElementById("gplxPreviewWrapper");
+    const gplxBadge = document.getElementById("gplxStatusBadge");
+
+    if (gplxUrl && gplxPreview) {
+      gplxPreview.src = gplxUrl;
+      if (gplxWrap) gplxWrap.style.display = "block";
+    }
+    if (gplxBadge && gplxStatus) {
+      gplxBadge.style.display = "inline-block";
+      if (gplxStatus === "APPROVED" || gplxStatus === "VERIFIED") {
+        gplxBadge.className = "badge badge-success";
+        gplxBadge.innerText = "Đã duyệt";
+      } else if (gplxStatus === "REJECTED") {
+        gplxBadge.className = "badge badge-danger";
+        gplxBadge.innerText = "Từ chối";
+      } else {
+        gplxBadge.className = "badge badge-warning";
+        gplxBadge.innerText = "Đang chờ duyệt";
       }
     }
   },
@@ -193,43 +241,152 @@ const ProfileController = {
     // Preview inputs for CCCD
     const cccdFront = document.getElementById("cccdFrontFile");
     if (cccdFront) {
-      cccdFront.addEventListener("change", (e) => this.previewFile(e, "cccdFrontPreview"));
+      cccdFront.addEventListener("change", (e) => this.previewFile(e, "cccdFrontPreview", "cccdFrontPreviewWrapper"));
     }
     const cccdBack = document.getElementById("cccdBackFile");
     if (cccdBack) {
-      cccdBack.addEventListener("change", (e) => this.previewFile(e, "cccdBackPreview"));
+      cccdBack.addEventListener("change", (e) => this.previewFile(e, "cccdBackPreview", "cccdBackPreviewWrapper"));
     }
     const gplxFile = document.getElementById("gplxFile");
     if (gplxFile) {
-      gplxFile.addEventListener("change", (e) => this.previewFile(e, "gplxPreview"));
+      gplxFile.addEventListener("change", (e) => this.previewFile(e, "gplxPreview", "gplxPreviewWrapper"));
     }
+
+    // Kích hoạt Drag & Drop
+    this.setupDragDrop("profileAvatarBox", "avatarFileInput", (file) => {
+      this.handleAvatarSelected({ target: { files: [file] } });
+    });
+    this.setupDragDrop("cccdFrontBox", "cccdFrontFile", (file) => {
+      this.displayFilePreview(file, "cccdFrontPreview", "cccdFrontPreviewWrapper");
+    });
+    this.setupDragDrop("cccdBackBox", "cccdBackFile", (file) => {
+      this.displayFilePreview(file, "cccdBackPreview", "cccdBackPreviewWrapper");
+    });
+    this.setupDragDrop("gplxBox", "gplxFile", (file) => {
+      this.displayFilePreview(file, "gplxPreview", "gplxPreviewWrapper");
+    });
   },
 
-  previewFile(e, targetImgId) {
+  // Cấu hình Drag & Drop cho một upload box
+  setupDragDrop(boxId, inputId, onFileSelected) {
+    const box = document.getElementById(boxId);
+    const input = document.getElementById(inputId);
+    if (!box || !input) return;
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      box.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        box.classList.add('drag-over');
+      }, false);
+    });
+
+    ['dragleave', 'dragend'].forEach(eventName => {
+      box.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        box.classList.remove('drag-over');
+      }, false);
+    });
+
+    box.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      box.classList.remove('drag-over');
+
+      const files = e.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+
+      const file = files[0];
+      const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        showToast('Chỉ chấp nhận file ảnh định dạng JPG, PNG hoặc WEBP!', 'error', 2500);
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showToast('Dung lượng ảnh vượt quá 10MB!', 'error', 2500);
+        return;
+      }
+
+      // Gán file vào input để form submit bình thường
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      input.files = dataTransfer.files;
+
+      if (typeof onFileSelected === 'function') {
+        onFileSelected(file);
+      }
+    }, false);
+  },
+
+  previewFile(e, targetImgId, targetWrapperId) {
     const file = e.target.files[0];
     if (!file) return;
+    this.displayFilePreview(file, targetImgId, targetWrapperId);
+  },
 
-    if (!["image/jpeg", "image/png", "image/jpg"].includes(file.type)) {
-      showToast("Chỉ chấp nhận file định dạng JPG hoặc PNG!", "error", 2500);
-      e.target.value = "";
+  displayFilePreview(file, targetImgId, targetWrapperId) {
+    const validTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      showToast("Chỉ chấp nhận file định dạng JPG, PNG hoặc WEBP!", "error", 2500);
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
       showToast("File vượt quá dung lượng tối đa 10MB!", "error", 2500);
-      e.target.value = "";
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = document.getElementById(targetImgId);
+      const wrap = targetWrapperId ? document.getElementById(targetWrapperId) : null;
       if (img) {
         img.src = event.target.result;
         img.style.display = "block";
       }
+      if (wrap) {
+        wrap.style.display = "block";
+      }
     };
     reader.readAsDataURL(file);
+  },
+
+  zoomImage(src, caption = 'Chi tiết hình ảnh') {
+    const modal = document.getElementById('imagePreviewModalOverlay');
+    const img = document.getElementById('imagePreviewModalImg');
+    const cap = document.getElementById('imagePreviewModalCaption');
+    if (!modal || !img || !src) return;
+    img.src = src;
+    if (cap) cap.innerText = caption;
+    modal.classList.add('open');
+  },
+
+  clearGplxPreview() {
+    const input = document.getElementById('gplxFile');
+    if (input) input.value = '';
+    const img = document.getElementById('gplxPreview');
+    if (img) img.src = '';
+    const wrap = document.getElementById('gplxPreviewWrapper');
+    if (wrap) wrap.style.display = 'none';
+  },
+
+  clearCccdPreview(side) {
+    if (side === 'front') {
+      const input = document.getElementById('cccdFrontFile');
+      if (input) input.value = '';
+      const img = document.getElementById('cccdFrontPreview');
+      if (img) img.src = '';
+      const wrap = document.getElementById('cccdFrontPreviewWrapper');
+      if (wrap) wrap.style.display = 'none';
+    } else {
+      const input = document.getElementById('cccdBackFile');
+      if (input) input.value = '';
+      const img = document.getElementById('cccdBackPreview');
+      if (img) img.src = '';
+      const wrap = document.getElementById('cccdBackPreviewWrapper');
+      if (wrap) wrap.style.display = 'none';
+    }
   },
 
   async handleAvatarSelected(e) {
@@ -462,27 +619,37 @@ const ProfileController = {
 
       if (res.ok) {
         showToast("Upload CCCD thành công. Hồ sơ đang chờ Admin xét duyệt!", "success", 2500);
-        document.getElementById("profileVerifyBadge").innerText = "Đang chờ duyệt";
-        document.getElementById("profileVerifyBadge").className = "badge badge-warning";
+        const pBadge = document.getElementById("profileVerifyBadge");
+        if (pBadge) {
+          pBadge.innerText = "Đang chờ duyệt";
+          pBadge.className = "badge badge-warning";
+        }
+        const frontUrl = data?.data?.frontImageUrl;
+        const backUrl = data?.data?.backImageUrl;
+        if (frontUrl) {
+          const fImg = document.getElementById("cccdFrontPreview");
+          const fWrap = document.getElementById("cccdFrontPreviewWrapper");
+          if (fImg) fImg.src = frontUrl;
+          if (fWrap) fWrap.style.display = "block";
+        }
+        if (backUrl) {
+          const bImg = document.getElementById("cccdBackPreview");
+          const bWrap = document.getElementById("cccdBackPreviewWrapper");
+          if (bImg) bImg.src = backUrl;
+          if (bWrap) bWrap.style.display = "block";
+        }
         return;
       } else {
-        showToast(data?.message || "Lỗi tải ảnh CCCD!", "error", 2500);
+        showToast(data?.message || "Lỗi tải ảnh CCCD!", "error", 3000);
         return;
       }
     } catch (err) {
-      console.warn("CCCD API offline:", err);
-    }
-
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `Tải lên xác minh CMND / CCCD`;
-    }
-    // Fallback
-    showToast("Upload CCCD thành công. Đang chờ Admin xét duyệt!", "success", 2500);
-    const badge = document.getElementById("profileVerifyBadge");
-    if (badge) {
-      badge.innerText = "Đang chờ duyệt";
-      badge.className = "badge badge-warning";
+      console.error("CCCD API offline/error:", err);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `Tải lên xác minh CMND / CCCD`;
+      }
+      showToast("Lỗi kết nối máy chủ khi upload CCCD!", "error", 2500);
     }
   },
 
@@ -520,17 +687,33 @@ const ProfileController = {
 
       if (res.ok) {
         showToast("Upload GPLX thành công. Đang chờ Admin xét duyệt!", "success", 2500);
+        const uploadedUrl = data?.data?.licenseImageUrl;
+        if (uploadedUrl) {
+          const gplxPreview = document.getElementById("gplxPreview");
+          const gplxWrap = document.getElementById("gplxPreviewWrapper");
+          if (gplxPreview) gplxPreview.src = uploadedUrl;
+          if (gplxWrap) gplxWrap.style.display = "block";
+        }
+        const badge = document.getElementById("gplxStatusBadge");
+        if (badge) {
+          badge.style.display = "inline-block";
+          badge.className = "badge badge-warning";
+          badge.innerText = "Đang chờ duyệt";
+        }
+        return;
+      } else {
+        const errorMsg = data?.message || "Tải lên GPLX thất bại! Vui lòng thử lại.";
+        showToast(errorMsg, "error", 3500);
         return;
       }
     } catch (err) {
-      console.warn("GPLX API offline:", err);
+      console.error("GPLX API offline/error:", err);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `Tải lên xác minh GPLX`;
+      }
+      showToast("Lỗi kết nối máy chủ khi upload GPLX!", "error", 2500);
     }
-
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `Tải lên xác minh GPLX`;
-    }
-    showToast("Upload GPLX thành công. Đang chờ Admin xét duyệt!", "success", 2500);
   },
 };
 

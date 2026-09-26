@@ -54,6 +54,7 @@ const OwnerService = {
       const allCars = StorageService.getCars();
       ownerCars = allCars.filter(c => c.owner_id === owner?.id || c.ownerId === owner?.id);
     }
+    this.ownerCars = ownerCars;
 
     const allBookings = typeof StorageService !== 'undefined' ? StorageService.getBookings() : [];
     const myCarIds = ownerCars.map(c => c.id);
@@ -192,7 +193,7 @@ const OwnerService = {
                     <tr>
                       <td>
                         <div class="table-car-cell">
-                          <img class="table-car-thumb" src="${c.image_url}" alt="${c.brand}" />
+                          <img class="table-car-thumb" src="${c.image_url}" alt="${c.brand}" style="cursor: zoom-in;" title="Bấm để phóng to xem ảnh" onclick="OwnerService.zoomImage('${c.image_url}', '${c.brand} ${c.model} (${c.license_plate})')" />
                           <div>
                             <strong>${c.brand} ${c.model}</strong>
                             <div style="font-size: 0.76rem; color: var(--slate-500);">${c.year} · ${c.seat_count} chỗ · ${c.transmission === 'AUTOMATIC' ? 'Số tự động' : 'Số sàn'}</div>
@@ -212,6 +213,7 @@ const OwnerService = {
                       <td>
                         <div class="table-actions" style="display: flex; gap: 6px;">
                           <button class="btn btn-outline btn-sm" onclick="OwnerService.viewCarDetail(${c.id})">Chi tiết</button>
+                          <button class="btn btn-outline btn-sm" style="color: #2563eb; border-color: #2563eb;" onclick="OwnerService.openEditCarModal(${c.id})">Sửa xe</button>
                           <button class="btn btn-outline btn-sm" style="color: #0f766e; border-color: #0f766e;" onclick="OwnerService.openPhotosModal(${c.id}, '${c.brand} ${c.model}')">Ảnh xe</button>
                         </div>
                       </td>
@@ -273,171 +275,205 @@ const OwnerService = {
           </div>
         </div>
 
-        <!-- Tab Content: Đăng xe mới -->
+        <!-- Tab Content: Đăng xe mới (Dàn hàng ngang chia row tối ưu diện tích) -->
         <div id="ownerTabAddContent" style="display: none;">
-          <div class="form-card">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+          <div class="form-card" style="padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
               <div>
-                <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--slate-900); margin-bottom: 0.3rem;">
+                <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--slate-900); margin: 0 0 2px 0;">
                   Đăng ký xe cho thuê mới
                 </h3>
-                <p style="color: var(--slate-600); font-size: 0.86rem; margin: 0;">
-                  Vui lòng nhập chính xác thông tin phương tiện để bộ phận thẩm định duyệt hồ sơ nhanh chóng nhất.
+                <p style="color: var(--slate-500); font-size: 0.82rem; margin: 0;">
+                  Điền thông số phương tiện và tải ảnh thực tế để gửi kiểm duyệt nhanh chóng.
                 </p>
               </div>
               <button type="button" class="btn btn-outline btn-sm" style="border-color: #0f766e; color: #0f766e; font-weight: 700; background: #f0fdfa;" onclick="OwnerService.fillSampleCarData()">
-                ⚡ Tự động điền dữ liệu mẫu chuẩn
+                ⚡ Điền dữ liệu mẫu
               </button>
             </div>
 
             <form id="addCarForm" onsubmit="OwnerService.handleCarSubmit(event)">
-              <div class="form-grid-2">
-                <div class="form-group">
-                  <label class="form-label">Hãng xe <span class="required">*</span></label>
-                  <select class="form-control" id="newCarBrand" required>
-                    <option value="Toyota">Toyota</option>
-                    <option value="VinFast">VinFast</option>
-                    <option value="Hyundai">Hyundai</option>
-                    <option value="Kia">Kia</option>
-                    <option value="Honda">Honda</option>
-                    <option value="Mazda">Mazda</option>
-                    <option value="Ford">Ford</option>
-                    <option value="Mitsubishi">Mitsubishi</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Dòng xe & Phiên bản <span class="required">*</span></label>
-                  <input type="text" class="form-control" id="newCarModel" placeholder="Ví dụ: VF3 Plus, Vios 1.5G, Camry 2.5Q..." required />
-                </div>
-              </div>
-
-              <div class="form-grid-3">
-                <div class="form-group">
-                  <label class="form-label">Năm sản xuất <span class="required">*</span></label>
-                  <input type="number" class="form-control" id="newCarYear" min="2016" max="2026" value="2023" required />
-                </div>
-                <div class="form-group">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <label class="form-label" style="margin-bottom: 0;">Biển kiểm soát <span class="required">*</span></label>
-                    <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.74rem; color: #0f766e; padding: 0 4px; text-decoration: underline;" onclick="OwnerService.generateSamplePlate()">
-                      Tạo biển số mẫu
-                    </button>
+              <div class="form-layout-split">
+                <!-- CỘT TRÁI (THÔNG SỐ XE - DÀN THEO HÀNG NGANG CHIA ROW) -->
+                <div class="form-left-col">
+                  <!-- ROW 1 (4 CỘT): Hãng, Dòng, Năm, Biển số -->
+                  <div class="form-grid-4">
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Hãng xe <span class="required">*</span></label>
+                      <select class="form-control" id="newCarBrand" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">
+                        <option value="Toyota">Toyota</option>
+                        <option value="VinFast">VinFast</option>
+                        <option value="Hyundai">Hyundai</option>
+                        <option value="Kia">Kia</option>
+                        <option value="Honda">Honda</option>
+                        <option value="Mazda">Mazda</option>
+                        <option value="Ford">Ford</option>
+                        <option value="Mitsubishi">Mitsubishi</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Dòng xe & Bản <span class="required">*</span></label>
+                      <input type="text" class="form-control" id="newCarModel" placeholder="VF3, Camry..." required style="padding: 0.45rem 0.65rem; font-size: 0.85rem;" />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Năm SX <span class="required">*</span></label>
+                      <input type="number" class="form-control" id="newCarYear" min="2016" max="2026" value="2023" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem;" />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label class="form-label" style="font-size: 0.82rem; margin-bottom: 0;">Biển số <span class="required">*</span></label>
+                        <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.7rem; color: #0f766e; padding: 0;" onclick="OwnerService.generateSamplePlate()">Tự tạo</button>
+                      </div>
+                      <input type="text" class="form-control" id="newCarPlate" placeholder="51A-12345" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem; font-family: monospace; font-weight: 700;" />
+                    </div>
                   </div>
-                  <input type="text" class="form-control" id="newCarPlate" placeholder="51A-12345 hoặc 30H-99999" required />
-                  <span style="font-size: 0.72rem; color: var(--slate-500); display: block; margin-top: 3px;">
-                    Định dạng chuẩn VN: <strong>51A-12345</strong> hoặc <strong>30H-99999</strong>
-                  </span>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Số chỗ ngồi <span class="required">*</span></label>
-                  <select class="form-control" id="newCarSeats">
-                    <option value="4">4 chỗ (Hatchback / Mini)</option>
-                    <option value="5" selected>5 chỗ (Sedan / Crossover)</option>
-                    <option value="7">7 chỗ (MPV / SUV)</option>
-                  </select>
-                </div>
-              </div>
 
-              <div class="form-grid-3">
-                <div class="form-group">
-                  <label class="form-label">Hộp số <span class="required">*</span></label>
-                  <select class="form-control" id="newCarTransmission">
-                    <option value="AUTOMATIC">Số tự động (AT)</option>
-                    <option value="MANUAL">Số sàn (MT)</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Loại nhiên liệu <span class="required">*</span></label>
-                  <select class="form-control" id="newCarFuel">
-                    <option value="GASOLINE">Xăng</option>
-                    <option value="ELECTRIC">Điện</option>
-                    <option value="DIESEL">Dầu Diesel</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Giá thuê đề xuất (đ/ngày) <span class="required">*</span></label>
-                  <input type="number" class="form-control" id="newCarPrice" placeholder="Ví dụ: 800000" step="50000" min="100000" max="10000000" value="800000" required />
-                </div>
-              </div>
+                  <!-- ROW 2 (4 CỘT): Số chỗ, Hộp số, Nhiên liệu, Giá thuê -->
+                  <div class="form-grid-4">
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Số chỗ <span class="required">*</span></label>
+                      <select class="form-control" id="newCarSeats" style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">
+                        <option value="4">4 chỗ</option>
+                        <option value="5" selected>5 chỗ</option>
+                        <option value="7">7 chỗ</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Hộp số <span class="required">*</span></label>
+                      <select class="form-control" id="newCarTransmission" style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">
+                        <option value="AUTOMATIC">Tự động (AT)</option>
+                        <option value="MANUAL">Số sàn (MT)</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Nhiên liệu <span class="required">*</span></label>
+                      <select class="form-control" id="newCarFuel" style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">
+                        <option value="GASOLINE">Xăng</option>
+                        <option value="ELECTRIC">Điện</option>
+                        <option value="DIESEL">Dầu Diesel</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Giá thuê (đ/ngày) <span class="required">*</span></label>
+                      <input type="number" class="form-control" id="newCarPrice" placeholder="800000" step="50000" min="100000" max="10000000" value="800000" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem; font-weight: 700; color: #047857;" />
+                    </div>
+                  </div>
 
-              <div class="form-grid-2">
-                <div class="form-group">
-                  <label class="form-label">Tỉnh / Thành phố <span class="required">*</span></label>
-                  <select class="form-control" id="newCarProvince" required>
-                    <option value="Hồ Chí Minh" selected>TP. Hồ Chí Minh</option>
-                    <option value="Hà Nội">Hà Nội</option>
-                    <option value="Đà Nẵng">Đà Nẵng</option>
-                    <option value="Bình Dương">Bình Dương</option>
-                    <option value="Đồng Nai">Đồng Nai</option>
-                    <option value="Cần Thơ">Cần Thơ</option>
-                    <option value="Hải Phòng">Hải Phòng</option>
-                    <option value="Khánh Hòa">Khánh Hòa</option>
-                    <option value="Lâm Đồng">Lâm Đồng</option>
-                    <option value="Bà Rịa - Vũng Tàu">Bà Rịa - Vũng Tàu</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Địa chỉ nhận xe (Vị trí bãi đỗ) <span class="required">*</span></label>
-                  <input type="text" class="form-control" id="newCarAddress" placeholder="Số nhà, tên đường, phường/xã, quận/huyện" required />
-                </div>
-              </div>
+                  <!-- ROW 3 (2 CỘT): Tỉnh/Thành phố, Địa chỉ -->
+                  <div class="form-grid-2" style="margin-bottom: 0.85rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Tỉnh / Thành phố <span class="required">*</span></label>
+                      <select class="form-control" id="newCarProvince" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">
+                        <option value="Hồ Chí Minh" selected>TP. Hồ Chí Minh</option>
+                        <option value="Hà Nội">Hà Nội</option>
+                        <option value="Đà Nẵng">Đà Nẵng</option>
+                        <option value="Bình Dương">Bình Dương</option>
+                        <option value="Đồng Nai">Đồng Nai</option>
+                        <option value="Cần Thơ">Cần Thơ</option>
+                        <option value="Hải Phòng">Hải Phòng</option>
+                        <option value="Khánh Hòa">Khánh Hòa</option>
+                        <option value="Lâm Đồng">Lâm Đồng</option>
+                        <option value="Bà Rịa - Vũng Tàu">Bà Rịa - Vũng Tàu</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Địa chỉ nhận xe (Vị trí bãi đỗ) <span class="required">*</span></label>
+                      <input type="text" class="form-control" id="newCarAddress" placeholder="Số nhà, tên đường, phường/xã, quận/huyện" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem;" />
+                    </div>
+                  </div>
 
-              <div class="form-group">
-                <label class="form-label">Tiện ích & Trang bị sẵn trên xe</label>
-                <div class="checkbox-group-grid">
-                  <label class="checkbox-label"><input type="checkbox" name="amenity" value="Bản đồ dẫn đường" checked> Bản đồ dẫn đường</label>
-                  <label class="checkbox-label"><input type="checkbox" name="amenity" value="Camera lùi / 360" checked> Camera lùi / 360</label>
-                  <label class="checkbox-label"><input type="checkbox" name="amenity" value="Thu phí tự động VETC" checked> Thu phí tự động VETC</label>
-                  <label class="checkbox-label"><input type="checkbox" name="amenity" value="Apple CarPlay / Android Auto"> Apple CarPlay</label>
-                  <label class="checkbox-label"><input type="checkbox" name="amenity" value="Cửa sổ trời"> Cửa sổ trời</label>
-                  <label class="checkbox-label"><input type="checkbox" name="amenity" value="Cảm biến áp suất lốp"> Cảm biến áp suất lốp</label>
-                </div>
-              </div>
+                  <!-- ROW 4: Tiện ích -->
+                  <div class="form-group" style="margin-bottom: 0.85rem;">
+                    <label class="form-label" style="font-size: 0.82rem; margin-bottom: 6px;">Tiện ích & Trang bị sẵn</label>
+                    <div class="checkbox-group-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                      <label class="checkbox-label" style="font-size: 0.78rem;"><input type="checkbox" name="amenity" value="Bản đồ dẫn đường" checked> Bản đồ dẫn đường</label>
+                      <label class="checkbox-label" style="font-size: 0.78rem;"><input type="checkbox" name="amenity" value="Camera lùi / 360" checked> Camera lùi / 360</label>
+                      <label class="checkbox-label" style="font-size: 0.78rem;"><input type="checkbox" name="amenity" value="Thu phí tự động VETC" checked> Thu phí VETC</label>
+                      <label class="checkbox-label" style="font-size: 0.78rem;"><input type="checkbox" name="amenity" value="Apple CarPlay / Android Auto"> Apple CarPlay</label>
+                      <label class="checkbox-label" style="font-size: 0.78rem;"><input type="checkbox" name="amenity" value="Cửa sổ trời"> Cửa sổ trời</label>
+                      <label class="checkbox-label" style="font-size: 0.78rem;"><input type="checkbox" name="amenity" value="Cảm biến áp suất lốp"> Cảm biến lốp</label>
+                    </div>
+                  </div>
 
-              <div class="form-group">
-                <label class="form-label">
-                  Hình ảnh xe thực tế <span style="color: #0f766e; font-size: 0.8rem; font-weight: 600;">(Khuyên dùng: Chọn ảnh thật từ máy)</span>
-                </label>
-                <div style="margin-bottom: 8px;">
-                  <input type="file" class="form-control" id="newCarPhotoFile" accept="image/png, image/jpeg, image/jpg, image/webp" onchange="OwnerService.previewCarPhoto(this)" />
-                  <span style="font-size: 0.74rem; color: var(--slate-500); display: block; margin-top: 3px;">
-                    Định dạng: JPG, PNG, WEBP. Dung lượng tối đa: 5MB.
-                  </span>
+                  <!-- ROW 5: Mô tả -->
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Mô tả tình trạng xe</label>
+                    <textarea class="form-control" id="newCarDesc" rows="2" placeholder="Xe mới bảo dưỡng, máy êm, sạch sẽ..." style="padding: 0.45rem 0.65rem; font-size: 0.85rem;"></textarea>
+                  </div>
                 </div>
-                <div id="newCarPhotoPreviewContainer" style="display: none; margin-bottom: 10px; position: relative; width: fit-content;">
-                  <img id="newCarPhotoPreview" src="" alt="Xem trước ảnh xe" style="max-height: 160px; border-radius: 8px; border: 1px solid #cbd5e1; object-fit: cover;" />
-                  <button type="button" class="btn btn-danger btn-xs" style="position: absolute; top: 6px; right: 6px; padding: 2px 7px; font-size: 11px; background: rgba(239, 68, 68, 0.9);" onclick="OwnerService.clearCarPhotoPreview()">Xóa ảnh</button>
-                </div>
-                <details style="font-size: 0.82rem; color: var(--slate-600); margin-top: 6px;">
-                  <summary style="cursor: pointer; color: #0f766e; font-weight: 600;">Hoặc dán URL ảnh / chọn ảnh mẫu có sẵn</summary>
-                  <div style="padding-top: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
-                      <label class="form-label" style="margin-bottom: 0; font-size: 0.78rem;">Link ảnh URL:</label>
-                      <div style="display: flex; gap: 4px;">
-                        <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.72rem; padding: 2px 7px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setCarSampleImage('SEDAN')">Mẫu Sedan</button>
-                        <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.72rem; padding: 2px 7px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setCarSampleImage('SUV')">Mẫu SUV</button>
-                        <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.72rem; padding: 2px 7px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setCarSampleImage('EV')">Mẫu Xe Điện</button>
+
+                <!-- CỘT PHẢI (HÌNH ẢNH XE: KÉO THẢ DRAG & DROP + LIVE PREVIEW ZOOM) -->
+                <div class="form-right-col" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                      <label class="form-label" style="font-size: 0.82rem; margin-bottom: 0;">Hình ảnh xe đại diện <span class="required">*</span></label>
+                      <span style="font-size: 0.72rem; color: #0f766e; font-weight: 600;">Hỗ trợ kéo & thả</span>
+                    </div>
+
+                    <!-- Drag & Drop Zone -->
+                    <div class="upload-dropzone" id="carPhotoDropzone" onclick="document.getElementById('newCarPhotoFile').click()">
+                      <input type="file" id="newCarPhotoFile" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" onchange="OwnerService.previewCarPhoto(this)" />
+                      
+                      <!-- State 1: Placeholder khi chưa chọn ảnh -->
+                      <div id="newCarPhotoPlaceholder" style="padding: 1.5rem 0.5rem;">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.8" style="margin-bottom: 6px;">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                          <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        <div style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">Kéo & thả ảnh xe vào đây</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">hoặc bấm để chọn từ máy tính</div>
+                        <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 4px;">JPG, PNG, WEBP (Tối đa 5MB)</div>
+                      </div>
+
+                      <!-- State 2: Preview Card khi đã có ảnh -->
+                      <div id="newCarPhotoPreviewContainer" class="preview-thumbnail-card" style="display: none;" onclick="event.stopPropagation()">
+                        <img id="newCarPhotoPreview" src="" alt="Xem trước ảnh xe" style="cursor: zoom-in;" title="Bấm để phóng to xem ảnh" onclick="OwnerService.zoomImage(this.src, 'Ảnh xe xem trước')" />
+                        <div class="preview-overlay-actions">
+                          <button type="button" class="preview-overlay-btn" onclick="OwnerService.zoomImage(document.getElementById('newCarPhotoPreview').src, 'Ảnh xe xem trước')" title="Phóng to">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                            Phóng to
+                          </button>
+                          <button type="button" class="preview-overlay-btn btn-remove" onclick="OwnerService.clearCarPhotoPreview()" title="Đổi ảnh khác">
+                            Đổi ảnh
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <input type="text" class="form-control" id="newCarImageUrl" placeholder="Nếu để trống, hệ thống sẽ tự động gán hình ảnh xe minh họa đẹp mắt" value="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=900&q=80" />
+
+                    <!-- Quick Samples -->
+                    <div style="margin-top: 8px;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 4px; flex-wrap: wrap;">
+                        <span style="font-size: 0.74rem; color: #64748b;">Hoặc chọn ảnh mẫu:</span>
+                        <div style="display: flex; gap: 4px;">
+                          <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.7rem; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setCarSampleImage('SEDAN')">Sedan</button>
+                          <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.7rem; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setCarSampleImage('SUV')">SUV</button>
+                          <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.7rem; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setCarSampleImage('EV')">Xe điện</button>
+                        </div>
+                      </div>
+                      <input type="hidden" id="newCarImageUrl" value="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=900&q=80" />
+                    </div>
                   </div>
-                </details>
-              </div>
 
-              <div class="form-group">
-                <label class="form-label">Mô tả thêm về tình trạng xe</label>
-                <textarea class="form-control" id="newCarDesc" rows="3" placeholder="Xe mới bảo dưỡng, máy êm, sạch sẽ không mùi thuốc lá..."></textarea>
-              </div>
-
-              <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; flex-wrap: wrap;">
-                <button type="button" class="btn btn-outline btn-sm" onclick="OwnerService.switchOwnerTab('CARS')">Hủy bỏ</button>
-                <button type="submit" class="btn btn-primary btn-sm">Gửi xe lên phê duyệt</button>
+                  <!-- Action Buttons -->
+                  <div style="display: flex; gap: 0.5rem; margin-top: auto; padding-top: 0.5rem;">
+                    <button type="button" class="btn btn-outline btn-sm" style="flex: 1;" onclick="OwnerService.switchOwnerTab('CARS')">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-primary btn-sm" style="flex: 2; font-weight: 700;">Gửi xe lên phê duyệt</button>
+                  </div>
+                </div>
               </div>
             </form>
           </div>
         </div>
       </div>
     `;
+
+    setTimeout(() => {
+      this.setupDropzone('carPhotoDropzone', 'newCarPhotoFile', (file) => {
+        const input = document.getElementById('newCarPhotoFile');
+        this.previewCarPhoto(input);
+      });
+    }, 50);
   },
 
   // BR: Tự động điền dữ liệu mẫu hợp lệ để test nhanh
@@ -466,6 +502,13 @@ const OwnerService = {
     setVal('newCarImageUrl', s.img);
     setVal('newCarDesc', s.desc);
 
+    const imgPreview = document.getElementById('newCarPhotoPreview');
+    const container = document.getElementById('newCarPhotoPreviewContainer');
+    const placeholder = document.getElementById('newCarPhotoPlaceholder');
+    if (imgPreview) imgPreview.src = s.img;
+    if (container) container.style.display = 'block';
+    if (placeholder) placeholder.style.display = 'none';
+
     const msg = `Đã điền thông tin mẫu xe ${s.brand} ${s.model} (Biển: ${plate})!`;
     if (typeof showToast === 'function') showToast(msg, 'info', 2000);
     else if (typeof App !== 'undefined' && App.showToast) App.showToast(msg, 'info');
@@ -490,8 +533,15 @@ const OwnerService = {
       SUV: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=900&q=80',
       EV: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=900&q=80'
     };
+    const url = images[type] || images.SEDAN;
     const el = document.getElementById('newCarImageUrl');
-    if (el) el.value = images[type] || images.SEDAN;
+    if (el) el.value = url;
+    const img = document.getElementById('newCarPhotoPreview');
+    const container = document.getElementById('newCarPhotoPreviewContainer');
+    const placeholder = document.getElementById('newCarPhotoPlaceholder');
+    if (img) img.src = url;
+    if (container) container.style.display = 'block';
+    if (placeholder) placeholder.style.display = 'none';
   },
 
   switchOwnerTab(tabName) {
@@ -675,8 +725,10 @@ const OwnerService = {
     reader.onload = (e) => {
       const img = document.getElementById('newCarPhotoPreview');
       const container = document.getElementById('newCarPhotoPreviewContainer');
+      const placeholder = document.getElementById('newCarPhotoPlaceholder');
       if (img) img.src = e.target.result;
       if (container) container.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
     };
     reader.readAsDataURL(file);
   },
@@ -686,8 +738,442 @@ const OwnerService = {
     if (input) input.value = '';
     const container = document.getElementById('newCarPhotoPreviewContainer');
     if (container) container.style.display = 'none';
+    const placeholder = document.getElementById('newCarPhotoPlaceholder');
+    if (placeholder) placeholder.style.display = 'block';
     const img = document.getElementById('newCarPhotoPreview');
     if (img) img.src = '';
+  },
+
+  setupDropzone(dropzoneId, inputId, onFileCallback) {
+    const zone = document.getElementById(dropzoneId);
+    const input = document.getElementById(inputId);
+    if (!zone || !input) return;
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      zone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.add('drag-over');
+      }, false);
+    });
+
+    ['dragleave', 'dragend'].forEach(eventName => {
+      zone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.remove('drag-over');
+      }, false);
+    });
+
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      zone.classList.remove('drag-over');
+
+      const files = e.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+
+      const file = files[0];
+      const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        this.showToast('Chỉ chấp nhận file ảnh định dạng JPG, PNG hoặc WEBP!', 'error');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        this.showToast('Dung lượng ảnh vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn!', 'error');
+        return;
+      }
+
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      input.files = dataTransfer.files;
+
+      if (typeof onFileCallback === 'function') {
+        onFileCallback(file);
+      }
+    }, false);
+  },
+
+  zoomImage(src, caption = 'Chi tiết hình ảnh') {
+    const modal = document.getElementById('imagePreviewModalOverlay');
+    const img = document.getElementById('imagePreviewModalImg');
+    const cap = document.getElementById('imagePreviewModalCaption');
+    if (!modal || !img || !src) return;
+    img.src = src;
+    if (cap) cap.innerText = caption;
+    modal.classList.add('open');
+  },
+
+  // CRP-24: Modal Cập nhật thông tin xe (Update Product — dàn hàng ngang chia row tối ưu diện tích)
+  async openEditCarModal(carId) {
+    const overlay = document.getElementById('editCarModalOverlay');
+    const body = document.getElementById('editCarModalBody');
+    const title = document.getElementById('editCarModalTitle');
+    if (!overlay || !body) return;
+
+    overlay.classList.add('open');
+    body.innerHTML = `
+      <div style="text-align: center; padding: 2.5rem;">
+        <span class="spinner" style="display: inline-block; width: 28px; height: 28px; border: 3px solid #cbd5e1; border-top-color: #0f766e; border-radius: 50%; animation: spin 0.8s linear infinite;"></span>
+        <p style="margin-top: 10px; color: var(--slate-600); font-size: 0.9rem;">Đang tải thông tin xe...</p>
+      </div>
+    `;
+
+    let car = null;
+    if (Array.isArray(this.ownerCars)) {
+      car = this.ownerCars.find(c => c.id == carId);
+    }
+    if (!car && typeof CarAPI !== 'undefined' && CarAPI.getPublicCarDetail) {
+      try {
+        const res = await CarAPI.getPublicCarDetail(carId);
+        if (res && res.data) {
+          const d = res.data;
+          car = {
+            id: d.id,
+            brand: d.brand,
+            model: d.model,
+            year: d.year,
+            license_plate: d.plateNumber || d.plate_number,
+            seat_count: d.seats,
+            transmission: d.transmission,
+            fuel_type: d.fuelType,
+            price_per_day: d.pricePerDay,
+            pickup_address: d.address,
+            province: d.province,
+            features: d.features,
+            description: d.description,
+            image_url: d.thumbnailUrl
+          };
+        }
+      } catch (e) {
+        console.warn('Cannot fetch public car detail:', e);
+      }
+    }
+    if (!car && typeof StorageService !== 'undefined') {
+      car = StorageService.getCarById(carId);
+    }
+
+    if (!car) {
+      body.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: #ef4444;">
+          Không tìm thấy thông tin xe #${carId}. Vui lòng thử lại!
+        </div>
+      `;
+      return;
+    }
+
+    if (title) {
+      title.innerText = `Cập nhật thông tin xe: ${car.brand} ${car.model} (${car.license_plate})`;
+    }
+
+    const currentBrand = car.brand || 'Toyota';
+    const currentModel = car.model || '';
+    const currentYear = car.year || 2023;
+    const currentPlate = car.license_plate || car.plate_number || '';
+    const currentSeats = car.seat_count || car.seats || 5;
+    const currentTrans = car.transmission || 'AUTOMATIC';
+    const currentFuel = car.fuel_type || car.fuelType || 'GASOLINE';
+    const currentPrice = car.price_per_day || car.pricePerDay || 800000;
+    const currentAddress = (car.pickup_address || car.address || '').replace(/,.*$/, '');
+    const currentProvince = car.province || 'Hồ Chí Minh';
+    const currentFeatures = car.features || '';
+    const currentDesc = car.description || '';
+    const currentImg = car.image_url || car.thumbnail_url || car.thumbnailUrl || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=900&q=80';
+
+    body.innerHTML = `
+      <form id="editCarForm" onsubmit="OwnerService.handleCarUpdateSubmit(event, ${carId})">
+        <div class="form-layout-split">
+          <!-- CỘT TRÁI: DÀN HÀNG NGANG CHIA ROW TỐI ƯU DIỆN TÍCH -->
+          <div class="form-left-col">
+            <!-- ROW 1 (4 CỘT): Hãng, Dòng, Năm, Biển số -->
+            <div class="form-grid-4">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Hãng xe <span class="required">*</span></label>
+                <select class="form-control" id="editCarBrand" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">
+                  <option value="Toyota" ${currentBrand === 'Toyota' ? 'selected' : ''}>Toyota</option>
+                  <option value="VinFast" ${currentBrand === 'VinFast' ? 'selected' : ''}>VinFast</option>
+                  <option value="Hyundai" ${currentBrand === 'Hyundai' ? 'selected' : ''}>Hyundai</option>
+                  <option value="Kia" ${currentBrand === 'Kia' ? 'selected' : ''}>Kia</option>
+                  <option value="Honda" ${currentBrand === 'Honda' ? 'selected' : ''}>Honda</option>
+                  <option value="Mazda" ${currentBrand === 'Mazda' ? 'selected' : ''}>Mazda</option>
+                  <option value="Ford" ${currentBrand === 'Ford' ? 'selected' : ''}>Ford</option>
+                  <option value="Mitsubishi" ${currentBrand === 'Mitsubishi' ? 'selected' : ''}>Mitsubishi</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Dòng xe <span class="required">*</span></label>
+                <input type="text" class="form-control" id="editCarModel" value="${currentModel}" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem;" />
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Năm SX <span class="required">*</span></label>
+                <input type="number" class="form-control" id="editCarYear" min="2016" max="2026" value="${currentYear}" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem;" />
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Biển kiểm soát</label>
+                <input type="text" class="form-control" id="editCarPlate" value="${currentPlate}" readonly style="padding: 0.45rem 0.65rem; font-size: 0.85rem; font-family: monospace; font-weight: 700; background: #f1f5f9; cursor: not-allowed;" title="Biển số là định danh duy nhất không thể đổi" />
+              </div>
+            </div>
+
+            <!-- ROW 2 (4 CỘT): Số chỗ, Hộp số, Nhiên liệu, Giá thuê -->
+            <div class="form-grid-4">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Số chỗ <span class="required">*</span></label>
+                <select class="form-control" id="editCarSeats" style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">
+                  <option value="4" ${currentSeats == 4 ? 'selected' : ''}>4 chỗ</option>
+                  <option value="5" ${currentSeats == 5 ? 'selected' : ''}>5 chỗ</option>
+                  <option value="7" ${currentSeats == 7 ? 'selected' : ''}>7 chỗ</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Hộp số <span class="required">*</span></label>
+                <select class="form-control" id="editCarTransmission" style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">
+                  <option value="AUTOMATIC" ${currentTrans === 'AUTOMATIC' ? 'selected' : ''}>Tự động (AT)</option>
+                  <option value="MANUAL" ${currentTrans === 'MANUAL' ? 'selected' : ''}>Số sàn (MT)</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Nhiên liệu <span class="required">*</span></label>
+                <select class="form-control" id="editCarFuel" style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">
+                  <option value="GASOLINE" ${currentFuel === 'GASOLINE' ? 'selected' : ''}>Xăng</option>
+                  <option value="ELECTRIC" ${currentFuel === 'ELECTRIC' ? 'selected' : ''}>Điện</option>
+                  <option value="DIESEL" ${currentFuel === 'DIESEL' ? 'selected' : ''}>Dầu Diesel</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Giá thuê (đ/ngày) <span class="required">*</span></label>
+                <input type="number" class="form-control" id="editCarPrice" value="${currentPrice}" step="50000" min="100000" max="10000000" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem; font-weight: 700; color: #047857;" />
+              </div>
+            </div>
+
+            <!-- ROW 3 (2 CỘT): Tỉnh/Thành phố, Địa chỉ -->
+            <div class="form-grid-2" style="margin-bottom: 0.85rem;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Tỉnh / Thành phố <span class="required">*</span></label>
+                <select class="form-control" id="editCarProvince" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">
+                  <option value="Hồ Chí Minh" ${currentProvince.includes('Hồ Chí Minh') ? 'selected' : ''}>TP. Hồ Chí Minh</option>
+                  <option value="Hà Nội" ${currentProvince.includes('Hà Nội') ? 'selected' : ''}>Hà Nội</option>
+                  <option value="Đà Nẵng" ${currentProvince.includes('Đà Nẵng') ? 'selected' : ''}>Đà Nẵng</option>
+                  <option value="Bình Dương" ${currentProvince.includes('Bình Dương') ? 'selected' : ''}>Bình Dương</option>
+                  <option value="Đồng Nai" ${currentProvince.includes('Đồng Nai') ? 'selected' : ''}>Đồng Nai</option>
+                  <option value="Cần Thơ" ${currentProvince.includes('Cần Thơ') ? 'selected' : ''}>Cần Thơ</option>
+                  <option value="Hải Phòng" ${currentProvince.includes('Hải Phòng') ? 'selected' : ''}>Hải Phòng</option>
+                  <option value="Khánh Hòa" ${currentProvince.includes('Khánh Hòa') ? 'selected' : ''}>Khánh Hòa</option>
+                  <option value="Lâm Đồng" ${currentProvince.includes('Lâm Đồng') ? 'selected' : ''}>Lâm Đồng</option>
+                  <option value="Bà Rịa - Vũng Tàu" ${currentProvince.includes('Vũng Tàu') ? 'selected' : ''}>Bà Rịa - Vũng Tàu</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Địa chỉ nhận xe <span class="required">*</span></label>
+                <input type="text" class="form-control" id="editCarAddress" value="${currentAddress}" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem;" />
+              </div>
+            </div>
+
+            <!-- ROW 4: Tiện ích -->
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label class="form-label" style="font-size: 0.82rem; margin-bottom: 6px;">Tiện ích & Trang bị sẵn</label>
+              <div class="checkbox-group-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                <label class="checkbox-label" style="font-size: 0.78rem;"><input type="checkbox" name="editAmenity" value="Bản đồ dẫn đường" ${currentFeatures.includes('Bản đồ') ? 'checked' : ''}> Bản đồ dẫn đường</label>
+                <label class="checkbox-label" style="font-size: 0.78rem;"><input type="checkbox" name="editAmenity" value="Camera lùi / 360" ${currentFeatures.includes('Camera') ? 'checked' : ''}> Camera lùi / 360</label>
+                <label class="checkbox-label" style="font-size: 0.78rem;"><input type="checkbox" name="editAmenity" value="Thu phí tự động VETC" ${currentFeatures.includes('Thu phí') ? 'checked' : ''}> Thu phí VETC</label>
+                <label class="checkbox-label" style="font-size: 0.78rem;"><input type="checkbox" name="editAmenity" value="Apple CarPlay / Android Auto" ${currentFeatures.includes('CarPlay') ? 'checked' : ''}> Apple CarPlay</label>
+                <label class="checkbox-label" style="font-size: 0.78rem;"><input type="checkbox" name="editAmenity" value="Cửa sổ trời" ${currentFeatures.includes('Cửa sổ') ? 'checked' : ''}> Cửa sổ trời</label>
+                <label class="checkbox-label" style="font-size: 0.78rem;"><input type="checkbox" name="editAmenity" value="Cảm biến áp suất lốp" ${currentFeatures.includes('Cảm biến') ? 'checked' : ''}> Cảm biến lốp</label>
+              </div>
+            </div>
+
+            <!-- ROW 5: Mô tả -->
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 0.82rem; margin-bottom: 4px;">Mô tả tình trạng xe</label>
+              <textarea class="form-control" id="editCarDesc" rows="2" style="padding: 0.45rem 0.65rem; font-size: 0.85rem;">${currentDesc}</textarea>
+            </div>
+          </div>
+
+          <!-- CỘT PHẢI: KÉO THẢ ẢNH XE & LIVE PREVIEW -->
+          <div class="form-right-col" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label" style="font-size: 0.82rem; margin-bottom: 0;">Hình ảnh xe đại diện</label>
+                <span style="font-size: 0.72rem; color: #0f766e; font-weight: 600;">Hỗ trợ kéo & thả</span>
+              </div>
+
+              <!-- Dropzone -->
+              <div class="upload-dropzone" id="editCarPhotoDropzone" onclick="document.getElementById('editCarPhotoFile').click()">
+                <input type="file" id="editCarPhotoFile" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" onchange="OwnerService.previewEditCarPhoto(this)" />
+                
+                <div id="editCarPhotoPreviewContainer" class="preview-thumbnail-card" onclick="event.stopPropagation()">
+                  <img id="editCarPhotoPreview" src="${currentImg}" alt="Ảnh xe" style="cursor: zoom-in;" title="Bấm để phóng to xem ảnh" onclick="OwnerService.zoomImage(this.src, '${currentBrand} ${currentModel}')" />
+                  <div class="preview-overlay-actions">
+                    <button type="button" class="preview-overlay-btn" onclick="OwnerService.zoomImage(document.getElementById('editCarPhotoPreview').src, '${currentBrand} ${currentModel}')" title="Phóng to">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                      Phóng to
+                    </button>
+                    <button type="button" class="preview-overlay-btn" onclick="document.getElementById('editCarPhotoFile').click()" title="Đổi ảnh">
+                      Đổi ảnh
+                    </button>
+                  </div>
+                </div>
+                <div style="font-size: 0.72rem; color: #64748b; margin-top: 6px;">Kéo thả ảnh mới vào đây hoặc bấm để thay đổi</div>
+              </div>
+
+              <!-- Samples & Hidden URL -->
+              <div style="margin-top: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 4px; flex-wrap: wrap;">
+                  <span style="font-size: 0.74rem; color: #64748b;">Hoặc chọn ảnh mẫu:</span>
+                  <div style="display: flex; gap: 4px;">
+                    <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.7rem; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setEditCarSampleImage('SEDAN')">Sedan</button>
+                    <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.7rem; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setEditCarSampleImage('SUV')">SUV</button>
+                    <button type="button" class="btn btn-ghost btn-xs" style="font-size: 0.7rem; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px;" onclick="OwnerService.setEditCarSampleImage('EV')">Xe điện</button>
+                  </div>
+                </div>
+                <input type="hidden" id="editCarImageUrl" value="${currentImg}" />
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 0.5rem; margin-top: auto; padding-top: 0.5rem;">
+              <button type="button" class="btn btn-outline btn-sm" style="flex: 1;" onclick="document.getElementById('editCarModalOverlay').classList.remove('open')">Đóng</button>
+              <button type="submit" class="btn btn-primary btn-sm" style="flex: 2; font-weight: 700;">Lưu thay đổi</button>
+            </div>
+          </div>
+        </div>
+      </form>
+    `;
+
+    setTimeout(() => {
+      this.setupDropzone('editCarPhotoDropzone', 'editCarPhotoFile', (file) => {
+        const input = document.getElementById('editCarPhotoFile');
+        this.previewEditCarPhoto(input);
+      });
+    }, 50);
+  },
+
+  previewEditCarPhoto(input) {
+    const file = input?.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(file.type)) {
+      this.showToast('Chỉ chấp nhận file ảnh định dạng JPG, PNG hoặc WEBP!', 'error');
+      input.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.showToast('Dung lượng ảnh vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn!', 'error');
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.getElementById('editCarPhotoPreview');
+      if (img) img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  },
+
+  setEditCarSampleImage(type) {
+    const images = {
+      SEDAN: 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?auto=format&fit=crop&w=900&q=80',
+      SUV: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=900&q=80',
+      EV: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=900&q=80'
+    };
+    const url = images[type] || images.SEDAN;
+    const el = document.getElementById('editCarImageUrl');
+    if (el) el.value = url;
+    const img = document.getElementById('editCarPhotoPreview');
+    if (img) img.src = url;
+  },
+
+  async handleCarUpdateSubmit(e, carId) {
+    e.preventDefault();
+    const btnSubmit = e.target.querySelector('button[type="submit"]');
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = 'Đang lưu thay đổi...';
+    }
+
+    try {
+      const brand = document.getElementById('editCarBrand').value;
+      const model = document.getElementById('editCarModel').value.trim();
+      const year = parseInt(document.getElementById('editCarYear').value, 10);
+      const seats = parseInt(document.getElementById('editCarSeats').value, 10);
+      const transmission = document.getElementById('editCarTransmission').value;
+      const fuel = document.getElementById('editCarFuel').value;
+      const price = parseFloat(document.getElementById('editCarPrice').value);
+      const province = document.getElementById('editCarProvince').value;
+      const address = document.getElementById('editCarAddress').value.trim();
+      const desc = document.getElementById('editCarDesc').value.trim();
+      let imageUrl = document.getElementById('editCarImageUrl').value.trim();
+
+      if (price < 100000 || price > 10000000) {
+        throw new Error('Giá thuê phải từ 100.000 VNĐ đến 10.000.000 VNĐ/ngày!');
+      }
+
+      const amenities = Array.from(document.querySelectorAll('input[name="editAmenity"]:checked')).map(cb => cb.value);
+
+      const payload = {
+        brand,
+        model,
+        year,
+        seats,
+        transmission,
+        fuelType: fuel,
+        pricePerDay: price,
+        address: `${address}, ${province}`,
+        province,
+        features: amenities.join(','),
+        description: desc,
+        thumbnailUrl: imageUrl
+      };
+
+      // 1. Gửi API PUT /api/v1/cars/{carId}
+      if (typeof CarAPI !== 'undefined' && CarAPI.updateCar) {
+        await CarAPI.updateCar(carId, payload);
+      }
+
+      // 1.1 Upload ảnh xe nếu có file mới
+      const photoFile = document.getElementById('editCarPhotoFile')?.files?.[0];
+      if (photoFile && typeof CarAPI !== 'undefined' && CarAPI.uploadCarPhoto) {
+        try {
+          btnSubmit.innerHTML = 'Đang tải ảnh xe mới...';
+          const uploadRes = await CarAPI.uploadCarPhoto(carId, photoFile);
+          if (uploadRes?.data?.imageUrl) {
+            imageUrl = uploadRes.data.imageUrl;
+          }
+        } catch (uploadErr) {
+          console.warn('Lỗi upload ảnh xe mới:', uploadErr);
+        }
+      }
+
+      // 2. Cập nhật dữ liệu dự phòng Local Storage
+      if (typeof StorageService !== 'undefined') {
+        StorageService.updateCar(carId, {
+          brand,
+          model,
+          year,
+          seat_count: seats,
+          transmission,
+          fuel_type: fuel,
+          price_per_day: price,
+          pickup_address: `${address}, ${province}`,
+          amenities,
+          description: desc,
+          image_url: imageUrl
+        });
+      }
+
+      document.getElementById('editCarModalOverlay')?.classList.remove('open');
+      this.showToast(`Cập nhật thông tin xe ${brand} ${model} thành công!`, 'success');
+      await this.renderOwnerPortal();
+    } catch (err) {
+      console.error('Lỗi cập nhật xe:', err);
+      this.showToast(err.message || 'Cập nhật xe thất bại. Vui lòng thử lại!', 'error');
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = 'Lưu thay đổi';
+      }
+    }
   },
 
   // CRP-33: Quản lý thư viện ảnh xe của Owner
@@ -738,7 +1224,7 @@ const OwnerService = {
             const isThumb = p.isThumbnail || p.is_thumbnail || false;
             return `
             <div style="position: relative; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
-              <img src="${imgUrl}" alt="Ảnh xe" style="width: 100%; height: 110px; object-fit: cover;" />
+              <img src="${imgUrl}" alt="Ảnh xe" style="width: 100%; height: 110px; object-fit: cover; cursor: zoom-in;" title="Bấm để phóng to xem ảnh" onclick="OwnerService.zoomImage('${imgUrl}', '${carTitle}')" />
               ${isThumb ? `
                 <span style="position: absolute; top: 6px; left: 6px; background: #0f766e; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
                   Đại diện
