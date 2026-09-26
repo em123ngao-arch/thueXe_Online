@@ -268,9 +268,10 @@ const ProfileController = {
 
         if (res.ok) {
           showToast("Cập nhật ảnh đại diện thành công!", "success", 2000);
-          if (data?.result?.avatarUrl) {
+          const newAvatarUrl = data?.data?.avatarUrl || data?.result?.avatarUrl;
+          if (newAvatarUrl) {
             const user = AuthService.getCurrentUser() || {};
-            user.avatar = data.result.avatarUrl;
+            user.avatar = newAvatarUrl;
             localStorage.setItem("user_info", JSON.stringify(user));
             AuthService.updateAuthUI();
           }
