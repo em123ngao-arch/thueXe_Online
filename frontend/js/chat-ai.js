@@ -310,7 +310,7 @@ const AiChatWidget = (() => {
       if (data.success && data.data && data.data.messages && data.data.messages.length > 0) {
         const box = document.getElementById("ai-messages-box");
         box.innerHTML = "";
-        data.data.messages.forEach(m => appendMessage(m.role, m.text));
+        data.data.messages.forEach(m => appendMessage(m.role, m.content || m.text));
       }
     } catch (e) {}
   }
