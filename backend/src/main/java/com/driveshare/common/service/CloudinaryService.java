@@ -8,8 +8,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -21,18 +26,22 @@ public class CloudinaryService {
 
     private final Cloudinary cloudinary;
     private final boolean isConfigured;
+    private final String uploadDir;
 
     private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList(
             "image/jpeg",
             "image/jpg",
-            "image/png"
+            "image/png",
+            "image/webp"
     );
 
     public CloudinaryService(
             @Value("${cloudinary.cloud-name:demo}") String cloudName,
             @Value("${cloudinary.api-key:}") String apiKey,
-            @Value("${cloudinary.api-secret:}") String apiSecret
+            @Value("${cloudinary.api-secret:}") String apiSecret,
+            @Value("${driveshare.upload.dir:uploads}") String uploadDir
     ) {
+        this.uploadDir = uploadDir;
         if (apiKey != null && !apiKey.isBlank() && apiSecret != null && !apiSecret.isBlank()) {
             this.cloudinary = new Cloudinary(ObjectUtils.asMap(
                     "cloud_name", cloudName,
@@ -48,7 +57,7 @@ public class CloudinaryService {
                     "secure", true
             ));
             this.isConfigured = false;
-            log.warn("Cloudinary API credentials not provided. Mock upload URLs will be generated in development mode.");
+            log.info("Cloudinary API credentials not provided. Hybrid Local Storage enabled (saving files to: {}).", uploadDir);
         }
     }
 
@@ -71,6 +80,7 @@ public class CloudinaryService {
                 originalFilename.toLowerCase().endsWith(".jpg")
                         || originalFilename.toLowerCase().endsWith(".jpeg")
                         || originalFilename.toLowerCase().endsWith(".png")
+                        || originalFilename.toLowerCase().endsWith(".webp")
         );
 
         if (!validContentType && !validExtension) {
@@ -79,14 +89,15 @@ public class CloudinaryService {
     }
 
     /**
-     * Upload image to Cloudinary (or return dev URL if not configured)
+     * Upload image to Cloudinary or save to local disk if Cloudinary is not configured
      */
     public String uploadImage(MultipartFile file, String folder, long maxSizeBytes) {
         validateImageFile(file, maxSizeBytes);
 
         String originalFilename = file.getOriginalFilename();
         String cleanName = originalFilename != null ? originalFilename.replaceAll("[^a-zA-Z0-9.-]", "_") : "image.jpg";
-        String publicId = folder + "/" + UUID.randomUUID() + "_" + cleanName;
+        String uniqueId = UUID.randomUUID().toString().replace("-", "");
+        String publicId = folder + "/" + uniqueId + "_" + cleanName;
 
         if (isConfigured) {
             try {
@@ -103,9 +114,43 @@ public class CloudinaryService {
             }
         }
 
-        // Fallback for development without API keys
-        String fallbackUrl = "https://res.cloudinary.com/driveshare/image/upload/v1726750000/" + publicId;
-        log.info("Development mode: generated mock image URL: {}", fallbackUrl);
-        return fallbackUrl;
+        // Hybrid Local Storage: save physically to local disk
+        try {
+            Path targetDir = Paths.get(uploadDir, folder).toAbsolutePath().normalize();
+            if (!Files.exists(targetDir)) {
+                Files.createDirectories(targetDir);
+            }
+
+            String fileName = uniqueId + "_" + cleanName;
+            Path targetFile = targetDir.resolve(fileName);
+            Files.copy(file.getInputStream(), targetFile, StandardCopyOption.REPLACE_EXISTING);
+
+            String accessUrl = buildFileUrl(folder, fileName);
+            log.info("Saved image to local disk: {}, public access URL: {}", targetFile, accessUrl);
+            return accessUrl;
+        } catch (IOException e) {
+            log.error("Local file storage failed: {}", e.getMessage(), e);
+            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Không thể lưu trữ tập tin hình ảnh vào máy chủ");
+        }
+    }
+
+    private String buildFileUrl(String folder, String fileName) {
+        String normalizedFolder = folder.replace("\\", "/");
+        if (!normalizedFolder.startsWith("/")) {
+            normalizedFolder = "/" + normalizedFolder;
+        }
+        if (!normalizedFolder.endsWith("/")) {
+            normalizedFolder = normalizedFolder + "/";
+        }
+        String relativePath = "/uploads" + normalizedFolder + fileName;
+
+        try {
+            return ServletUriComponentsBuilder.fromCurrentContextPath()
+                    .path(relativePath)
+                    .toUriString();
+        } catch (Exception e) {
+            return "http://localhost:8080" + relativePath;
+        }
     }
 }
+
