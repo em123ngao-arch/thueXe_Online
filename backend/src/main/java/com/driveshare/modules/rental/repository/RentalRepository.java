@@ -17,6 +17,8 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
     // CRP-42: Đếm số đơn PENDING hiện tại của 1 khách thuê (khống chế tối đa 3)
     long countByRenterIdAndStatus(Long renterId, ERentalStatus status);
 
+    long countByRenterIdAndStatusIn(Long renterId, List<ERentalStatus> statuses);
+
     // CRP-44: Khách thuê xem lịch sử yêu cầu của mình
     List<Rental> findByRenterIdOrderByCreatedAtDesc(Long renterId);
 
@@ -39,6 +41,20 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
             @Param("status") ERentalStatus status
     );
 
+    // Giai đoạn 2 & 3: Tìm các đơn trùng khung giờ theo danh sách trạng thái (PENDING, PENDING_APPROVAL, ON_HOLD)
+    @Query("SELECT r FROM Rental r WHERE r.carId = :carId " +
+           "AND (:excludeRentalId IS NULL OR r.rentalId != :excludeRentalId) " +
+           "AND r.status IN :statuses " +
+           "AND r.startDate <= :endDate " +
+           "AND r.endDate >= :startDate")
+    List<Rental> findCompetingRentals(
+            @Param("carId") Long carId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("excludeRentalId") Long excludeRentalId,
+            @Param("statuses") List<ERentalStatus> statuses
+    );
+
     // CRP-44, 51: Tìm đơn thuê theo ID và Renter ID (bảo mật tránh thao tác chéo đơn người khác)
     java.util.Optional<Rental> findByRentalIdAndRenterId(Long rentalId, Long renterId);
 
@@ -50,6 +66,13 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
     List<Rental> findExpiredPendingRentals(
             @Param("status") ERentalStatus status,
             @Param("threshold") Instant threshold
+    );
+
+    // Giai đoạn 3 v2.0.0: Tìm các đơn WAITING_PAYMENT đã hết hạn 45 phút giữ chỗ
+    @Query("SELECT r FROM Rental r WHERE r.status = :status AND r.paymentExpiresAt <= :now")
+    List<Rental> findExpiredWaitingPaymentRentals(
+            @Param("status") ERentalStatus status,
+            @Param("now") Instant now
     );
 
     // CRP-38: Kiểm tra 1 xe cụ thể có bị trùng lịch trong khoảng ngày [startDate, endDate] không

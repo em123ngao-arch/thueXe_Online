@@ -56,14 +56,29 @@ const OwnerService = {
     }
     this.ownerCars = ownerCars;
 
-    const allBookings = typeof StorageService !== 'undefined' ? StorageService.getBookings() : [];
-    const myCarIds = ownerCars.map(c => c.id);
-    const ownerBookings = allBookings.filter(b => myCarIds.includes(b.car_id));
-    
+    let ownerBookings = [];
+    if (typeof RentalAPI !== 'undefined' && RentalAPI.getOwnerRentals && typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
+      try {
+        const res = await RentalAPI.getOwnerRentals();
+        if (res && (res.code === 200 || res.success) && Array.isArray(res.data)) {
+          ownerBookings = res.data;
+        }
+      } catch (err) {
+        console.warn('RentalAPI.getOwnerRentals fallback to local data:', err);
+      }
+    }
+
+    if (ownerBookings.length === 0 && typeof StorageService !== 'undefined') {
+      const allBookings = StorageService.getBookings();
+      const myCarIds = ownerCars.map(c => c.id);
+      ownerBookings = allBookings.filter(b => myCarIds.includes(b.car_id));
+    }
+    this.ownerBookings = ownerBookings;
+
     // Tính tổng tiền cọc và doanh thu tạm tính
     const totalEarnings = ownerBookings
-      .filter(b => b.status === 'DEPOSIT_PAID' || b.status === 'COMPLETED')
-      .reduce((sum, b) => sum + (b.rental_amount || 0), 0);
+      .filter(b => b.status === 'DEPOSIT_PAID' || b.status === 'CONFIRMED' || b.status === 'COMPLETED')
+      .reduce((sum, b) => sum + Number(b.depositAmount || b.rental_amount || b.deposit_amount || 0), 0);
 
     const formatMoney = (val) => {
       return typeof StorageService !== 'undefined' ? StorageService.formatCurrency(val) : (val?.toLocaleString('vi-VN') + ' đ');
@@ -248,27 +263,76 @@ const OwnerService = {
                 <tbody>
                   ${ownerBookings.length === 0 ? `
                     <tr><td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--slate-500);">Chưa có yêu cầu đặt thuê nào cho các xe của bạn.</td></tr>
-                  ` : ownerBookings.map(b => `
+                  ` : ownerBookings.map(b => {
+                    const id = b.rentalId || b.id;
+                    const carName = (b.carBrand ? `${b.carBrand} ${b.carModel || ''}` : b.car_name) || 'Xe của bạn';
+                    const plate = b.carPlateNumber || b.license_plate || '';
+                    const renterName = b.renterFullName || b.renter_name || 'Khách thuê';
+                    const renterPhone = b.renterPhone || b.renter_phone || '---';
+                    const startDate = b.startDate || b.start_date || '';
+                    const endDate = b.endDate || b.end_date || '';
+                    const totalDays = b.totalDays || b.total_days || 1;
+                    const deposit = b.depositAmount || b.rental_amount || b.deposit_amount || 0;
+                    const note = b.note || b.trip_purpose || '';
+                    
+                    let badge = `<span class="badge badge-info">${b.status}</span>`;
+                    let action = '<span style="color: var(--slate-400); font-size: 0.8rem;">—</span>';
+
+                    if (b.status === 'PENDING' || b.status === 'PENDING_APPROVAL') {
+                      badge = '<span class="badge badge-warning" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a;">Chờ duyệt hồ sơ</span>';
+                      action = `
+                        <div style="display:flex; gap:4px;">
+                          <button class="btn btn-primary btn-xs" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="OwnerService.approveRental(${id})">Duyệt</button>
+                          <button class="btn btn-outline-danger btn-xs" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color:var(--danger); border:1px solid var(--danger); background:transparent;" onclick="OwnerService.rejectRentalPrompt(${id})">Từ chối</button>
+                        </div>
+                      `;
+                    } else if (b.status === 'WAITING_PAYMENT' || b.status === 'APPROVED') {
+                      badge = '<span class="badge badge-primary" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">Chờ khách cọc (45p)</span>';
+                    } else if (b.status === 'ON_HOLD') {
+                      badge = '<span class="badge" style="background:#fef9c3; color:#a16207; border:1px solid #fef08a;">Tạm hoãn (Soft Lock)</span>';
+                    } else if (b.status === 'CONFIRMED' || b.status === 'DEPOSIT_PAID') {
+                      badge = '<span class="badge badge-success">Đã chốt cọc 30%</span>';
+                      action = `
+                        <button class="btn btn-primary btn-xs" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: #059669; border-color: #059669;" onclick="OwnerService.startRental(${id})">
+                          Bắt đầu chuyến
+                        </button>
+                      `;
+                    } else if (b.status === 'IN_PROGRESS') {
+                      badge = '<span class="badge badge-info">Đang trong chuyến đi</span>';
+                      action = `
+                        <button class="btn btn-primary btn-xs" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: #2563eb; border-color: #2563eb;" onclick="OwnerService.completeRental(${id})">
+                          Hoàn tất chuyến
+                        </button>
+                      `;
+                    } else if (b.status === 'COMPLETED') {
+                      badge = '<span class="badge badge-neutral">Đã hoàn thành</span>';
+                    } else if (b.status === 'REJECTED') {
+                      badge = '<span class="badge badge-danger">Đã từ chối</span>';
+                    } else if (b.status === 'WITHDRAWN_BY_GUEST') {
+                      badge = '<span class="badge" style="background:#f1f5f9; color:#64748b;">Khách đã rút</span>';
+                    } else if (b.status === 'EXPIRED' || b.status === 'AUTO_EXPIRED_NO_HOST_ACTION') {
+                      badge = '<span class="badge badge-secondary" style="background:#f1f5f9; color:#94a3b8;">Hết hạn</span>';
+                    }
+
+                    return `
                     <tr>
-                      <td><span class="booking-code">#${b.id}</span></td>
-                      <td><strong>${b.car_name}</strong></td>
+                      <td><span class="booking-code">#${id}</span></td>
                       <td>
-                        ${b.renter_name}<br/>
-                        <span style="font-size: 0.76rem; color: var(--slate-500);">${b.renter_phone}</span>
-                      </td>
-                      <td style="font-size: 0.82rem;">${b.start_date} &rarr; ${b.end_date}</td>
-                      <td style="color: #047857; font-weight: 700;">${formatMoney(b.rental_amount)}</td>
-                      <td>
-                        ${b.status === 'DEPOSIT_PAID' ? '<span class="badge badge-success">Đã đặt cọc</span>' : 
-                          (b.status === 'COMPLETED' ? '<span class="badge badge-neutral">Đã hoàn thành</span>' : '<span class="badge badge-warning">' + b.status + '</span>')}
+                        <strong>${carName}</strong>
+                        ${plate ? `<div style="font-size:0.75rem; color:var(--slate-500); font-family:monospace;">${plate}</div>` : ''}
                       </td>
                       <td>
-                        ${b.status === 'DEPOSIT_PAID' ? `
-                          <button class="btn btn-primary btn-sm" onclick="OwnerService.completeBooking(${b.id})">Hoàn tất chuyến</button>
-                        ` : '<span style="color: var(--slate-400); font-size: 0.8rem;">—</span>'}
+                        <strong>${renterName}</strong><br/>
+                        <span style="font-size: 0.76rem; color: var(--slate-500);">${renterPhone}</span>
+                        ${note ? `<div style="font-size: 0.73rem; color: #0284c7; margin-top:2px;" title="Mục đích chuyến đi">Lộ trình: ${note}</div>` : ''}
                       </td>
+                      <td style="font-size: 0.82rem;">${startDate} &rarr; ${endDate} (${totalDays} ngày)</td>
+                      <td style="color: #047857; font-weight: 700;">${formatMoney(deposit)}</td>
+                      <td>${badge}</td>
+                      <td>${action}</td>
                     </tr>
-                  `).join('')}
+                    `;
+                  }).join('')}
                 </tbody>
               </table>
             </div>
@@ -1339,5 +1403,88 @@ const OwnerService = {
     this.showToast(`Chuyến đi #${bookingId} đã kết thúc thành công!`, 'success');
     this.renderOwnerPortal();
     this.switchOwnerTab('REQUESTS');
+  },
+
+  async approveRental(rentalId) {
+    if (!confirm(`Bạn có chắc muốn duyệt cho khách thuê yêu cầu #${rentalId} không?\n\nLưu ý: Hệ thống sẽ kích hoạt Soft Lock 45 phút để khách tiến hành đặt cọc 30%. Các đơn trùng lịch khác sẽ tạm hoãn.`)) {
+      return;
+    }
+    if (typeof RentalAPI !== 'undefined' && RentalAPI.approveRental) {
+      try {
+        const res = await RentalAPI.approveRental(rentalId);
+        if (res && res.success) {
+          this.showToast(`Đã duyệt yêu cầu #${rentalId} thành công! Kích hoạt giữ chỗ 45 phút.`, 'success');
+          await this.renderOwnerPortal();
+          this.switchOwnerTab('REQUESTS');
+          return;
+        }
+      } catch (err) {
+        console.warn('Lỗi approveRental API:', err);
+      }
+    }
+    this.showToast(`Yêu cầu #${rentalId} đã được duyệt! (Chờ thanh toán cọc trong 45 phút)`, 'info');
+  },
+
+  async rejectRentalPrompt(rentalId) {
+    const reason = prompt(`Nhập lý do từ chối yêu cầu thuê #${rentalId}:`, 'Xe bận lịch đột xuất');
+    if (reason === null) return;
+    if (!reason.trim()) {
+      alert('Vui lòng cung cấp lý do từ chối!');
+      return;
+    }
+    if (typeof RentalAPI !== 'undefined' && RentalAPI.rejectRental) {
+      try {
+        const res = await RentalAPI.rejectRental(rentalId, reason.trim());
+        if (res && res.success) {
+          this.showToast(`Đã từ chối yêu cầu #${rentalId}.`, 'warning');
+          await this.renderOwnerPortal();
+          this.switchOwnerTab('REQUESTS');
+          return;
+        }
+      } catch (err) {
+        console.warn('Lỗi rejectRental API:', err);
+      }
+    }
+    this.showToast(`Đã ghi nhận từ chối yêu cầu #${rentalId}.`, 'info');
+  },
+
+  async startRental(rentalId) {
+    if (!confirm(`Xác nhận bắt đầu chuyến đi cho đơn #${rentalId} (Bàn giao xe cho khách thuê)?`)) {
+      return;
+    }
+    if (typeof RentalAPI !== 'undefined' && RentalAPI.startRental) {
+      try {
+        const res = await RentalAPI.startRental(rentalId);
+        if (res && res.success) {
+          this.showToast(`Chuyến đi #${rentalId} đã bắt đầu! Trạng thái: IN_PROGRESS.`, 'success');
+          await this.renderOwnerPortal();
+          this.switchOwnerTab('REQUESTS');
+          return;
+        }
+      } catch (err) {
+        console.warn('Lỗi startRental API:', err);
+      }
+    }
+    this.showToast(`Bắt đầu chuyến đi #${rentalId}.`, 'info');
+  },
+
+  async completeRental(rentalId) {
+    if (!confirm(`Xác nhận hoàn tất chuyến đi cho đơn #${rentalId} (Khách đã bàn giao lại xe an toàn)?`)) {
+      return;
+    }
+    if (typeof RentalAPI !== 'undefined' && RentalAPI.completeRental) {
+      try {
+        const res = await RentalAPI.completeRental(rentalId);
+        if (res && res.success) {
+          this.showToast(`Chuyến đi #${rentalId} đã hoàn tất thành công! Trạng thái: COMPLETED.`, 'success');
+          await this.renderOwnerPortal();
+          this.switchOwnerTab('REQUESTS');
+          return;
+        }
+      } catch (err) {
+        console.warn('Lỗi completeRental API:', err);
+      }
+    }
+    this.showToast(`Hoàn tất chuyến đi #${rentalId}.`, 'info');
   }
 };

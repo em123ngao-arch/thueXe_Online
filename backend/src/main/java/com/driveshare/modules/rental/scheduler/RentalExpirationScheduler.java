@@ -41,4 +41,41 @@ public class RentalExpirationScheduler {
             log.info("CRP-43: Đã tự động chuyển {} đơn PENDING quá hạn sang EXPIRED", expiredList.size());
         }
     }
+
+    /**
+     * Giai đoạn 3 & 4 (mục 11.4 của đặc tả v2.0.0):
+     * Quét các đơn WAITING_PAYMENT đã quá hạn paymentExpiresAt (45 phút) nhưng khách chưa cọc.
+     * Chuyển sang EXPIRED (giải phóng Soft Lock), và mở lại các đơn ON_HOLD trùng lịch sang PENDING_APPROVAL.
+     */
+    @Scheduled(cron = "${app.rental.expire-softlock-cron:0 * * * * *}")
+    @Transactional
+    public void autoExpireWaitingPaymentSoftLocks() {
+        Instant now = Instant.now();
+        List<Rental> expiredList = rentalRepository.findExpiredWaitingPaymentRentals(ERentalStatus.WAITING_PAYMENT, now);
+
+        if (!expiredList.isEmpty()) {
+            for (Rental rental : expiredList) {
+                rental.setStatus(ERentalStatus.EXPIRED);
+                rental.setRejectReason("Đã quá thời hạn 45 phút giữ chỗ nhưng khách hàng không hoàn tất đặt cọc");
+
+                // Mở lại các đơn ON_HOLD trùng lịch
+                List<Rental> onHoldRentals = rentalRepository.findCompetingRentals(
+                        rental.getCarId(),
+                        rental.getStartDate(),
+                        rental.getEndDate(),
+                        rental.getRentalId(),
+                        List.of(ERentalStatus.ON_HOLD)
+                );
+                for (Rental onHold : onHoldRentals) {
+                    onHold.setStatus(ERentalStatus.PENDING_APPROVAL);
+                    onHold.setRejectReason(null);
+                }
+                if (!onHoldRentals.isEmpty()) {
+                    rentalRepository.saveAll(onHoldRentals);
+                }
+            }
+            rentalRepository.saveAll(expiredList);
+            log.info("Giai đoạn 3: Đã giải phóng Soft Lock cho {} đơn WAITING_PAYMENT quá hạn và phục hồi các đơn ON_HOLD", expiredList.size());
+        }
+    }
 }

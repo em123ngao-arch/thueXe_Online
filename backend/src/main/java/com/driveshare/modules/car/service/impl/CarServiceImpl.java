@@ -315,6 +315,12 @@ public class CarServiceImpl implements CarService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<CarResponse> searchCars(com.driveshare.modules.car.dto.request.CarSearchRequest request) {
+        if (request.getStartDate() != null && request.getEndDate() != null) {
+            if (request.getStartDate().isAfter(request.getEndDate())) {
+                throw new AppException(ErrorCode.INVALID_RENTAL_DATES);
+            }
+        }
+
         // Xử lý tiêu chí Sắp xếp (Sort)
         Sort sort = Sort.by(Sort.Direction.DESC, "createdAt"); // Mặc định: mới nhất
         if ("price_asc".equalsIgnoreCase(request.getSortBy())) {

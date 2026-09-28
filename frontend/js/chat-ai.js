@@ -212,7 +212,8 @@ const AiChatWidget = (() => {
       const loadingId = appendLoading();
 
       try {
-        const res = await fetch("/api/v1/chat", {
+        const baseUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) ? API_CONFIG.BASE_URL : 'http://localhost:8080/api/v1';
+        const res = await fetch(`${baseUrl}/chat`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -301,7 +302,8 @@ const AiChatWidget = (() => {
 
   async function loadHistory() {
     try {
-      const res = await fetch(`/api/v1/chat/${sessionId}/history`, {
+      const baseUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) ? API_CONFIG.BASE_URL : 'http://localhost:8080/api/v1';
+      const res = await fetch(`${baseUrl}/chat/${sessionId}/history`, {
         headers: {
           "Authorization": localStorage.getItem("token") ? `Bearer ${localStorage.getItem("token")}` : ""
         }

@@ -185,8 +185,8 @@ const App = {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
-  // Hiển thị màn hình "Chuyến của tôi" (cho Renter)
-  showMyBookingsView() {
+  // Hiển thị màn hình "Chuyến của tôi" (cho Renter - Giai đoạn 1 v2.0.0)
+  async showMyBookingsView() {
     const renterView = document.getElementById('renterSection');
     const myBookingsView = document.getElementById('myBookingsSection');
     const ownerView = document.getElementById('ownerSection');
@@ -201,7 +201,24 @@ const App = {
     document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
     document.getElementById('navMyBookings')?.classList.add('active');
 
-    const bookings = StorageService.getBookings();
+    // Ưu tiên tải từ API backend thực tế (RentalAPI.getMyRentals)
+    let bookings = [];
+    if (typeof RentalAPI !== 'undefined' && RentalAPI.getMyRentals && typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
+      try {
+        const res = await RentalAPI.getMyRentals();
+        if (res && (res.code === 200 || res.success) && Array.isArray(res.data)) {
+          bookings = res.data;
+        } else {
+          bookings = StorageService.getBookings();
+        }
+      } catch (e) {
+        console.warn('Lỗi khi tải đơn thuê từ server, sử dụng local storage:', e);
+        bookings = StorageService.getBookings();
+      }
+    } else {
+      bookings = StorageService.getBookings();
+    }
+
     RenderService.renderMyBookings(bookings);
   },
 
@@ -214,14 +231,39 @@ const App = {
   },
 
   // Cập nhật số đơn trên navbar
-  updateBookingCountBadge() {
+  async updateBookingCountBadge() {
     const badge = document.getElementById('navBookingBadgeCount');
-    if (badge) {
-      const bookings = StorageService.getBookings();
-      const activeCount = bookings.filter(b => b.status === 'DEPOSIT_PAID' || b.status === 'PENDING').length;
-      badge.textContent = activeCount;
-      badge.style.display = activeCount > 0 ? 'flex' : 'none';
+    if (!badge) return;
+
+    let activeCount = 0;
+    if (typeof RentalAPI !== 'undefined' && RentalAPI.getMyRentals && typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
+      try {
+        const res = await RentalAPI.getMyRentals();
+        if (res && (res.code === 200 || res.success) && Array.isArray(res.data)) {
+          activeCount = res.data.filter(b => 
+            b.status === 'PENDING' || 
+            b.status === 'PENDING_APPROVAL' || 
+            b.status === 'WAITING_PAYMENT' || 
+            b.status === 'CONFIRMED' || 
+            b.status === 'DEPOSIT_PAID' ||
+            b.status === 'IN_PROGRESS'
+          ).length;
+          badge.textContent = activeCount;
+          badge.style.display = activeCount > 0 ? 'flex' : 'none';
+          return;
+        }
+      } catch (e) {}
     }
+
+    const bookings = StorageService.getBookings();
+    activeCount = bookings.filter(b => 
+      b.status === 'DEPOSIT_PAID' || 
+      b.status === 'PENDING' || 
+      b.status === 'PENDING_APPROVAL' ||
+      b.status === 'WAITING_PAYMENT'
+    ).length;
+    badge.textContent = activeCount;
+    badge.style.display = activeCount > 0 ? 'flex' : 'none';
   },
 
   // Lắng nghe và áp dụng bộ lọc
@@ -270,74 +312,182 @@ const App = {
       this.applyFilters();
     });
 
-    // Nút tìm kiếm tại Hero Search Widget
+    // Nút tìm kiếm tại Hero Search Widget (CRP-38 & CRP-39)
     document.getElementById('btnHeroSearch')?.addEventListener('click', () => {
       const locationSelect = document.getElementById('searchLocationSelect');
       if (locationSelect) {
         this.currentFilters.city = locationSelect.value;
+      }
+      const startEl = document.getElementById('searchStartDate');
+      const endEl = document.getElementById('searchEndDate');
+      if (startEl && startEl.value) {
+        this.currentFilters.startDate = startEl.value;
+      }
+      if (endEl && endEl.value) {
+        this.currentFilters.endDate = endEl.value;
       }
       this.applyFilters();
       document.getElementById('catalogSection')?.scrollIntoView({ behavior: 'smooth' });
     });
   },
 
-  // Áp dụng logic lọc danh sách xe
-  applyFilters() {
-    const allCars = StorageService.getCars();
-    // Chỉ lấy xe ACTIVE cho sàn khách thuê
-    let filtered = allCars.filter(c => c.status === 'ACTIVE');
+  // Áp dụng logic lọc danh sách xe (hỗ trợ CarAPI.searchCars & fallback)
+  async applyFilters() {
+    let carsFromApi = null;
+    if (typeof CarAPI !== 'undefined' && CarAPI.searchCars) {
+      try {
+        const params = { page: 0, size: 50 };
+        if (this.currentFilters.city && this.currentFilters.city !== 'ALL') params.province = this.currentFilters.city;
+        if (this.currentFilters.brand && this.currentFilters.brand !== 'ALL') params.brand = this.currentFilters.brand;
+        if (this.currentFilters.startDate) params.startDate = this.currentFilters.startDate;
+        if (this.currentFilters.endDate) params.endDate = this.currentFilters.endDate;
+        if (this.currentFilters.transmission && this.currentFilters.transmission !== 'ALL') params.transmission = this.currentFilters.transmission;
+        if (this.currentFilters.fuel && this.currentFilters.fuel !== 'ALL') params.fuelType = this.currentFilters.fuel;
+        if (this.currentFilters.priceRange && this.currentFilters.priceRange !== 'ALL') {
+          if (this.currentFilters.priceRange === 'UNDER_800') params.maxPrice = 800000;
+          else if (this.currentFilters.priceRange === '800_1200') { params.minPrice = 800000; params.maxPrice = 1200000; }
+          else if (this.currentFilters.priceRange === 'OVER_1200') params.minPrice = 1200000;
+        }
+        if (this.currentFilters.sort === 'PRICE_ASC') params.sortBy = 'price_asc';
+        else if (this.currentFilters.sort === 'PRICE_DESC') params.sortBy = 'price_desc';
 
-    // Lọc theo thành phố
-    if (this.currentFilters.city && this.currentFilters.city !== 'ALL') {
-      filtered = filtered.filter(c => c.city && c.city.includes(this.currentFilters.city));
-    }
+        if (this.currentFilters.seats === '7') {
+          params.seats = 7;
+        }
 
-    // Lọc theo Hãng
-    if (this.currentFilters.brand && this.currentFilters.brand !== 'ALL') {
-      filtered = filtered.filter(c => c.brand.toLowerCase() === this.currentFilters.brand.toLowerCase());
-    }
-
-    // Lọc theo Số chỗ
-    if (this.currentFilters.seats && this.currentFilters.seats !== 'ALL') {
-      if (this.currentFilters.seats === '4-5') {
-        filtered = filtered.filter(c => c.seat_count <= 5 && c.car_type !== 'PICKUP');
-      } else if (this.currentFilters.seats === '7') {
-        filtered = filtered.filter(c => c.seat_count >= 7);
-      } else if (this.currentFilters.seats === 'PICKUP') {
-        filtered = filtered.filter(c => c.car_type === 'PICKUP');
+        const res = await CarAPI.searchCars(params);
+        // Backend trả dạng: { data: { items: [...], pagination: {...} } }
+        const items = res?.data?.items || res?.data?.content || res?.result?.items || [];
+        if (items.length > 0) {
+          carsFromApi = items;
+        }
+      } catch (err) {
+        console.warn('CarAPI.searchCars fallback to local:', err);
       }
     }
 
-    // Lọc theo Hộp số
-    if (this.currentFilters.transmission && this.currentFilters.transmission !== 'ALL') {
-      filtered = filtered.filter(c => c.transmission === this.currentFilters.transmission);
-    }
+    let filtered = [];
+    if (carsFromApi) {
+      filtered = [...carsFromApi];
 
-    // Lọc theo Nhiên liệu
-    if (this.currentFilters.fuel && this.currentFilters.fuel !== 'ALL') {
-      filtered = filtered.filter(c => c.fuel_type === this.currentFilters.fuel);
-    }
-
-    // Lọc theo Mức giá
-    if (this.currentFilters.priceRange && this.currentFilters.priceRange !== 'ALL') {
-      if (this.currentFilters.priceRange === 'UNDER_800') {
-        filtered = filtered.filter(c => c.price_per_day < 800000);
-      } else if (this.currentFilters.priceRange === '800_1200') {
-        filtered = filtered.filter(c => c.price_per_day >= 800000 && c.price_per_day <= 1200000);
-      } else if (this.currentFilters.priceRange === 'OVER_1200') {
-        filtered = filtered.filter(c => c.price_per_day > 1200000);
+      // Lọc theo Số chỗ
+      if (this.currentFilters.seats && this.currentFilters.seats !== 'ALL') {
+        if (this.currentFilters.seats === '4-5') {
+          filtered = filtered.filter(c => {
+            const seats = c.seats || c.seat_count || 5;
+            const model = (c.model || '').toLowerCase();
+            return seats <= 5 && !model.includes('ranger');
+          });
+        } else if (this.currentFilters.seats === '7') {
+          filtered = filtered.filter(c => (c.seats || c.seat_count || 0) >= 7);
+        } else if (this.currentFilters.seats === 'PICKUP') {
+          filtered = filtered.filter(c => (c.model || '').toLowerCase().includes('ranger') || c.car_type === 'PICKUP');
+        }
       }
-    }
 
-    // Sắp xếp
-    if (this.currentFilters.sort === 'PRICE_ASC') {
-      filtered.sort((a, b) => a.price_per_day - b.price_per_day);
-    } else if (this.currentFilters.sort === 'PRICE_DESC') {
-      filtered.sort((a, b) => b.price_per_day - a.price_per_day);
-    } else if (this.currentFilters.sort === 'RATING') {
-      filtered.sort((a, b) => b.rating - a.rating);
-    } else if (this.currentFilters.sort === 'TRIPS') {
-      filtered.sort((a, b) => b.trip_count - a.trip_count);
+      // Lọc theo Hộp số
+      if (this.currentFilters.transmission && this.currentFilters.transmission !== 'ALL') {
+        filtered = filtered.filter(c => c.transmission === this.currentFilters.transmission);
+      }
+
+      // Lọc theo Nhiên liệu
+      if (this.currentFilters.fuel && this.currentFilters.fuel !== 'ALL') {
+        filtered = filtered.filter(c => (c.fuel_type || c.fuelType) === this.currentFilters.fuel);
+      }
+
+      // Lọc theo Hãng xe
+      if (this.currentFilters.brand && this.currentFilters.brand !== 'ALL') {
+        filtered = filtered.filter(c => (c.brand || '').toLowerCase() === this.currentFilters.brand.toLowerCase());
+      }
+
+      // Lọc theo Địa điểm / Tỉnh thành
+      if (this.currentFilters.city && this.currentFilters.city !== 'ALL') {
+        filtered = filtered.filter(c => {
+          const prov = (c.province || c.city || '').toLowerCase();
+          return prov.includes(this.currentFilters.city.toLowerCase());
+        });
+      }
+
+      // Lọc theo Mức giá
+      if (this.currentFilters.priceRange && this.currentFilters.priceRange !== 'ALL') {
+        if (this.currentFilters.priceRange === 'UNDER_800') {
+          filtered = filtered.filter(c => Number(c.price_per_day || c.pricePerDay || 0) < 800000);
+        } else if (this.currentFilters.priceRange === '800_1200') {
+          filtered = filtered.filter(c => {
+            const p = Number(c.price_per_day || c.pricePerDay || 0);
+            return p >= 800000 && p <= 1200000;
+          });
+        } else if (this.currentFilters.priceRange === 'OVER_1200') {
+          filtered = filtered.filter(c => Number(c.price_per_day || c.pricePerDay || 0) > 1200000);
+        }
+      }
+
+      // Sắp xếp
+      if (this.currentFilters.sort === 'PRICE_ASC') {
+        filtered.sort((a, b) => Number(a.price_per_day || a.pricePerDay || 0) - Number(b.price_per_day || b.pricePerDay || 0));
+      } else if (this.currentFilters.sort === 'PRICE_DESC') {
+        filtered.sort((a, b) => Number(b.price_per_day || b.pricePerDay || 0) - Number(a.price_per_day || a.pricePerDay || 0));
+      }
+      console.log('[App] Sau khi lọc: còn ' + filtered.length + ' xe phù hợp');
+    } else {
+      // FALLBACK: chỉ dùng khi backend offline hoặc không có kết nối
+      console.warn('[App] Backend không có dữ liệu xe — fallback về local StorageService');
+      const allCars = StorageService.getCars();
+      // Chỉ lấy xe ACTIVE cho sàn khách thuê
+      filtered = allCars.filter(c => c.status === 'ACTIVE');
+
+      // Lọc theo thành phố
+      if (this.currentFilters.city && this.currentFilters.city !== 'ALL') {
+        filtered = filtered.filter(c => c.city && c.city.includes(this.currentFilters.city));
+      }
+
+      // Lọc theo Hãng
+      if (this.currentFilters.brand && this.currentFilters.brand !== 'ALL') {
+        filtered = filtered.filter(c => c.brand.toLowerCase() === this.currentFilters.brand.toLowerCase());
+      }
+
+      // Lọc theo Số chỗ
+      if (this.currentFilters.seats && this.currentFilters.seats !== 'ALL') {
+        if (this.currentFilters.seats === '4-5') {
+          filtered = filtered.filter(c => c.seat_count <= 5 && c.car_type !== 'PICKUP');
+        } else if (this.currentFilters.seats === '7') {
+          filtered = filtered.filter(c => c.seat_count >= 7);
+        } else if (this.currentFilters.seats === 'PICKUP') {
+          filtered = filtered.filter(c => c.car_type === 'PICKUP');
+        }
+      }
+
+      // Lọc theo Hộp số
+      if (this.currentFilters.transmission && this.currentFilters.transmission !== 'ALL') {
+        filtered = filtered.filter(c => c.transmission === this.currentFilters.transmission);
+      }
+
+      // Lọc theo Nhiên liệu
+      if (this.currentFilters.fuel && this.currentFilters.fuel !== 'ALL') {
+        filtered = filtered.filter(c => c.fuel_type === this.currentFilters.fuel);
+      }
+
+      // Lọc theo Mức giá
+      if (this.currentFilters.priceRange && this.currentFilters.priceRange !== 'ALL') {
+        if (this.currentFilters.priceRange === 'UNDER_800') {
+          filtered = filtered.filter(c => c.price_per_day < 800000);
+        } else if (this.currentFilters.priceRange === '800_1200') {
+          filtered = filtered.filter(c => c.price_per_day >= 800000 && c.price_per_day <= 1200000);
+        } else if (this.currentFilters.priceRange === 'OVER_1200') {
+          filtered = filtered.filter(c => c.price_per_day > 1200000);
+        }
+      }
+
+      // Sắp xếp
+      if (this.currentFilters.sort === 'PRICE_ASC') {
+        filtered.sort((a, b) => a.price_per_day - b.price_per_day);
+      } else if (this.currentFilters.sort === 'PRICE_DESC') {
+        filtered.sort((a, b) => b.price_per_day - a.price_per_day);
+      } else if (this.currentFilters.sort === 'RATING') {
+        filtered.sort((a, b) => b.rating - a.rating);
+      } else if (this.currentFilters.sort === 'TRIPS') {
+        filtered.sort((a, b) => b.trip_count - a.trip_count);
+      }
     }
 
     // Cập nhật số lượng xe tìm thấy
@@ -382,18 +532,39 @@ const App = {
 
   // Gợi ý thông minh tự nhiên theo lộ trình (Không có emoji)
   applyPromptSuggestion(type) {
+    // Reset all filter controls visually first
+    document.querySelectorAll('[data-filter-brand]').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-filter-brand="ALL"]')?.classList.add('active');
+    this.currentFilters.brand = 'ALL';
+
+    document.querySelectorAll('[data-filter-seats]').forEach(b => b.classList.remove('active'));
+    const fuelSelect = document.getElementById('selectFuel');
+    if (fuelSelect) fuelSelect.value = 'ALL';
+    this.currentFilters.fuel = 'ALL';
+
+    const priceSelect = document.getElementById('selectPrice');
+    if (priceSelect) priceSelect.value = 'ALL';
+    this.currentFilters.priceRange = 'ALL';
+
     if (type === 'VUNG_TAU') {
       this.currentFilters.seats = '4-5';
       this.currentFilters.priceRange = 'UNDER_800';
-      this.showToast('Gợi ý: Dòng xe 5 chỗ Sedan Vios / Accent tiết kiệm xăng, cốp rộng đi Vũng Tàu', 'info');
+      document.querySelector('[data-filter-seats="4-5"]')?.classList.add('active');
+      if (priceSelect) priceSelect.value = 'UNDER_800';
+      this.showToast('Gợi ý: Dòng xe 4-5 chỗ Sedan / CUV tiết kiệm xăng dưới 800.000 đ/ngày đi Vũng Tàu', 'info');
     } else if (type === 'DA_LAT_7CHO') {
       this.currentFilters.seats = '7';
-      this.showToast('Gợi ý: Dòng MPV/SUV 7 chỗ Xpander / Carnival gầm cao máy khỏe vượt đèo', 'info');
+      document.querySelector('[data-filter-seats="7"]')?.classList.add('active');
+      this.showToast('Gợi ý: Dòng MPV/SUV 7 chỗ Xpander / Fortuner / Carnival gầm cao máy khỏe cho gia đình đi Đà Lạt', 'info');
     } else if (type === 'XE_DIEN') {
       this.currentFilters.fuel = 'ELECTRIC';
-      this.showToast('Gợi ý: SUV điện VinFast VF8 lái êm ái, sạc miễn phí trên toàn quốc', 'info');
+      document.querySelector('[data-filter-seats="ALL"]')?.classList.add('active');
+      if (fuelSelect) fuelSelect.value = 'ELECTRIC';
+      this.showToast('Gợi ý: Dòng xe điện thông minh VinFast VF8 lái êm ái, sạc thông minh', 'info');
     } else if (type === 'TIET_KIEM') {
       this.currentFilters.priceRange = 'UNDER_800';
+      document.querySelector('[data-filter-seats="ALL"]')?.classList.add('active');
+      if (priceSelect) priceSelect.value = 'UNDER_800';
       this.showToast('Gợi ý: Dòng xe giá tốt dưới 800.000 đ/ngày cho chuyến đi tiết kiệm', 'info');
     }
 
@@ -403,16 +574,27 @@ const App = {
 
   // Modal Chi tiết xe
   async openCarDetailModal(carId) {
-    let car = StorageService.getCarById(carId);
+    // Ưu tiên lấy từ backend API (dữ liệu thật)
+    let car = null;
 
-    if (typeof ApiService !== 'undefined' && ApiService.getPublicCarDetail) {
+    const carApi = (typeof CarAPI !== 'undefined' && CarAPI.getPublicCarDetail) ? CarAPI : null;
+    if (carApi) {
       try {
-        const res = await ApiService.getPublicCarDetail(carId);
+        const res = await carApi.getPublicCarDetail(carId);
         if (res && (res.success || res.code === 200) && res.data) {
           car = res.data;
         }
       } catch (err) {
-        console.warn('API getPublicCarDetail fallback to local data:', err);
+        console.warn('[App] API getPublicCarDetail lỗi, thử fallback local:', err);
+      }
+    }
+
+    // Fallback về local chỉ khi carId khớp với data local (không dùng khi backend offline + carId từ API)
+    if (!car) {
+      const localCar = StorageService.getCarById(carId);
+      if (localCar) {
+        car = localCar;
+        console.warn('[App] Dùng dữ liệu local cho xe #' + carId + ' — chỉ hiển thị, không thể đặt xe');
       }
     }
 

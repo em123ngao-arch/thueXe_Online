@@ -1,9 +1,13 @@
 package com.driveshare.modules.car.repository.specification;
 
 import com.driveshare.common.enums.ECarStatus;
+import com.driveshare.common.enums.ERentalStatus;
 import com.driveshare.modules.car.dto.request.CarSearchRequest;
 import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.rental.entity.Rental;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
 
@@ -11,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Lớp tạo dynamic query (JPA Specification) phục vụ tìm kiếm và lọc xe (CRP-39).
+ * Lớp tạo dynamic query (JPA Specification) phục vụ tìm kiếm và lọc xe (CRP-39, CRP-38).
  */
 public class CarSpecification {
 
@@ -63,6 +67,31 @@ public class CarSpecification {
             }
             if (request.getMaxPrice() != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("pricePerDay"), request.getMaxPrice()));
+            }
+
+            // 9. Lọc xe khả dụng theo khoảng ngày (CRP-38 & Giai đoạn 1 v2.0.0)
+            if (request.getStartDate() != null && request.getEndDate() != null && query != null) {
+                Subquery<Long> subquery = query.subquery(Long.class);
+                Root<Rental> rentalRoot = subquery.from(Rental.class);
+                subquery.select(rentalRoot.get("carId"));
+
+                List<Predicate> conflictPredicates = new ArrayList<>();
+                conflictPredicates.add(cb.equal(rentalRoot.get("carId"), root.get("carId")));
+                conflictPredicates.add(rentalRoot.get("status").in(
+                        ERentalStatus.APPROVED,
+                        ERentalStatus.WAITING_PAYMENT,
+                        ERentalStatus.CONFIRMED,
+                        ERentalStatus.IN_PROGRESS
+                ));
+                conflictPredicates.add(cb.isNull(rentalRoot.get("deletedAt")));
+
+                // Điều kiện giao nhau: rental.startDate <= request.endDate AND rental.endDate >= request.startDate
+                conflictPredicates.add(cb.lessThanOrEqualTo(rentalRoot.get("startDate"), request.getEndDate()));
+                conflictPredicates.add(cb.greaterThanOrEqualTo(rentalRoot.get("endDate"), request.getStartDate()));
+
+                subquery.where(conflictPredicates.toArray(new Predicate[0]));
+
+                predicates.add(cb.not(root.get("carId").in(subquery)));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

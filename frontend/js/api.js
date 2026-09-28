@@ -953,3 +953,198 @@ const PaymentAPI = {
   }
 };
 
+// ─────────────────────────────────────────────────────────────
+// RENTAL API SERVICE (CRP-41, CRP-42, CRP-44, CRP-46 - Giai đoạn 1 v2.0.0)
+// ─────────────────────────────────────────────────────────────
+
+const RentalAPI = {
+  getAuthHeaders() {
+    const token = TokenService.getToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+  },
+
+  /**
+   * CRP-41 & Giai đoạn 1: Gửi yêu cầu thuê xe mới (POST /api/v1/rentals)
+   */
+  async createRental(rentalData) {
+    const url = `${API_CONFIG.BASE_URL}/rentals`;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(rentalData)
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return {
+          success: false,
+          status: res.status,
+          errorCode: json.errorCode || json.code,
+          message: json.message || 'Không thể tạo yêu cầu thuê xe'
+        };
+      }
+      return { success: true, data: json.data || json };
+    } catch (err) {
+      console.warn('[RentalAPI] createRental offline/error:', err);
+      return { success: false, message: 'Lỗi kết nối máy chủ khi tạo yêu cầu thuê xe' };
+    }
+  },
+
+  /**
+   * CRP-44: Khách thuê xem danh sách đơn thuê của chính mình (GET /api/v1/rentals/me)
+   */
+  async getMyRentals() {
+    const url = `${API_CONFIG.BASE_URL}/rentals/me`;
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể lấy danh sách đơn thuê' };
+      }
+      return { success: true, data: json.data || [] };
+    } catch (err) {
+      console.warn('[RentalAPI] getMyRentals offline/error:', err);
+      return { success: false, message: 'Lỗi kết nối máy chủ' };
+    }
+  },
+
+  /**
+   * CRP-44 & Giai đoạn 1: Khách thuê rút / hủy yêu cầu khi đang chờ duyệt (PUT /api/v1/rentals/{id}/cancel)
+   */
+  async cancelRental(rentalId) {
+    const url = `${API_CONFIG.BASE_URL}/rentals/${rentalId}/cancel`;
+    try {
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể hủy yêu cầu thuê xe' };
+      }
+      return { success: true, data: json.data };
+    } catch (err) {
+      console.warn('[RentalAPI] cancelRental offline/error:', err);
+      return { success: false, message: 'Lỗi kết nối máy chủ khi hủy yêu cầu' };
+    }
+  },
+
+  /**
+   * CRP-46: Chủ xe xem danh sách yêu cầu gửi đến xe của mình (GET /api/v1/owner/rentals)
+   */
+  async getOwnerRentals(status = null) {
+    const url = `${API_CONFIG.BASE_URL}/owner/rentals${status ? '?status=' + status : ''}`;
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể lấy danh sách yêu cầu thuê' };
+      }
+      return { success: true, data: json.data || [] };
+    } catch (err) {
+      console.warn('[RentalAPI] getOwnerRentals offline/error:', err);
+      return { success: false, message: 'Lỗi kết nối máy chủ' };
+    }
+  },
+
+  /**
+   * CRP-47 & Giai đoạn 2 & 3: Chủ xe duyệt yêu cầu thuê xe (PUT /api/v1/owner/rentals/{id}/approve)
+   */
+  async approveRental(rentalId) {
+    const url = `${API_CONFIG.BASE_URL}/owner/rentals/${rentalId}/approve`;
+    try {
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể duyệt yêu cầu thuê' };
+      }
+      return { success: true, data: json.data };
+    } catch (err) {
+      console.warn('[RentalAPI] approveRental offline/error:', err);
+      return { success: false, message: 'Lỗi kết nối máy chủ khi duyệt yêu cầu' };
+    }
+  },
+
+  /**
+   * CRP-48: Chủ xe từ chối yêu cầu thuê xe (PUT /api/v1/owner/rentals/{id}/reject)
+   */
+  async rejectRental(rentalId, reason) {
+    const url = `${API_CONFIG.BASE_URL}/owner/rentals/${rentalId}/reject`;
+    try {
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          ...this.getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason })
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể từ chối yêu cầu thuê' };
+      }
+      return { success: true, data: json.data };
+    } catch (err) {
+      console.warn('[RentalAPI] rejectRental offline/error:', err);
+      return { success: false, message: 'Lỗi kết nối máy chủ khi từ chối yêu cầu' };
+    }
+  },
+
+  /**
+   * Giai đoạn 4: Bắt đầu chuyến đi (bàn giao xe) -> chuyển sang IN_PROGRESS
+   * PUT /api/v1/owner/rentals/{id}/start
+   */
+  async startRental(rentalId) {
+    const url = `${API_CONFIG.BASE_URL}/owner/rentals/${rentalId}/start`;
+    try {
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể bắt đầu chuyến đi' };
+      }
+      return { success: true, data: json.data };
+    } catch (err) {
+      console.warn('[RentalAPI] startRental error:', err);
+      return { success: false, message: 'Lỗi kết nối máy chủ khi bắt đầu chuyến đi' };
+    }
+  },
+
+  /**
+   * Giai đoạn 4: Hoàn tất chuyến đi (khách trả xe) -> chuyển sang COMPLETED
+   * PUT /api/v1/owner/rentals/{id}/complete
+   */
+  async completeRental(rentalId) {
+    const url = `${API_CONFIG.BASE_URL}/owner/rentals/${rentalId}/complete`;
+    try {
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể hoàn tất chuyến đi' };
+      }
+      return { success: true, data: json.data };
+    } catch (err) {
+      console.warn('[RentalAPI] completeRental error:', err);
+      return { success: false, message: 'Lỗi kết nối máy chủ khi hoàn tất chuyến đi' };
+    }
+  }
+};
+
+

@@ -60,6 +60,8 @@ public enum ErrorCode {
     RENTAL_NOT_FOUND("RENTAL_NOT_FOUND", "Không tìm thấy yêu cầu thuê xe", HttpStatus.NOT_FOUND),
     MAX_PENDING_RENTALS_EXCEEDED("MAX_PENDING_RENTALS_EXCEEDED", "Bạn chỉ có thể gửi tối đa 3 yêu cầu thuê xe cùng một lúc", HttpStatus.BAD_REQUEST),
     RENTAL_CANNOT_BE_CANCELLED("RENTAL_CANNOT_BE_CANCELLED", "Yêu cầu thuê xe không thể hủy ở trạng thái hiện tại", HttpStatus.BAD_REQUEST),
+    RENTAL_CANNOT_BE_STARTED("RENTAL_CANNOT_BE_STARTED", "Chuyến đi phải ở trạng thái đã chốt cọc (CONFIRMED) để bắt đầu", HttpStatus.BAD_REQUEST),
+    RENTAL_CANNOT_BE_COMPLETED("RENTAL_CANNOT_BE_COMPLETED", "Chuyến đi phải ở trạng thái đang diễn ra (IN_PROGRESS) để hoàn thành", HttpStatus.BAD_REQUEST),
     RENTAL_ALREADY_PROCESSED("RENTAL_ALREADY_PROCESSED", "Yêu cầu thuê xe đã được xử lý", HttpStatus.BAD_REQUEST),
     INVALID_RENTAL_DATES("INVALID_RENTAL_DATES", "Ngày kết thúc thuê phải sau ngày bắt đầu thuê", HttpStatus.BAD_REQUEST),
     CAR_ALREADY_RENTED("CAR_ALREADY_RENTED", "Xe đã có người thuê trong khoảng thời gian này", HttpStatus.CONFLICT),
