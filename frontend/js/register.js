@@ -266,20 +266,26 @@ const RegisterController = {
       const redirect = urlParams.get("redirect");
 
       setTimeout(() => {
-        if (redirect && !redirect.includes("login.html")) {
+        const user = AuthService.getCurrentUser();
+        const role = (typeof resolvePrimaryRole === "function" && user?.roles)
+          ? resolvePrimaryRole(user.roles, user.role)
+          : (user?.role || "").toUpperCase();
+
+        if (role === "ADMIN") {
+          window.location.href = "admin.html";
+        } else if (role === "OWNER") {
+          // Chủ xe luôn ưu tiên vào trang Quản lý xe, trừ khi có redirect đến trang chủ xe khác
+          if (redirect && redirect.includes("owner-earnings.html")) {
+            window.location.href = decodeURIComponent(redirect);
+          } else {
+            window.location.href = "owner-cars.html";
+          }
+        } else if (redirect && !redirect.includes("login.html") && !redirect.includes("owner-cars.html") && !redirect.includes("admin.html")) {
           window.location.href = decodeURIComponent(redirect);
         } else {
-          const user = AuthService.getCurrentUser();
-          const role = (user?.role || "").toUpperCase();
-          if (role === "ADMIN") {
-            window.location.href = "admin.html";
-          } else if (role === "OWNER") {
-            window.location.href = "owner-cars.html";
-          } else {
-            window.location.href = "index.html";
-          }
+          window.location.href = "index.html";
         }
-      }, 1000);
+      }, 700);
     } else {
       if (typeof showToast === "function") {
         showToast(res.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản hoặc mật khẩu!", "error", 2500);

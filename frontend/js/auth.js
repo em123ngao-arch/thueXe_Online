@@ -104,6 +104,22 @@ function checkAuth(requiredRole = null) {
   return true;
 }
 
+function resolvePrimaryRole(roles, singleRole) {
+  const list = [];
+  if (singleRole && typeof singleRole === "string") list.push(singleRole);
+  if (Array.isArray(roles)) list.push(...roles);
+  else if (roles && typeof roles === "object") list.push(...Object.values(roles));
+
+  const normalized = list.map((r) =>
+    (typeof r === "string" ? r : (r.roleName || r.name || "")).replace("ROLE_", "").toUpperCase()
+  );
+
+  if (normalized.includes("ADMIN")) return "ADMIN";
+  if (normalized.includes("OWNER")) return "OWNER";
+  if (normalized.includes("STAFF")) return "STAFF";
+  return "RENTER";
+}
+
 function setSession(authData) {
   const token =
     authData.accessToken || authData.access_token || authData.token;
@@ -119,11 +135,13 @@ function setSession(authData) {
     localStorage.setItem("ds_refresh_token", refreshToken);
   }
 
-  const role =
-    authData.role ||
-    (authData.roles && authData.roles[0]) ||
-    authData.user?.role ||
-    "RENTER";
+  const rawRoles = authData.roles || authData.user?.roles || (authData.role ? [authData.role] : []);
+  const allRoles = (Array.isArray(rawRoles) ? rawRoles : Object.values(rawRoles))
+    .map((r) => (typeof r === "string" ? r : (r.roleName || r.name || "")))
+    .map((r) => (r.startsWith("ROLE_") ? r : "ROLE_" + r.toUpperCase()));
+  if (allRoles.length === 0) allRoles.push("ROLE_RENTER");
+
+  const primaryRole = resolvePrimaryRole(allRoles, authData.role || authData.user?.role);
 
   const user = {
     userId: authData.userId || authData.user_id || authData.user?.id || Date.now(),
@@ -142,8 +160,8 @@ function setSession(authData) {
       "Người dùng",
     email: authData.email || authData.user?.email || "",
     phone: authData.phoneNumber || authData.phone || authData.user?.phoneNumber || "",
-    role: role.replace("ROLE_", ""),
-    roles: [role.startsWith("ROLE_") ? role : "ROLE_" + role],
+    role: primaryRole,
+    roles: allRoles,
     status: authData.status || authData.user?.status || "ACTIVE",
     avatar:
       authData.avatarUrl ||
@@ -155,6 +173,7 @@ function setSession(authData) {
   localStorage.setItem(KEY_USER, JSON.stringify(user));
   localStorage.setItem("ds_user", JSON.stringify(user));
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+  localStorage.setItem("driveshare_current_role", primaryRole);
 
   if (typeof AuthService !== "undefined" && AuthService.updateAuthUI) {
     AuthService.updateAuthUI();
@@ -442,9 +461,7 @@ const AuthService = {
 
     navAuthContainers.forEach((navAuthContainer) => {
       if (user && this.isAuthenticated()) {
-        const roleName = (user.role || (user.roles && user.roles[0]) || "RENTER")
-          .replace("ROLE_", "")
-          .toUpperCase();
+        const roleName = resolvePrimaryRole(user.roles, user.role);
 
         const roleBadgeText =
           roleName === "ADMIN" ? "Quản trị" : roleName === "OWNER" ? "Chủ xe" : "Khách thuê";
@@ -462,18 +479,18 @@ const AuthService = {
               <img src="${userAvatar}" alt="${user.fullName || user.name}" class="nav-avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid ${roleColor};" />
               <div class="nav-user-info" style="display: flex; flex-direction: column; line-height: 1.2;">
                 <span class="nav-user-name" style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">${user.fullName || user.name}</span>
-                <span class="nav-user-role" style="font-size: 0.72rem; font-weight: 600; color: ${roleColor};">${roleBadgeText}</span>
+                <span class="nav-user-role" style="font-size: 0.72rem; font-weight: 700; color: ${roleColor};">${roleBadgeText}</span>
               </div>
             </a>
-            <div style="display: flex; align-items: center; gap: 4px; margin-left: 4px;">
+            <div style="display: flex; align-items: center; gap: 6px; margin-left: 4px;">
               <a href="profile.html" class="btn btn-ghost btn-sm" title="Hồ sơ cá nhân" style="padding: 4px; color: #64748b; border-radius: 6px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
               </a>
               ${
                 roleName === "ADMIN"
-                  ? `<a href="admin.html" class="btn btn-sm" title="Kênh Quản trị" style="padding: 4px 8px; font-size: 0.75rem; background: #ef4444; color: white; border-radius: 6px; text-decoration: none; font-weight: 700;">Admin</a>`
+                  ? `<a href="admin.html" class="btn btn-sm" title="Kênh Quản trị" style="padding: 4px 10px; font-size: 0.75rem; background: #ef4444; color: white; border-radius: 6px; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">Admin Portal</a>`
                   : roleName === "OWNER"
-                  ? `<a href="owner-cars.html" class="btn btn-sm" title="Quản lý xe" style="padding: 4px 8px; font-size: 0.75rem; background: #f59e0b; color: white; border-radius: 6px; text-decoration: none; font-weight: 700;">Xe của tôi</a>`
+                  ? `<a href="owner-cars.html" class="btn btn-sm" title="Kênh Quản lý xe" style="padding: 4px 10px; font-size: 0.75rem; background: #f59e0b; color: white; border-radius: 6px; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>Kênh Chủ Xe</a>`
                   : ""
               }
               <button class="btn btn-ghost btn-sm" onclick="AuthService.logout()" title="Đăng xuất" style="padding: 4px; color: #94a3b8; border: none; background: transparent; cursor: pointer; border-radius: 6px;">
@@ -517,8 +534,16 @@ const AuthService = {
           cur.avatarUrl = d.avatarUrl;
         }
         if (d.fullName) cur.fullName = d.fullName;
-        if (d.phoneNumber) cur.phone = d.phoneNumber;
+        if (d.phoneNumber || d.phone) cur.phone = d.phoneNumber || d.phone;
         if (d.address) cur.address = d.address;
+        if (d.roles) {
+          const rawRoles = Array.isArray(d.roles) ? d.roles : Object.values(d.roles);
+          cur.roles = rawRoles.map((r) =>
+            typeof r === "string" ? (r.startsWith("ROLE_") ? r : "ROLE_" + r.toUpperCase()) : r
+          );
+          cur.role = resolvePrimaryRole(cur.roles, cur.role);
+          localStorage.setItem("driveshare_current_role", cur.role);
+        }
         localStorage.setItem(KEY_USER, JSON.stringify(cur));
         localStorage.setItem("ds_user", JSON.stringify(cur));
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(cur));

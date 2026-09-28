@@ -51,8 +51,9 @@ const App = {
     if (typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
       const user = AuthService.getCurrentUser();
       if (user) {
-        const role = (user.role || (user.roles && user.roles[0]) || 'RENTER')
-          .replace('ROLE_', '').toUpperCase();
+        const role = (typeof resolvePrimaryRole === 'function' && user.roles)
+          ? resolvePrimaryRole(user.roles, user.role)
+          : (user.role || (user.roles && user.roles[0]) || 'RENTER').replace('ROLE_', '').toUpperCase();
         if (role === 'ADMIN') return 'ADMIN';
         if (role === 'OWNER') return 'OWNER';
         return 'RENTER';
@@ -68,8 +69,9 @@ const App = {
     if (isLoggedIn && typeof AuthService !== 'undefined') {
       const user = AuthService.getCurrentUser();
       if (user) {
-        userRole = (user.role || (user.roles && user.roles[0]) || 'RENTER')
-          .replace('ROLE_', '').toUpperCase();
+        userRole = (typeof resolvePrimaryRole === 'function' && user.roles)
+          ? resolvePrimaryRole(user.roles, user.role)
+          : (user.role || (user.roles && user.roles[0]) || 'RENTER').replace('ROLE_', '').toUpperCase();
       }
     }
 
@@ -97,10 +99,18 @@ const App = {
       if (btnAddCar)   btnAddCar.style.display   = 'none';
       if (navBookings) navBookings.style.display = '';
     } else if (userRole === 'OWNER') {
-      if (btnAddCar)   btnAddCar.style.display   = '';
+      if (btnAddCar) {
+        btnAddCar.style.display = '';
+        btnAddCar.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>Kênh Quản lý xe`;
+        btnAddCar.onclick = () => { window.location.href = 'owner-cars.html'; };
+      }
       if (navBookings) navBookings.style.display = 'none';
     } else if (userRole === 'ADMIN') {
-      if (btnAddCar)   btnAddCar.style.display   = 'none';
+      if (btnAddCar) {
+        btnAddCar.style.display = '';
+        btnAddCar.innerHTML = `Vào Trang Quản Trị`;
+        btnAddCar.onclick = () => { window.location.href = 'admin.html'; };
+      }
       if (navBookings) navBookings.style.display = 'none';
     } else {
       if (btnAddCar)   btnAddCar.style.display   = '';
@@ -778,8 +788,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
     const user = AuthService.getCurrentUser();
     if (user) {
-      const jwtRole = (user.role || (user.roles && user.roles[0]) || 'RENTER')
-        .replace('ROLE_', '').toUpperCase();
+      const jwtRole = (typeof resolvePrimaryRole === 'function' && user.roles)
+        ? resolvePrimaryRole(user.roles, user.role)
+        : (user.role || (user.roles && user.roles[0]) || 'RENTER').replace('ROLE_', '').toUpperCase();
       // Ép overwrite CURRENT_ROLE theo role thật của user hiện tại
       localStorage.setItem('driveshare_current_role', jwtRole);
     }
