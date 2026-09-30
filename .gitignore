@@ -63,3 +63,8 @@ scratch/
 .agents/memory/
 uploads/
 **/uploads/
+
+# Sensitive environment variables — NEVER commit these!
+.env
+.env.local
+.env.*.local

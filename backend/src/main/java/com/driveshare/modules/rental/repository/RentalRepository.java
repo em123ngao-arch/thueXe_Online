@@ -98,4 +98,35 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
             @Param("endDate") LocalDate endDate,
             @Param("statuses") List<ERentalStatus> statuses
     );
+
+    /**
+     * Lấy các đơn thuê đang hoạt động/chốt cọc của 1 xe từ mốc thời gian chỉ định
+     */
+    @Query("SELECT r FROM Rental r " +
+           "WHERE r.carId = :carId " +
+           "AND r.status IN :statuses " +
+           "AND r.endDate >= :from " +
+           "AND r.deletedAt IS NULL " +
+           "ORDER BY r.startDate ASC")
+    List<Rental> findActiveRentalsForCar(
+            @Param("carId") Long carId,
+            @Param("statuses") List<ERentalStatus> statuses,
+            @Param("from") LocalDate from
+    );
+
+    // CRP-NEW: Kiểm tra user đã có đơn PENDING/PENDING_APPROVAL trùng ngày cho cùng xe
+    // Ngăn chặn 1 khách gửi 2 yêu cầu thuê cùng xe trong khoảng thời gian trùng lặp
+    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN TRUE ELSE FALSE END FROM Rental r " +
+           "WHERE r.carId = :carId " +
+           "AND r.renterId = :renterId " +
+           "AND r.status IN :statuses " +
+           "AND r.startDate <= :endDate " +
+           "AND r.endDate >= :startDate")
+    boolean hasActiveOrPendingRentalForUserAndCar(
+            @Param("carId") Long carId,
+            @Param("renterId") Long renterId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("statuses") List<ERentalStatus> statuses
+    );
 }

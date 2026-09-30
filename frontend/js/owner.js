@@ -78,7 +78,7 @@ const OwnerService = {
     // Tính tổng tiền cọc và doanh thu tạm tính
     const totalEarnings = ownerBookings
       .filter(b => b.status === 'DEPOSIT_PAID' || b.status === 'CONFIRMED' || b.status === 'COMPLETED')
-      .reduce((sum, b) => sum + Number(b.depositAmount || b.rental_amount || b.deposit_amount || 0), 0);
+      .reduce((sum, b) => sum + Number(b.deposit_amount || b.depositAmount || b.rental_amount || 0), 0);
 
     const formatMoney = (val) => {
       return typeof StorageService !== 'undefined' ? StorageService.formatCurrency(val) : (val?.toLocaleString('vi-VN') + ' đ');
@@ -228,6 +228,7 @@ const OwnerService = {
                       <td>
                         <div class="table-actions" style="display: flex; gap: 6px;">
                           <button class="btn btn-outline btn-sm" onclick="OwnerService.viewCarDetail(${c.id})">Chi tiết</button>
+                          <button class="btn btn-outline btn-sm" style="color: #7c3aed; border-color: #7c3aed;" onclick="OwnerService.openCalendarModal(${c.id}, '${c.brand} ${c.model}')">Lịch xe</button>
                           <button class="btn btn-outline btn-sm" style="color: #2563eb; border-color: #2563eb;" onclick="OwnerService.openEditCarModal(${c.id})">Sửa xe</button>
                           <button class="btn btn-outline btn-sm" style="color: #0f766e; border-color: #0f766e;" onclick="OwnerService.openPhotosModal(${c.id}, '${c.brand} ${c.model}')">Ảnh xe</button>
                         </div>
@@ -264,15 +265,17 @@ const OwnerService = {
                   ${ownerBookings.length === 0 ? `
                     <tr><td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--slate-500);">Chưa có yêu cầu đặt thuê nào cho các xe của bạn.</td></tr>
                   ` : ownerBookings.map(b => {
-                    const id = b.rentalId || b.id;
-                    const carName = (b.carBrand ? `${b.carBrand} ${b.carModel || ''}` : b.car_name) || 'Xe của bạn';
-                    const plate = b.carPlateNumber || b.license_plate || '';
-                    const renterName = b.renterFullName || b.renter_name || 'Khách thuê';
-                    const renterPhone = b.renterPhone || b.renter_phone || '---';
-                    const startDate = b.startDate || b.start_date || '';
-                    const endDate = b.endDate || b.end_date || '';
-                    const totalDays = b.totalDays || b.total_days || 1;
-                    const deposit = b.depositAmount || b.rental_amount || b.deposit_amount || 0;
+                    const id = b.rental_id || b.rentalId || b.id;
+                    const carBrand = b.car_brand || b.carBrand || '';
+                    const carModel = b.car_model || b.carModel || '';
+                    const carName = (carBrand ? `${carBrand} ${carModel}`.trim() : (b.car_name || b.carName)) || 'Xe của bạn';
+                    const plate = b.car_plate_number || b.carPlateNumber || b.license_plate || b.plateNumber || '';
+                    const renterName = b.renter_full_name || b.renterFullName || b.renter_name || b.renterName || 'Khách thuê';
+                    const renterPhone = b.renter_phone || b.renterPhone || '---';
+                    const startDate = b.start_date || b.startDate || '';
+                    const endDate = b.end_date || b.endDate || '';
+                    const totalDays = b.total_days || b.totalDays || 1;
+                    const deposit = b.deposit_amount || b.depositAmount || b.rental_amount || 0;
                     const note = b.note || b.trip_purpose || '';
                     
                     let badge = `<span class="badge badge-info">${b.status}</span>`;
@@ -1368,6 +1371,359 @@ const OwnerService = {
     } catch (err) {
       console.error('Lỗi khi xóa ảnh:', err);
       this.showToast(err?.message || 'Xóa ảnh thất bại!', 'error');
+    }
+  },
+
+  // =====================================================================
+  // CRP-40 — Quản lý Lịch Xe & Chặn Ngày Bận (Owner Blackout Dates)
+  // =====================================================================
+
+  async openCalendarModal(carId, carTitle = '') {
+    const overlay = document.getElementById('carCalendarModalOverlay');
+    const body = document.getElementById('carCalendarModalBody');
+    const title = document.getElementById('carCalendarModalTitle');
+    if (!overlay || !body) return;
+
+    if (title) title.innerText = `Lịch Xe & Quản Lý Ngày Bận: ${carTitle || '#' + carId}`;
+    body.innerHTML = `
+      <div style="text-align: center; padding: 2.5rem;">
+        <span class="spinner" style="display: inline-block; width: 28px; height: 28px; border: 3px solid #cbd5e1; border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.8s linear infinite;"></span>
+        <p style="margin-top: 10px; color: var(--slate-600); font-weight: 600;">Đang đồng bộ dữ liệu lịch xe...</p>
+      </div>
+    `;
+    overlay.classList.add('open');
+
+    let calendarData = null;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // 1. Thử gọi API Backend: GET /api/v1/cars/{id}/calendar
+    if (typeof CarAPI !== 'undefined' && CarAPI.getCarCalendar) {
+      try {
+        const res = await CarAPI.getCarCalendar(carId, todayStr);
+        if (res && (res.code === 200 || res.success) && res.data) {
+          calendarData = res.data;
+        }
+      } catch (err) {
+        console.warn('CarAPI.getCarCalendar fallback to local data:', err);
+      }
+    }
+
+    // 2. Fallback sang LocalStorage nếu backend chưa có hoặc offline
+    if (!calendarData) {
+      const myBookings = (typeof StorageService !== 'undefined' ? StorageService.getBookings() : [])
+        .filter(b => String(b.car_id || b.carId) === String(carId) && ['CONFIRMED', 'DEPOSIT_PAID', 'IN_PROGRESS', 'APPROVED', 'WAITING_PAYMENT'].includes(b.status));
+
+      const myBlocks = typeof StorageService !== 'undefined' ? StorageService.getCalendarBlocks(carId) : [];
+
+      const items = [];
+      const unavailableSet = new Set();
+
+      myBookings.forEach(b => {
+        const s = b.start_date || b.startDate;
+        const e = b.end_date || b.endDate;
+        items.push({
+          type: 'RENTAL',
+          referenceId: b.id || b.booking_id,
+          startDate: s,
+          endDate: e,
+          title: `Đơn #${b.id || b.booking_id} (${b.renter_name || b.renterFullName || 'Khách thuê'})`,
+          status: b.status,
+          note: b.note || b.trip_purpose || ''
+        });
+        if (s && e) {
+          let cur = new Date(s);
+          const end = new Date(e);
+          while (cur <= end) {
+            unavailableSet.add(cur.toISOString().split('T')[0]);
+            cur.setDate(cur.getDate() + 1);
+          }
+        }
+      });
+
+      myBlocks.forEach(b => {
+        items.push({
+          type: 'OWNER_BLOCK',
+          referenceId: b.blockId,
+          startDate: b.startDate,
+          endDate: b.endDate,
+          title: 'Chủ xe chặn lịch',
+          status: 'BLOCKED',
+          note: b.reason || 'Bảo dưỡng / Đi việc riêng'
+        });
+        if (b.startDate && b.endDate) {
+          let cur = new Date(b.startDate);
+          const end = new Date(b.endDate);
+          while (cur <= end) {
+            unavailableSet.add(cur.toISOString().split('T')[0]);
+            cur.setDate(cur.getDate() + 1);
+          }
+        }
+      });
+
+      calendarData = {
+        carId,
+        brand: carTitle,
+        model: '',
+        plateNumber: '',
+        items,
+        unavailableDates: Array.from(unavailableSet).sort()
+      };
+    }
+
+    this.renderCalendarModalView(carId, carTitle, calendarData);
+  },
+
+  renderCalendarModalView(carId, carTitle, data) {
+    const body = document.getElementById('carCalendarModalBody');
+    if (!body) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const items = data.items || [];
+    const rentalItems = items.filter(i => i.type === 'RENTAL');
+    const blockItems = items.filter(i => i.type === 'OWNER_BLOCK');
+    const unavailableCount = (data.unavailableDates || []).length;
+
+    body.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        
+        <!-- THỐNG KÊ NHANH TRẠNG THÁI LỊCH XE -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px 16px;">
+            <div style="font-size: 0.78rem; font-weight: 700; color: #166534; text-transform: uppercase;">Mặc định khả dụng</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #15803d; margin-top: 2px;">Rảnh 24/7</div>
+            <div style="font-size: 0.73rem; color: #166534; margin-top: 2px;">Sẵn sàng nhận khách mọi ngày trừ ngày bận</div>
+          </div>
+          <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 12px 16px;">
+            <div style="font-size: 0.78rem; font-weight: 700; color: #9a3412; text-transform: uppercase;">Đơn khách đã thuê</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #c2410c; margin-top: 2px;">${rentalItems.length} chuyến đi</div>
+            <div style="font-size: 0.73rem; color: #9a3412; margin-top: 2px;">Tự động khóa theo đơn đã duyệt/cọc</div>
+          </div>
+          <div style="background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 10px; padding: 12px 16px;">
+            <div style="font-size: 0.78rem; font-weight: 700; color: #5b21b6; text-transform: uppercase;">Chủ xe tự chặn bận</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #7c3aed; margin-top: 2px;">${blockItems.length} đợt chặn</div>
+            <div style="font-size: 0.73rem; color: #5b21b6; margin-top: 2px;">Xe bảo dưỡng, đăng kiểm hoặc việc riêng</div>
+          </div>
+        </div>
+
+        <!-- FORM CHỦ XE CHẶN LỊCH BẬN MỚI (BLACKOUT DATE) -->
+        <div style="background: #faf5ff; border: 1.5px dashed #c084fc; border-radius: 12px; padding: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <strong style="color: #6b21a8; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                Chủ động chặn ngày bận (Khóa xe tạm thời)
+              </strong>
+              <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: #7e22ce;">
+                Khi bạn chặn ngày, khách hàng tìm kiếm trong khoảng thời gian này sẽ <strong>không thấy xe xuất hiện</strong>.
+              </p>
+            </div>
+          </div>
+
+          <form onsubmit="OwnerService.handleCreateCalendarBlock(event, ${carId}, '${carTitle}')" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) 140px; gap: 10px; align-items: flex-end;">
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 700; color: #4c1d95; margin-bottom: 4px; display: block;">Từ ngày <span style="color:#ef4444;">*</span></label>
+              <input type="date" id="blockStartDate" class="form-control" min="${todayStr}" value="${todayStr}" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem; border-color: #d8b4fe;" />
+            </div>
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 700; color: #4c1d95; margin-bottom: 4px; display: block;">Đến ngày <span style="color:#ef4444;">*</span></label>
+              <input type="date" id="blockEndDate" class="form-control" min="${todayStr}" value="${todayStr}" required style="padding: 0.45rem 0.65rem; font-size: 0.85rem; border-color: #d8b4fe;" />
+            </div>
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 700; color: #4c1d95; margin-bottom: 4px; display: block;">Lý do chặn bận</label>
+              <select id="blockReasonSelect" class="form-control" style="padding: 0.45rem 0.65rem; font-size: 0.85rem; border-color: #d8b4fe;" onchange="document.getElementById('blockReasonCustom').style.display = this.value === 'CUSTOM' ? 'block' : 'none'">
+                <option value="Bảo dưỡng xe định kỳ">Bảo dưỡng xe định kỳ</option>
+                <option value="Đi việc gia đình / Về quê">Đi việc gia đình / Về quê</option>
+                <option value="Đưa xe đi đăng kiểm định kỳ">Đưa xe đi đăng kiểm định kỳ</option>
+                <option value="Nghỉ lễ / Tạm ngưng cho thuê">Nghỉ lễ / Tạm ngưng cho thuê</option>
+                <option value="CUSTOM">Lý do khác...</option>
+              </select>
+              <input type="text" id="blockReasonCustom" class="form-control" placeholder="Nhập lý do cụ thể..." style="display: none; margin-top: 4px; padding: 0.45rem 0.65rem; font-size: 0.85rem; border-color: #d8b4fe;" />
+            </div>
+            <div>
+              <button type="submit" id="btnSubmitBlock" class="btn btn-primary" style="width: 100%; padding: 0.5rem 0.75rem; font-size: 0.85rem; font-weight: 700; background: #7c3aed; border-color: #7c3aed;">
+                Khóa ngày bận
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- DANH SÁCH CHI TIẾT CÁC NGÀY BẬN & ĐƠN THUÊ -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong style="color: var(--slate-800); font-size: 0.95rem;">
+              Danh sách đơn thuê & Các đợt chặn lịch (${items.length})
+            </strong>
+            <span style="font-size: 0.78rem; color: var(--slate-500);">
+              Tổng cộng <strong>${unavailableCount}</strong> ngày đã có lịch
+            </span>
+          </div>
+
+          <div style="max-height: 290px; overflow-y: auto; border: 1px solid var(--slate-200); border-radius: 8px; background: #fff;">
+            ${items.length === 0 ? `
+              <div style="text-align: center; padding: 2.5rem; color: var(--slate-500); background: #f8fafc;">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.8" style="margin-bottom: 6px;">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="m9 12 2 2 4-4"></path>
+                </svg>
+                <div style="font-weight: 700; color: #166534; font-size: 0.92rem;">Xe đang hoàn toàn rảnh mọi ngày!</div>
+                <div style="font-size: 0.8rem; color: var(--slate-500); margin-top: 2px;">Chưa có đơn thuê nào và chưa bị chặn lịch. Khách hàng có thể tìm và đặt xe bất kỳ lúc nào.</div>
+              </div>
+            ` : `
+              <table class="custom-table" style="font-size: 0.84rem; margin-bottom: 0;">
+                <thead>
+                  <tr style="background: #f8fafc;">
+                    <th style="padding: 8px 12px;">Phân loại</th>
+                    <th style="padding: 8px 12px;">Khoảng thời gian</th>
+                    <th style="padding: 8px 12px;">Chi tiết & Ghi chú</th>
+                    <th style="padding: 8px 12px;">Trạng thái</th>
+                    <th style="padding: 8px 12px; text-align: right;">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${items.map(item => {
+                    const isRental = item.type === 'RENTAL';
+                    return `
+                      <tr>
+                        <td style="padding: 10px 12px;">
+                          ${isRental ? `
+                            <span class="badge" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; font-weight: 700;">
+                              Đơn thuê xe
+                            </span>
+                          ` : `
+                            <span class="badge" style="background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; font-weight: 700;">
+                              Chủ xe chặn
+                            </span>
+                          `}
+                        </td>
+                        <td style="padding: 10px 12px;">
+                          <strong style="color: var(--slate-900);">${item.startDate}</strong> &rarr; <strong style="color: var(--slate-900);">${item.endDate}</strong>
+                        </td>
+                        <td style="padding: 10px 12px;">
+                          <div style="font-weight: 600; color: var(--slate-800);">${item.title}</div>
+                          ${item.note ? `<div style="font-size: 0.74rem; color: var(--slate-500); margin-top: 2px;">${item.note}</div>` : ''}
+                        </td>
+                        <td style="padding: 10px 12px;">
+                          ${isRental ? `
+                            <span class="badge badge-success" style="font-size: 0.72rem;">${item.status}</span>
+                          ` : `
+                            <span class="badge" style="background: #ede9fe; color: #6d28d9; font-size: 0.72rem;">Đang khóa xe</span>
+                          `}
+                        </td>
+                        <td style="padding: 10px 12px; text-align: right;">
+                          ${!isRental ? `
+                            <button class="btn btn-ghost btn-xs" style="color: #ef4444; border: 1px solid #fecaca; background: #fff; font-size: 0.75rem; padding: 3px 8px;" onclick="OwnerService.handleDeleteCalendarBlock(${carId}, ${item.referenceId}, '${carTitle}')">
+                              Mở khóa ngày này
+                            </button>
+                          ` : `
+                            <span style="font-size: 0.75rem; color: var(--slate-400);">Theo đơn khách</span>
+                          `}
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            `}
+          </div>
+        </div>
+
+      </div>
+    `;
+  },
+
+  async handleCreateCalendarBlock(event, carId, carTitle) {
+    if (event) event.preventDefault();
+    const startInput = document.getElementById('blockStartDate');
+    const endInput = document.getElementById('blockEndDate');
+    const selectReason = document.getElementById('blockReasonSelect');
+    const customReason = document.getElementById('blockReasonCustom');
+    const btnSubmit = document.getElementById('btnSubmitBlock');
+
+    if (!startInput || !endInput) return;
+    const startDate = startInput.value;
+    const endDate = endInput.value;
+    let reason = selectReason?.value === 'CUSTOM' ? (customReason?.value || 'Chủ xe bận') : (selectReason?.value || 'Chủ xe bận / Bảo dưỡng');
+
+    if (!startDate || !endDate) {
+      this.showToast('Vui lòng chọn ngày bắt đầu và kết thúc!', 'error');
+      return;
+    }
+    if (new Date(endDate) < new Date(startDate)) {
+      this.showToast('Ngày kết thúc phải sau hoặc bằng ngày bắt đầu!', 'error');
+      return;
+    }
+
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerText = 'Đang khóa...';
+    }
+
+    try {
+      let success = false;
+      if (typeof CarAPI !== 'undefined' && CarAPI.addCalendarBlock) {
+        try {
+          const res = await CarAPI.addCalendarBlock(carId, { startDate, endDate, reason });
+          if (res && (res.code === 200 || res.code === 201 || res.success)) {
+            success = true;
+          }
+        } catch (apiErr) {
+          console.warn('Lỗi gọi CarAPI.addCalendarBlock:', apiErr);
+          const errMsg = apiErr?.message || (typeof apiErr === 'string' ? apiErr : 'Không thể chặn lịch vì trùng với đơn thuê xe');
+          this.showToast(errMsg, 'error');
+          if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerText = 'Khóa ngày bận';
+          }
+          return;
+        }
+      }
+
+      // Lưu dự phòng LocalStorage
+      if (typeof StorageService !== 'undefined') {
+        StorageService.saveCalendarBlock({ carId, startDate, endDate, reason });
+      }
+
+      this.showToast(`Đã chặn ngày bận từ ${startDate} đến ${endDate} thành công!`, 'success');
+      await this.openCalendarModal(carId, carTitle);
+    } catch (err) {
+      console.error('Lỗi khi chặn ngày bận:', err);
+      this.showToast(err.message || 'Thao tác thất bại!', 'error');
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerText = 'Khóa ngày bận';
+      }
+    }
+  },
+
+  async handleDeleteCalendarBlock(carId, blockId, carTitle) {
+    if (!confirm('Bạn có chắc muốn mở khóa ngày bận này để xe có thể cho thuê trở lại không?')) {
+      return;
+    }
+
+    try {
+      if (typeof CarAPI !== 'undefined' && CarAPI.removeCalendarBlock) {
+        try {
+          await CarAPI.removeCalendarBlock(carId, blockId);
+        } catch (apiErr) {
+          console.warn('Lỗi gọi CarAPI.removeCalendarBlock:', apiErr);
+        }
+      }
+
+      if (typeof StorageService !== 'undefined') {
+        StorageService.deleteCalendarBlock(blockId);
+      }
+
+      this.showToast('Đã mở khóa ngày bận thành công!', 'success');
+      await this.openCalendarModal(carId, carTitle);
+    } catch (err) {
+      console.error('Lỗi khi mở khóa ngày bận:', err);
+      this.showToast(err.message || 'Thao tác thất bại!', 'error');
     }
   },
 

@@ -244,6 +244,28 @@ const CarAPI = {
    */
   setCarThumbnail(carId, photoId) {
     return apiCall(`/cars/${carId}/photos/${photoId}/set-primary`, 'PATCH');
+  },
+
+  /**
+   * GET /api/v1/cars/{carId}/calendar — Lấy toàn bộ lịch xe và ngày bận (CRP-40)
+   */
+  getCarCalendar(carId, fromDate = null) {
+    const query = fromDate ? `?fromDate=${fromDate}` : '';
+    return apiCall(`/cars/${carId}/calendar${query}`, 'GET');
+  },
+
+  /**
+   * POST /api/v1/cars/{carId}/calendar/blocks — Chủ xe chặn ngày bận (CRP-40)
+   */
+  addCalendarBlock(carId, blockData) {
+    return apiCall(`/cars/${carId}/calendar/blocks`, 'POST', blockData);
+  },
+
+  /**
+   * DELETE /api/v1/cars/{carId}/calendar/blocks/{blockId} — Chủ xe mở khóa ngày bận (CRP-40)
+   */
+  removeCalendarBlock(carId, blockId) {
+    return apiCall(`/cars/${carId}/calendar/blocks/${blockId}`, 'DELETE');
   }
 };
 
@@ -1060,6 +1082,10 @@ const RentalAPI = {
    * CRP-47 & Giai đoạn 2 & 3: Chủ xe duyệt yêu cầu thuê xe (PUT /api/v1/owner/rentals/{id}/approve)
    */
   async approveRental(rentalId) {
+    if (!rentalId || rentalId === 'undefined') {
+      console.error('[RentalAPI] approveRental invalid rentalId:', rentalId);
+      return { success: false, message: 'Mã đơn thuê không hợp lệ' };
+    }
     const url = `${API_CONFIG.BASE_URL}/owner/rentals/${rentalId}/approve`;
     try {
       const res = await fetch(url, {
@@ -1081,6 +1107,10 @@ const RentalAPI = {
    * CRP-48: Chủ xe từ chối yêu cầu thuê xe (PUT /api/v1/owner/rentals/{id}/reject)
    */
   async rejectRental(rentalId, reason) {
+    if (!rentalId || rentalId === 'undefined') {
+      console.error('[RentalAPI] rejectRental invalid rentalId:', rentalId);
+      return { success: false, message: 'Mã đơn thuê không hợp lệ' };
+    }
     const url = `${API_CONFIG.BASE_URL}/owner/rentals/${rentalId}/reject`;
     try {
       const res = await fetch(url, {
@@ -1107,6 +1137,10 @@ const RentalAPI = {
    * PUT /api/v1/owner/rentals/{id}/start
    */
   async startRental(rentalId) {
+    if (!rentalId || rentalId === 'undefined') {
+      console.error('[RentalAPI] startRental invalid rentalId:', rentalId);
+      return { success: false, message: 'Mã đơn thuê không hợp lệ' };
+    }
     const url = `${API_CONFIG.BASE_URL}/owner/rentals/${rentalId}/start`;
     try {
       const res = await fetch(url, {
@@ -1129,6 +1163,10 @@ const RentalAPI = {
    * PUT /api/v1/owner/rentals/{id}/complete
    */
   async completeRental(rentalId) {
+    if (!rentalId || rentalId === 'undefined') {
+      console.error('[RentalAPI] completeRental invalid rentalId:', rentalId);
+      return { success: false, message: 'Mã đơn thuê không hợp lệ' };
+    }
     const url = `${API_CONFIG.BASE_URL}/owner/rentals/${rentalId}/complete`;
     try {
       const res = await fetch(url, {

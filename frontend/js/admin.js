@@ -1038,11 +1038,12 @@ const AdminService = {
       <div style="display: flex; flex-direction: column; gap: 1rem;">
         ${licenses.map(r => {
           const userId = r.user_id || r.userId || r.id;
-          const status = r.license_status || r.licenseStatus || 'PENDING';
+          const status = r.license_verification_status || r.license_status || r.licenseStatus || 'PENDING';
           const isPending = status === 'PENDING';
+          const imgSrc = r.license_front_url || r.licenseFrontUrl || r.license_image_url || r.licenseImageUrl || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=400&q=80';
           return `
             <div class="license-card">
-              <img class="license-thumb" src="${r.license_image_url || r.licenseImageUrl || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=400&q=80'}" alt="GPLX ${r.full_name || r.fullName}" onclick="window.open(this.src, '_blank')" style="cursor: pointer;" title="Nhấp để xem ảnh lớn" />
+              <img class="license-thumb" src="${imgSrc}" alt="GPLX ${r.full_name || r.fullName}" onclick="window.open(this.src, '_blank')" style="cursor: pointer;" title="Nhấp để xem ảnh lớn" />
               <div>
                 <div style="display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.3rem; flex-wrap: wrap;">
                   <h4 style="font-size: 1rem; font-weight: 700;">${r.full_name || r.fullName}</h4>

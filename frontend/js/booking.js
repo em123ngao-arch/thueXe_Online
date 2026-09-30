@@ -53,7 +53,8 @@ const BookingService = {
               || (c.images && c.images.length > 0 ? (c.images[0].imageUrl || c.images[0].image_url) : '')
               || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80',
             year: c.year,
-            seat_count: c.seats || c.seat_count || 4
+            seat_count: c.seats || c.seat_count || 4,
+            unavailable_dates: c.unavailableDates || c.unavailable_dates || []
           };
         }
       } catch (err) {
@@ -74,37 +75,81 @@ const BookingService = {
 
     this.currentCar = car;
 
-    // Lấy thông tin ngày giờ từ bộ tìm kiếm hoặc mặc định
+    // Lấy thông tin ngày giờ từ MiotoTimePicker hoặc bộ tìm kiếm
     const today = new Date();
-    const defaultStart = new Date(today);
-    defaultStart.setDate(today.getDate() + 1);
+    const formatYMD = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    const todayStr = formatYMD(today);
+
+    const minStart = new Date(today);
+    minStart.setDate(today.getDate() + 1);
     const defaultEnd = new Date(today);
     defaultEnd.setDate(today.getDate() + 3);
 
-    const formatDateInput = (d) => d.toISOString().split('T')[0];
+    const minStartStr = formatYMD(minStart);
+    const defaultEndStr = formatYMD(defaultEnd);
 
-    const startDateVal = document.getElementById('searchStartDate')?.value || formatDateInput(defaultStart);
-    const startTimeVal = document.getElementById('searchStartTime')?.value || '08:00';
-    const endDateVal = document.getElementById('searchEndDate')?.value || formatDateInput(defaultEnd);
-    const endTimeVal = document.getElementById('searchEndTime')?.value || '20:00';
+    const isHourly = (typeof MiotoTimePicker !== 'undefined' && MiotoTimePicker.state?.rentalMode === 'HOUR');
 
-    const startDateTime = new Date(`${startDateVal}T${startTimeVal}`);
-    const endDateTime = new Date(`${endDateVal}T${endTimeVal}`);
-
-    let days = Math.ceil((endDateTime - startDateTime) / (1000 * 60 * 60 * 24));
-    if (isNaN(days) || days < 1) days = 1;
-
+    let startDateVal, startTimeVal, endDateVal, endTimeVal, hours, days, rentalAmount, depositAmount;
     const pricePerDay = car.price_per_day || 500000;
-    const rentalAmount = days * pricePerDay;
-    const depositAmount = Math.round(rentalAmount * 0.30); // 30% cọc giữ chỗ
+
+    if (isHourly) {
+      hours = Math.max(4, Math.min(8, Number(MiotoTimePicker.state.hourlyHours || 4)));
+      startDateVal = MiotoTimePicker.state.startDate || MiotoTimePicker.state.hourlyStartDate || todayStr;
+      startTimeVal = MiotoTimePicker.state.startTime || MiotoTimePicker.state.hourlyStartTime || '14:30';
+      endDateVal = MiotoTimePicker.state.endDate || startDateVal;
+      endTimeVal = MiotoTimePicker.state.endTime || '18:30';
+      days = 1;
+      const hourlyRate = Math.round(pricePerDay / 10);
+      rentalAmount = hourlyRate * hours;
+      depositAmount = Math.round(rentalAmount * 0.30);
+    } else {
+      startDateVal = (typeof MiotoTimePicker !== 'undefined' && MiotoTimePicker.state?.startDate)
+          ? MiotoTimePicker.state.startDate
+          : (document.getElementById('searchStartDate')?.value || minStartStr);
+      if (startDateVal < minStartStr) startDateVal = minStartStr;
+
+      startTimeVal = (typeof MiotoTimePicker !== 'undefined' && MiotoTimePicker.state?.startTime)
+          ? MiotoTimePicker.state.startTime
+          : (document.getElementById('searchStartTime')?.value || '08:00');
+
+      endDateVal = (typeof MiotoTimePicker !== 'undefined' && MiotoTimePicker.state?.endDate)
+          ? MiotoTimePicker.state.endDate
+          : (document.getElementById('searchEndDate')?.value || defaultEndStr);
+      if (endDateVal < startDateVal) endDateVal = startDateVal;
+
+      endTimeVal = (typeof MiotoTimePicker !== 'undefined' && MiotoTimePicker.state?.endTime)
+          ? MiotoTimePicker.state.endTime
+          : (document.getElementById('searchEndTime')?.value || '20:00');
+
+      const startDateTime = new Date(`${startDateVal}T${startTimeVal}`);
+      const endDateTime = new Date(`${endDateVal}T${endTimeVal}`);
+
+      let diffHours = Math.ceil((endDateTime - startDateTime) / (1000 * 60 * 60));
+      days = Math.ceil(diffHours / 24);
+      if (isNaN(days) || days < 1) days = 1;
+
+      rentalAmount = days * pricePerDay;
+      depositAmount = Math.round(rentalAmount * 0.30); // 30% cọc giữ chỗ
+      hours = 0;
+    }
 
     this.calcData = {
       carId: car.id,
+      isHourly,
+      hours,
       days,
       startDate: startDateVal,
       endDate: endDateVal,
-      startTimeStr: `${startDateVal} ${startTimeVal}`,
-      endTimeStr: `${endDateVal} ${endTimeVal}`,
+      startTime: startTimeVal,
+      endTime: endTimeVal,
+      startTimeStr: `${startTimeVal} ${startDateVal}`,
+      endTimeStr: `${endTimeVal} ${endDateVal}`,
       pricePerDay,
       rentalAmount,
       depositAmount
@@ -145,15 +190,16 @@ const BookingService = {
               </div>
             </div>
 
-            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.5rem;">
-              2. Lịch trình & Địa điểm giao nhận xe
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+              <span>2. Lịch trình & Địa điểm giao nhận xe</span>
+              <a href="javascript:void(0)" onclick="App.closeModal(); if (typeof MiotoTimePicker !== 'undefined') MiotoTimePicker.open();" style="font-size: 0.8rem; color: #00a550; font-weight: 600; text-decoration: none;">Thay đổi</a>
             </h4>
             <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 0.85rem; font-size: 0.85rem;">
               <div style="margin-bottom: 0.35rem;">
                 <span style="color: var(--slate-500);">Nhận xe lúc:</span> <strong>${calc.startTimeStr}</strong>
               </div>
               <div style="margin-bottom: 0.35rem;">
-                <span style="color: var(--slate-500);">Trả xe lúc:</span> <strong>${calc.endTimeStr}</strong> (${calc.days} ngày)
+                <span style="color: var(--slate-500);">Trả xe lúc:</span> <strong>${calc.endTimeStr}</strong> ${calc.isHourly ? `(${calc.hours} giờ)` : `(${calc.days} ngày)`}
               </div>
               <div>
                 <span style="color: var(--slate-500);">Địa điểm nhận xe:</span> <strong>${car.pickup_address || 'Địa chỉ do chủ xe cung cấp'}</strong>
@@ -164,7 +210,7 @@ const BookingService = {
               3. Mục đích di chuyển & Ghi chú cho Chủ xe
             </h4>
             <div style="margin-bottom: 0.85rem;">
-              <textarea id="bookingTripNote" class="form-control" rows="2" placeholder="Ví dụ: Đi công tác Vũng Tàu cùng gia đình 3 người, cam kết giữ xe sạch sẽ..." style="width: 100%; font-size: 0.85rem; padding: 0.65rem; border-radius: 6px; border: 1px solid var(--slate-300);"></textarea>
+              <textarea id="bookingTripNote" class="form-control" rows="2" placeholder="${calc.isHourly ? 'Ví dụ: Thuê 4 tiếng đi gặp đối tác nội thành, cam kết giữ xe sạch sẽ...' : 'Ví dụ: Đi công tác Vũng Tàu cùng gia đình 3 người, cam kết giữ xe sạch sẽ...'}" style="width: 100%; font-size: 0.85rem; padding: 0.65rem; border-radius: 6px; border: 1px solid var(--slate-300);"></textarea>
             </div>
 
             <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: var(--radius-md); padding: 0.85rem; font-size: 0.82rem; color: #166534; line-height: 1.5;">
@@ -185,7 +231,7 @@ const BookingService = {
               </div>
 
               <div class="calc-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
-                <span>Đơn giá thuê (${calc.days} ngày):</span>
+                <span>${calc.isHourly ? `Đơn giá thuê theo giờ (${calc.hours} giờ - 10%/h):` : `Đơn giá thuê (${calc.days} ngày):`}</span>
                 <span>${formatMoney(calc.rentalAmount)}</span>
               </div>
               <div class="calc-row total" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem; font-weight: 700; border-top: 1px dashed var(--slate-300); padding-top: 0.5rem;">
@@ -227,11 +273,82 @@ const BookingService = {
       btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Đang gửi yêu cầu...';
     }
 
+    const today = new Date();
+    const formatYMD = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    const todayStr = formatYMD(today);
+
+    const minStart = new Date(today);
+    minStart.setDate(today.getDate() + 1);
+    const minStartStr = formatYMD(minStart);
+
+    if (this.calcData.isHourly) {
+      if (!this.calcData.startDate || this.calcData.startDate < todayStr) {
+        alert('Ngày nhận xe không được ở trong quá khứ!');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = 'Gửi yêu cầu thuê xe';
+        }
+        return;
+      }
+    } else {
+      if (!this.calcData.startDate || this.calcData.startDate < minStartStr) {
+        alert('Ngày nhận xe thuê theo ngày không được ở trong quá khứ và tối thiểu phải cách thời điểm hiện tại 1 ngày (từ ngày mai trở đi)!');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = 'Gửi yêu cầu thuê xe';
+        }
+        return;
+      }
+    }
+
+    if (this.calcData.endDate < this.calcData.startDate) {
+      alert('Ngày trả xe phải sau hoặc bằng ngày nhận xe!');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = 'Gửi yêu cầu thuê xe';
+      }
+      return;
+    }
+
+    // Kiểm tra xe có bị bận ngày (do đơn thuê khác hoặc chủ xe chặn bận)
+    if (this.currentCar && Array.isArray(this.currentCar.unavailable_dates) && this.currentCar.unavailable_dates.length > 0) {
+      let cur = new Date(this.calcData.startDate);
+      const end = new Date(this.calcData.endDate);
+      let conflictDate = null;
+      while (cur <= end) {
+        const curStr = formatYMD(cur);
+        if (this.currentCar.unavailable_dates.includes(curStr)) {
+          conflictDate = curStr;
+          break;
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+      if (conflictDate) {
+        alert(`Xe đã có lịch bận vào ngày ${conflictDate} (đã có đơn thuê hoặc chủ xe bận bảo dưỡng). Vui lòng chọn khoảng thời gian khác!`);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = 'Gửi Yêu Cầu Thuê Xe Cho Chủ Xe Duyệt (Miễn phí)';
+        }
+        return;
+      }
+    }
+
+    let finalNote = note || 'Mục đích di chuyển cá nhân';
+    if (this.calcData.isHourly) {
+      const hourlyPrefix = `[Thuê theo giờ: ${this.calcData.hours} giờ (${this.calcData.startTime} - ${this.calcData.endTime})]`;
+      finalNote = note ? `${hourlyPrefix} ${note}` : `${hourlyPrefix} Nhu cầu di chuyển theo giờ`;
+    }
+
     const payload = {
       car_id: this.calcData.carId,
       start_date: this.calcData.startDate,
       end_date: this.calcData.endDate,
-      note: note || 'Mục đích di chuyển cá nhân'
+      note: finalNote
     };
 
     try {
@@ -266,12 +383,45 @@ const BookingService = {
           toast.success(`Gửi yêu cầu thuê xe #${rentalId} thành công!`);
         }
       } else {
-        const errMsg = res.message || 'Không thể tạo yêu cầu thuê xe. Vui lòng thử lại!';
-        if (typeof toast !== 'undefined') {
-          toast.error(errMsg);
+        // Xử lý lỗi có mã cụ thể từ backend
+        const errCode = res && res.code;
+        const errMsg = res && res.message;
+
+        if (errCode === 'DUPLICATE_RENTAL_REQUEST') {
+          // Hiển thị UI thân thiện cho lỗi trùng đơn
+          if (typeof App !== 'undefined' && App.closeModal) App.closeModal();
+          const dupHtml = `
+            <div style="text-align: center; padding: 1.5rem 0.5rem;">
+              <div style="width: 64px; height: 64px; background: #fef9c3; color: #ca8a04; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1rem auto;">&#9888;</div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #92400e; margin-bottom: 0.5rem;">Yêu cầu trùng lặp!</h3>
+              <p style="color: var(--slate-600); font-size: 0.9rem; line-height: 1.6; max-width: 400px; margin: 0 auto 1.25rem auto;">
+                Bạn đã có <strong>yêu cầu thuê xe này đang chờ duyệt</strong> trong khoảng thời gian trùng lặp.<br/>
+                Vui lòng <strong>hủy đơn cũ</strong> trước khi gửi yêu cầu mới cho cùng xe trong cùng khoảng ngày.
+              </p>
+              <div style="display: flex; gap: 0.75rem; justify-content: center;">
+                <button class="btn btn-primary btn-md" onclick="App.closeModal(); App.showMyBookingsView();">
+                  Xem đơn đang chờ duyệt
+                </button>
+                <button class="btn btn-outline-secondary btn-md" onclick="App.closeModal();">
+                  Đóng
+                </button>
+              </div>
+            </div>
+          `;
+          if (typeof App !== 'undefined' && App.openModal) {
+            App.openModal('Không thể gửi yêu cầu', dupHtml);
+          } else {
+            alert(errMsg || 'Bạn đã có đơn thuê xe này đang chờ duyệt trong khoảng thời gian trùng lặp!');
+          }
         } else {
-          alert(errMsg);
+          const displayMsg = errMsg || 'Không thể tạo yêu cầu thuê xe. Vui lòng thử lại!';
+          if (typeof toast !== 'undefined') {
+            toast.error(displayMsg);
+          } else {
+            alert(displayMsg);
+          }
         }
+
         if (btn) {
           btn.disabled = false;
           btn.textContent = 'Gửi yêu cầu thuê xe tới Chủ xe';

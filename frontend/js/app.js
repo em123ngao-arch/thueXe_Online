@@ -44,6 +44,9 @@ const App = {
 
     // 4. Cài đặt sự kiện tìm kiếm & lọc
     this.attachFilterEvents();
+
+    // 5. Cài đặt ràng buộc ngày nhận/trả xe (tối thiểu cách 1 ngày, không ở quá khứ)
+    this.initSearchDates();
   },
 
   // Xác định role ban đầu dựa vào JWT (tài khoản đã đăng nhập) hoặc StorageService
@@ -211,6 +214,19 @@ const App = {
     document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
     document.getElementById('navMyBookings')?.classList.add('active');
 
+    // Cập nhật nút quay về trang chủ chuyên nghiệp trên Header
+    const btnHome = document.getElementById('btnHeaderReturnHome');
+    if (btnHome) {
+      btnHome.classList.add('highlight-back');
+      btnHome.title = "Quay về trang chủ tìm xe";
+      btnHome.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        <span id="txtHeaderHomeLabel">Về trang chủ</span>
+      `;
+    }
+
     // Ưu tiên tải từ API backend thực tế (RentalAPI.getMyRentals)
     let bookings = [];
     if (typeof RentalAPI !== 'undefined' && RentalAPI.getMyRentals && typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
@@ -230,14 +246,37 @@ const App = {
     }
 
     RenderService.renderMyBookings(bookings);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
   showCatalogView() {
+    // Ẩn Chuyến đi của tôi, hiện lại renterSection
+    const renterView = document.getElementById('renterSection');
+    const myBookingsView = document.getElementById('myBookingsSection');
+    if (renterView) renterView.style.display = 'block';
+    if (myBookingsView) myBookingsView.style.display = 'none';
+
     // Chỉ về Renter view nếu đây là role của user (hoặc chưa đăng nhập)
     const role = this._resolveInitialRole();
     this.switchRole(role);
     document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
     document.getElementById('navCatalog')?.classList.add('active');
+
+    // Đặt lại nút Trang chủ trên Header
+    const btnHome = document.getElementById('btnHeaderReturnHome');
+    if (btnHome) {
+      btnHome.classList.remove('highlight-back');
+      btnHome.title = "Trang chủ";
+      btnHome.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span id="txtHeaderHomeLabel">Trang chủ</span>
+      `;
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
   // Cập nhật số đơn trên navbar
@@ -338,6 +377,64 @@ const App = {
       }
       this.applyFilters();
       document.getElementById('catalogSection')?.scrollIntoView({ behavior: 'smooth' });
+    });
+  },
+
+  // Cài đặt ràng buộc ngày nhận và ngày trả xe (tối thiểu cách 1 ngày, không ở quá khứ)
+  initSearchDates() {
+    if (typeof MiotoTimePicker !== 'undefined') {
+      MiotoTimePicker.init();
+      return;
+    }
+
+    const startEl = document.getElementById('searchStartDate');
+    const endEl = document.getElementById('searchEndDate');
+    if (!startEl || !endEl) return;
+
+    const today = new Date();
+    // Ngày nhận tối thiểu cách 1 ngày (từ ngày mai)
+    const minStart = new Date(today);
+    minStart.setDate(today.getDate() + 1);
+
+    const defaultEnd = new Date(today);
+    defaultEnd.setDate(today.getDate() + 3);
+
+    const formatYMD = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const minStartStr = formatYMD(minStart);
+    const defaultEndStr = formatYMD(defaultEnd);
+
+    startEl.min = minStartStr;
+    if (!startEl.value || startEl.value < minStartStr) {
+      startEl.value = minStartStr;
+    }
+
+    endEl.min = startEl.value;
+    if (!endEl.value || endEl.value < startEl.value) {
+      endEl.value = defaultEndStr;
+    }
+
+    startEl.addEventListener('change', () => {
+      if (startEl.value < minStartStr) {
+        alert('Ngày nhận xe không được ở trong quá khứ và tối thiểu phải cách thời điểm hiện tại 1 ngày (từ ngày mai trở đi)!');
+        startEl.value = minStartStr;
+      }
+      endEl.min = startEl.value;
+      if (endEl.value < startEl.value) {
+        endEl.value = startEl.value;
+      }
+    });
+
+    endEl.addEventListener('change', () => {
+      if (endEl.value < startEl.value) {
+        alert('Ngày trả xe phải sau hoặc bằng ngày nhận xe!');
+        endEl.value = startEl.value;
+      }
     });
   },
 

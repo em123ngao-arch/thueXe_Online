@@ -50,6 +50,86 @@
   text-transform: uppercase;
 }
 
+/* Header Left Group & Professional Home / Back Button */
+.nav-left-group {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.nav-left-divider {
+  width: 1px;
+  height: 22px;
+  background-color: var(--slate-200);
+}
+
+.btn-header-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.95rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--slate-600);
+  background-color: var(--slate-50);
+  border: 1.5px solid var(--slate-200);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  line-height: 1;
+}
+
+.btn-header-home:hover {
+  background-color: #e6f7ef;
+  color: #00a550;
+  border-color: #86efac;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 165, 80, 0.12);
+}
+
+.btn-header-home svg {
+  color: currentColor;
+  transition: transform 0.2s ease;
+}
+
+/* Nổi bật khi đang ở trang Chuyến đi (Back mode) */
+.btn-header-home.highlight-back {
+  background-color: #f0fdf4;
+  color: #166534;
+  border-color: #86efac;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.btn-header-home.highlight-back:hover {
+  background-color: #00a550;
+  color: #ffffff;
+  border-color: #00a550;
+  box-shadow: 0 4px 12px rgba(0, 165, 80, 0.25);
+  transform: translateX(-2px);
+}
+
+.btn-header-home.highlight-back:hover svg {
+  transform: translateX(-3px);
+  color: #ffffff;
+}
+
+@media (max-width: 640px) {
+  .nav-left-divider {
+    display: none;
+  }
+  .btn-header-home {
+    padding: 0.45rem;
+    border-radius: 50%;
+  }
+  .btn-header-home span {
+    display: none;
+  }
+}
+
+
 /* Role Switcher Pill (Hidden according to user request) */
 .role-switcher-wrapper,
 .mobile-role-bar {

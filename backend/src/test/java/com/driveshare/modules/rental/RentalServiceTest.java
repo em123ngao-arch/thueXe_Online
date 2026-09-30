@@ -156,6 +156,25 @@ class RentalServiceTest {
     }
 
     @Test
+    @DisplayName("Validation: Ngày bắt đầu là hôm nay (< 1 ngày) -> ném INVALID_RENTAL_DATES")
+    void createRentalRequest_StartDateToday_ThrowsException() {
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(LocalDate.now())
+                .endDate(LocalDate.now().plusDays(2))
+                .build();
+
+        when(rentalRepository.countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING)).thenReturn(0L);
+
+        assertThatThrownBy(() -> rentalService.createRentalRequest(request))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> {
+                    AppException appEx = (AppException) ex;
+                    assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.INVALID_RENTAL_DATES);
+                });
+    }
+
+    @Test
     @DisplayName("Validation: Ngày kết thúc trước ngày bắt đầu -> ném INVALID_RENTAL_DATES")
     void createRentalRequest_EndDateBeforeStartDate_ThrowsException() {
         CreateRentalRequest request = CreateRentalRequest.builder()

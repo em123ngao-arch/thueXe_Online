@@ -92,6 +92,21 @@ public class CarSpecification {
                 subquery.where(conflictPredicates.toArray(new Predicate[0]));
 
                 predicates.add(cb.not(root.get("carId").in(subquery)));
+
+                // 9.2 Loại trừ xe bị chủ xe chủ động chặn lịch bận (Blackout Dates)
+                Subquery<Long> blockSubquery = query.subquery(Long.class);
+                Root<com.driveshare.modules.car.entity.CarCalendarBlock> blockRoot = blockSubquery.from(com.driveshare.modules.car.entity.CarCalendarBlock.class);
+                blockSubquery.select(blockRoot.get("carId"));
+
+                List<Predicate> blockPredicates = new ArrayList<>();
+                blockPredicates.add(cb.equal(blockRoot.get("carId"), root.get("carId")));
+                blockPredicates.add(cb.isNull(blockRoot.get("deletedAt")));
+                blockPredicates.add(cb.lessThanOrEqualTo(blockRoot.get("startDate"), request.getEndDate()));
+                blockPredicates.add(cb.greaterThanOrEqualTo(blockRoot.get("endDate"), request.getStartDate()));
+
+                blockSubquery.where(blockPredicates.toArray(new Predicate[0]));
+
+                predicates.add(cb.not(root.get("carId").in(blockSubquery)));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

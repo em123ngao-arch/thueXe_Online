@@ -105,7 +105,9 @@ public class CloudinaryService {
                 Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
                         "public_id", publicId,
                         "resource_type", "image",
-                        "overwrite", true
+                        "overwrite", true,
+                        "quality", "auto",       // Tự động tối ưu chất lượng (tiết kiệm ~30-60% bandwidth)
+                        "fetch_format", "auto"   // Tự động convert sang WebP/AVIF cho trình duyệt hỗ trợ
                 ));
                 return uploadResult.get("secure_url").toString();
             } catch (IOException e) {

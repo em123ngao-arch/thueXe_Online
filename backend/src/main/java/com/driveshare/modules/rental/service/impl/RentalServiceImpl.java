@@ -57,8 +57,11 @@ public class RentalServiceImpl implements RentalService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Ngày bắt đầu và ngày kết thúc không được để trống");
         }
 
-        if (startDate.isBefore(LocalDate.now())) {
-            throw new AppException(ErrorCode.INVALID_RENTAL_DATES, "Ngày bắt đầu thuê không được ở trong quá khứ");
+        boolean isHourly = request.getNote() != null && request.getNote().contains("[Thuê theo giờ");
+        LocalDate minStartDate = isHourly ? LocalDate.now() : LocalDate.now().plusDays(1);
+        if (startDate.isBefore(minStartDate)) {
+            throw new AppException(ErrorCode.INVALID_RENTAL_DATES,
+                    isHourly ? "Ngày nhận xe không được ở trong quá khứ" : "Ngày nhận xe thuê theo ngày tối thiểu phải từ ngày mai trở đi (cách 1 ngày)");
         }
 
         if (endDate.isBefore(startDate)) {
@@ -105,12 +108,40 @@ public class RentalServiceImpl implements RentalService {
             throw new AppException(ErrorCode.CAR_ALREADY_RENTED, "Xe đã có người giữ chỗ hoặc đang được thuê trong khoảng thời gian này");
         }
 
-        // 6. Tính toán số ngày và tiền thuê (tối thiểu 1 ngày)
+        // 5.5. CRP-NEW: Kiểm tra user này có sẵn đơn PENDING/PENDING_APPROVAL cho cùng xe trong cùng khoảng ngày không
+        boolean hasDuplicateRequest = rentalRepository.hasActiveOrPendingRentalForUserAndCar(
+                car.getCarId(),
+                renterId,
+                startDate,
+                endDate,
+                List.of(ERentalStatus.PENDING, ERentalStatus.PENDING_APPROVAL)
+        );
+        if (hasDuplicateRequest) {
+            log.warn("User renterId={} đã có đơn PENDING/PENDING_APPROVAL trùng ngày [{} -> {}] cho xe carId={}", renterId, startDate, endDate, car.getCarId());
+            throw new AppException(ErrorCode.DUPLICATE_RENTAL_REQUEST);
+        }
+
+        // 6. Tính toán số ngày và tiền thuê (hỗ trợ cả thuê ngày và thuê theo giờ 4h - 8h)
         long daysBetween = ChronoUnit.DAYS.between(startDate, endDate);
         int totalDays = (int) Math.max(1, daysBetween);
 
         BigDecimal pricePerDay = car.getPricePerDay();
-        BigDecimal totalPrice = pricePerDay.multiply(BigDecimal.valueOf(totalDays));
+        BigDecimal totalPrice;
+
+        // Nếu có ghi chú thuê theo giờ (4h - 8h)
+        String noteStr = request.getNote() != null ? request.getNote() : "";
+        if (noteStr.contains("Thuê theo giờ") || noteStr.contains("thuê theo giờ")) {
+            int hours = 4;
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+)\\s*(?:giờ|h)").matcher(noteStr);
+            if (m.find()) {
+                hours = Integer.parseInt(m.group(1));
+            }
+            hours = Math.max(4, Math.min(8, hours)); // Ràng buộc tối thiểu 4h - tối đa 8h
+            BigDecimal hourlyRate = pricePerDay.divide(BigDecimal.valueOf(10), 2, java.math.RoundingMode.HALF_UP);
+            totalPrice = hourlyRate.multiply(BigDecimal.valueOf(hours));
+        } else {
+            totalPrice = pricePerDay.multiply(BigDecimal.valueOf(totalDays));
+        }
         BigDecimal depositAmount = totalPrice.multiply(DEPOSIT_PERCENTAGE);
 
         // 7. Tạo mới đơn thuê ở trạng thái PENDING_APPROVAL theo đúng Đặc tả v2.0.0
