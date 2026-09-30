@@ -226,11 +226,17 @@ const OwnerService = {
                               : '<span class="badge badge-warning">Chờ Admin duyệt</span>')}
                       </td>
                       <td>
-                        <div class="table-actions" style="display: flex; gap: 6px;">
+                        <div class="table-actions" style="display: flex; gap: 6px; flex-wrap: wrap;">
                           <button class="btn btn-outline btn-sm" onclick="OwnerService.viewCarDetail(${c.id})">Chi tiết</button>
                           <button class="btn btn-outline btn-sm" style="color: #7c3aed; border-color: #7c3aed;" onclick="OwnerService.openCalendarModal(${c.id}, '${c.brand} ${c.model}')">Lịch xe</button>
                           <button class="btn btn-outline btn-sm" style="color: #2563eb; border-color: #2563eb;" onclick="OwnerService.openEditCarModal(${c.id})">Sửa xe</button>
                           <button class="btn btn-outline btn-sm" style="color: #0f766e; border-color: #0f766e;" onclick="OwnerService.openPhotosModal(${c.id}, '${c.brand} ${c.model}')">Ảnh xe</button>
+                          ${c.status === 'ACTIVE' 
+                            ? `<button class="btn btn-outline btn-sm" style="color: #d97706; border-color: #d97706;" title="Ẩn xe khỏi tìm kiếm" onclick="OwnerService.toggleCarStatus(${c.id}, 'ACTIVE', '${c.brand} ${c.model}')">Ẩn xe</button>` 
+                            : (c.status === 'INACTIVE' 
+                                ? `<button class="btn btn-outline btn-sm" style="color: #059669; border-color: #059669;" title="Mở hiển thị xe" onclick="OwnerService.toggleCarStatus(${c.id}, 'INACTIVE', '${c.brand} ${c.model}')">Hiện xe</button>` 
+                                : '')}
+                          <button class="btn btn-ghost btn-sm" style="color: #ef4444; border: 1px solid #fecaca;" title="Xóa xe này" onclick="OwnerService.deleteCar(${c.id}, '${c.brand} ${c.model} (${c.license_plate})')">Xóa</button>
                         </div>
                       </td>
                     </tr>
@@ -1727,28 +1733,171 @@ const OwnerService = {
     }
   },
 
-  viewCarDetail(carId) {
-    if (typeof App !== 'undefined' && App.openCarDetailModal) {
-      App.openCarDetailModal(carId);
-      return;
-    }
+  async viewCarDetail(carId) {
     const overlay = document.getElementById('carDetailModalOverlay');
     const body = document.getElementById('carDetailModalBody');
     const title = document.getElementById('carDetailModalTitle');
-    
-    let car = typeof StorageService !== 'undefined' ? StorageService.getCarById(carId) : null;
-    if (overlay && body) {
-      if (title) title.innerText = car ? `${car.brand} ${car.model}` : `Chi tiết xe #${carId}`;
-      body.innerHTML = car ? `
-        <div style="padding: 1rem;">
-          <img src="${car.image_url}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 1rem;" />
-          <h4>${car.brand} ${car.model} (${car.year})</h4>
-          <p>Biển số: <strong>${car.license_plate}</strong></p>
-          <p>Giá thuê: <strong>${typeof StorageService !== 'undefined' ? StorageService.formatCurrency(car.price_per_day) : car.price_per_day}</strong> / ngày</p>
-          <p>Địa chỉ: ${car.pickup_address}</p>
+    if (!overlay || !body) return;
+
+    overlay.classList.add('open');
+    if (title) title.innerText = `Chi tiết phương tiện #${carId}`;
+    body.innerHTML = `
+      <div style="text-align: center; padding: 2.5rem;">
+        <span class="spinner" style="display: inline-block; width: 28px; height: 28px; border: 3px solid #cbd5e1; border-top-color: #0f766e; border-radius: 50%; animation: spin 0.8s linear infinite;"></span>
+        <p style="margin-top: 10px; color: var(--slate-600); font-size: 0.9rem;">Đang tải thông tin chi tiết xe...</p>
+      </div>
+    `;
+
+    let car = null;
+    if (typeof CarAPI !== 'undefined' && CarAPI.getPublicCarDetail) {
+      try {
+        const res = await CarAPI.getPublicCarDetail(carId);
+        if (res && res.data) {
+          car = res.data;
+        }
+      } catch (e) {
+        console.warn('Cannot fetch public car detail via API, checking ownerCars or Storage:', e);
+      }
+    }
+
+    if (!car && Array.isArray(this.ownerCars)) {
+      const c = this.ownerCars.find(item => item.id == carId);
+      if (c) {
+        car = {
+          id: c.id,
+          brand: c.brand,
+          model: c.model,
+          year: c.year,
+          plateNumber: c.license_plate,
+          seats: c.seat_count,
+          transmission: c.transmission,
+          fuelType: c.fuel_type,
+          pricePerDay: c.price_per_day,
+          address: c.pickup_address,
+          province: c.province || 'Hồ Chí Minh',
+          description: c.description,
+          features: c.features,
+          thumbnailUrl: c.image_url,
+          status: c.status
+        };
+      }
+    }
+
+    if (!car && typeof StorageService !== 'undefined') {
+      const local = StorageService.getCarById(carId);
+      if (local) {
+        car = {
+          id: local.id,
+          brand: local.brand,
+          model: local.model,
+          year: local.year,
+          plateNumber: local.license_plate,
+          seats: local.seat_count,
+          transmission: local.transmission,
+          fuelType: local.fuel_type,
+          pricePerDay: local.price_per_day,
+          address: local.pickup_address,
+          province: local.province || 'Hồ Chí Minh',
+          description: local.description,
+          features: local.features,
+          thumbnailUrl: local.image_url,
+          status: local.status
+        };
+      }
+    }
+
+    if (!car) {
+      body.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: #ef4444;">
+          Không tìm thấy thông tin chi tiết của phương tiện này.
         </div>
-      ` : `<p style="padding: 1rem;">Không tìm thấy thông tin xe</p>`;
-      overlay.classList.add('open');
+      `;
+      return;
+    }
+
+    if (title) title.innerText = `${car.brand} ${car.model} (${car.year || ''})`;
+
+    if (typeof RenderService !== 'undefined' && RenderService.renderCarDetail) {
+      body.innerHTML = RenderService.renderCarDetail(car);
+    } else {
+      const img = car.thumbnailUrl || car.image_url || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=900&q=80';
+      const formatCurrency = (amt) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amt || 0);
+      body.innerHTML = `
+        <div style="padding: 0.5rem;">
+          <img src="${img}" alt="${car.brand}" style="width: 100%; max-height: 280px; object-fit: cover; border-radius: 8px; margin-bottom: 1rem;" />
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.9rem; margin-bottom: 1rem;">
+            <div><strong>Hãng & Dòng:</strong> ${car.brand} ${car.model}</div>
+            <div><strong>Biển số:</strong> <span style="font-family: monospace; font-weight: 700;">${car.plateNumber || car.license_plate || 'Chưa cập nhật'}</span></div>
+            <div><strong>Năm SX:</strong> ${car.year || '2023'}</div>
+            <div><strong>Số chỗ:</strong> ${car.seats || car.seat_count || 5} chỗ</div>
+            <div><strong>Hộp số:</strong> ${car.transmission === 'AUTOMATIC' ? 'Tự động' : 'Số sàn'}</div>
+            <div><strong>Nhiên liệu:</strong> ${car.fuelType === 'ELECTRIC' ? 'Điện' : (car.fuelType === 'DIESEL' ? 'Dầu' : 'Xăng')}</div>
+            <div><strong>Giá thuê:</strong> <span style="color: #047857; font-weight: 700;">${formatCurrency(car.pricePerDay || car.price_per_day)}</span>/ngày</div>
+            <div><strong>Trạng thái:</strong> ${car.status || 'ACTIVE'}</div>
+          </div>
+          <div style="margin-bottom: 0.75rem;">
+            <strong>Địa chỉ nhận xe:</strong> ${car.address || car.pickup_address || 'TP. Hồ Chí Minh'}
+          </div>
+          <div style="margin-bottom: 0.75rem;">
+            <strong>Tiện nghi:</strong> ${car.features || 'Bản đồ, Camera lùi, Thu phí tự động'}
+          </div>
+          <div>
+            <strong>Mô tả:</strong> ${car.description || 'Xe đẹp, bảo dưỡng định kỳ.'}
+          </div>
+        </div>
+      `;
+    }
+  },
+
+  // CRP-32: Chủ xe bật/tắt kích hoạt trạng thái xe (ACTIVE <-> INACTIVE)
+  async toggleCarStatus(carId, currentStatus, carName = 'xe') {
+    const isCurrentlyActive = currentStatus === 'ACTIVE';
+    const actionText = isCurrentlyActive ? 'TẮT KÍCH HOẠT (ẨN XE)' : 'KÍCH HOẠT (MỞ XE CHO THUÊ)';
+    const newStatus = isCurrentlyActive ? 'INACTIVE' : 'ACTIVE';
+
+    if (!confirm(`Bạn có chắc muốn ${actionText} cho ${carName}?\n\n- Nếu tắt: Xe sẽ bị ẩn khỏi danh sách tìm kiếm của khách hàng.\n- Nếu bật: Xe sẽ xuất hiện để khách thuê có thể đặt xe.`)) {
+      return;
+    }
+
+    try {
+      if (typeof CarAPI !== 'undefined' && CarAPI.updateCarStatus) {
+        await CarAPI.updateCarStatus(carId, newStatus);
+      } else if (typeof StorageService !== 'undefined') {
+        const c = StorageService.getCarById(carId);
+        if (c) {
+          c.status = newStatus;
+          StorageService.save();
+        }
+      }
+      this.showToast(`Đã chuyển trạng thái ${carName} sang ${newStatus === 'ACTIVE' ? 'Đang hoạt động' : 'Tạm ẩn'} thành công!`, 'success');
+      await this.renderOwnerPortal();
+    } catch (err) {
+      console.error('Lỗi khi đổi trạng thái xe:', err);
+      this.showToast(err.message || 'Không thể thay đổi trạng thái xe. Vui lòng thử lại!', 'error');
+    }
+  },
+
+  // CRP-32: Chủ sở hữu xóa xe (Soft Delete)
+  async deleteCar(carId, carName = 'xe') {
+    if (!confirm(`CẢNH BÁO: Bạn có chắc chắn muốn XÓA ${carName} không?\n\nLưu ý: Thao tác này sẽ gỡ bỏ xe khỏi danh mục xe cho thuê của bạn. Xe đang có chuyến đi hoạt động sẽ không thể xóa.`)) {
+      return;
+    }
+
+    try {
+      if (typeof CarAPI !== 'undefined' && CarAPI.deleteCar) {
+        await CarAPI.deleteCar(carId);
+      } else if (typeof StorageService !== 'undefined') {
+        let cars = StorageService.getCars();
+        cars = cars.filter(c => c.id != carId);
+        StorageService.setCars(cars);
+      }
+      this.showToast(`Đã xóa ${carName} thành công!`, 'success');
+      await this.renderOwnerPortal();
+    } catch (err) {
+      console.error('Lỗi khi xóa xe:', err);
+      let errMsg = err.message || err.error || 'Xóa xe thất bại. Vui lòng thử lại!';
+      if (err.data && err.data.message) errMsg = err.data.message;
+      this.showToast(errMsg, 'error');
     }
   },
 
