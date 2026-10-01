@@ -44,6 +44,15 @@ const App = {
 
     // 4. Cài đặt sự kiện tìm kiếm & lọc
     this.attachFilterEvents();
+
+    // 5. Cài đặt ràng buộc ngày nhận/trả xe (tối thiểu cách 1 ngày, không ở quá khứ)
+    this.initSearchDates();
+
+    // 6. Kiểm tra URL param hoặc hash để mở trực tiếp Chuyến đi
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'trips' || window.location.hash === '#trips' || window.location.hash === '#my-trips') {
+      setTimeout(() => this.showMyBookingsView(), 150);
+    }
   },
 
   // Xác định role ban đầu dựa vào JWT (tài khoản đã đăng nhập) hoặc StorageService
@@ -51,8 +60,9 @@ const App = {
     if (typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
       const user = AuthService.getCurrentUser();
       if (user) {
-        const role = (user.role || (user.roles && user.roles[0]) || 'RENTER')
-          .replace('ROLE_', '').toUpperCase();
+        const role = (typeof resolvePrimaryRole === 'function' && user.roles)
+          ? resolvePrimaryRole(user.roles, user.role)
+          : (user.role || (user.roles && user.roles[0]) || 'RENTER').replace('ROLE_', '').toUpperCase();
         if (role === 'ADMIN') return 'ADMIN';
         if (role === 'OWNER') return 'OWNER';
         return 'RENTER';
@@ -68,8 +78,9 @@ const App = {
     if (isLoggedIn && typeof AuthService !== 'undefined') {
       const user = AuthService.getCurrentUser();
       if (user) {
-        userRole = (user.role || (user.roles && user.roles[0]) || 'RENTER')
-          .replace('ROLE_', '').toUpperCase();
+        userRole = (typeof resolvePrimaryRole === 'function' && user.roles)
+          ? resolvePrimaryRole(user.roles, user.role)
+          : (user.role || (user.roles && user.roles[0]) || 'RENTER').replace('ROLE_', '').toUpperCase();
       }
     }
 
@@ -82,45 +93,36 @@ const App = {
     const btnAddCar  = document.getElementById('btnAddCar');
     const navBookings = document.getElementById('navMyBookings');
 
+    // Ẩn hoàn toàn role-switcher ở giữa theo yêu cầu người dùng
+    document.querySelectorAll('.role-switcher-wrapper, .mobile-role-bar').forEach(el => {
+      el.style.display = 'none';
+    });
+    if (pillRenter) pillRenter.style.display = 'none';
+    if (pillOwner)  pillOwner.style.display  = 'none';
+    if (pillAdmin)  pillAdmin.style.display  = 'none';
+    if (mobRenter)  mobRenter.style.display  = 'none';
+    if (mobOwner)   mobOwner.style.display   = 'none';
+    if (mobAdmin)   mobAdmin.style.display   = 'none';
+
     if (userRole === 'RENTER') {
-      // Renter: chỉ thấy pill Khách thuê xe, ẩn Owner + Admin
-      if (pillRenter) pillRenter.style.display = '';
-      if (pillOwner)  pillOwner.style.display  = 'none';
-      if (pillAdmin)  pillAdmin.style.display  = 'none';
-      if (mobRenter)  mobRenter.style.display  = '';
-      if (mobOwner)   mobOwner.style.display   = 'none';
-      if (mobAdmin)   mobAdmin.style.display   = 'none';
-      if (btnAddCar)  btnAddCar.style.display  = 'none';
+      if (btnAddCar)   btnAddCar.style.display   = 'none';
       if (navBookings) navBookings.style.display = '';
     } else if (userRole === 'OWNER') {
-      // Owner: chỉ thấy pill Chủ xe, ẩn Renter + Admin
-      if (pillRenter) pillRenter.style.display = 'none';
-      if (pillOwner)  pillOwner.style.display  = '';
-      if (pillAdmin)  pillAdmin.style.display  = 'none';
-      if (mobRenter)  mobRenter.style.display  = 'none';
-      if (mobOwner)   mobOwner.style.display   = '';
-      if (mobAdmin)   mobAdmin.style.display   = 'none';
-      if (btnAddCar)  btnAddCar.style.display  = '';
+      if (btnAddCar) {
+        btnAddCar.style.display = '';
+        btnAddCar.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>Kênh Quản lý xe`;
+        btnAddCar.onclick = () => { window.location.href = 'owner-cars.html'; };
+      }
       if (navBookings) navBookings.style.display = 'none';
     } else if (userRole === 'ADMIN') {
-      // Admin: chỉ thấy pill Nhân viên/Admin, ẩn Renter + Owner
-      if (pillRenter) pillRenter.style.display = 'none';
-      if (pillOwner)  pillOwner.style.display  = 'none';
-      if (pillAdmin)  pillAdmin.style.display  = '';
-      if (mobRenter)  mobRenter.style.display  = 'none';
-      if (mobOwner)   mobOwner.style.display   = 'none';
-      if (mobAdmin)   mobAdmin.style.display   = '';
-      if (btnAddCar)  btnAddCar.style.display  = 'none';
+      if (btnAddCar) {
+        btnAddCar.style.display = '';
+        btnAddCar.innerHTML = `Vào Trang Quản Trị`;
+        btnAddCar.onclick = () => { window.location.href = 'admin.html'; };
+      }
       if (navBookings) navBookings.style.display = 'none';
     } else {
-      // Guest: thấy cả 3 pill (để xem demo), nút Đăng xe hỏi đăng nhập
-      if (pillRenter) pillRenter.style.display = '';
-      if (pillOwner)  pillOwner.style.display  = '';
-      if (pillAdmin)  pillAdmin.style.display  = '';
-      if (mobRenter)  mobRenter.style.display  = '';
-      if (mobOwner)   mobOwner.style.display   = '';
-      if (mobAdmin)   mobAdmin.style.display   = '';
-      if (btnAddCar)  btnAddCar.style.display  = '';
+      if (btnAddCar)   btnAddCar.style.display   = '';
       if (navBookings) navBookings.style.display = '';
     }
   },
@@ -202,8 +204,8 @@ const App = {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
-  // Hiển thị màn hình "Chuyến của tôi" (cho Renter)
-  showMyBookingsView() {
+  // Hiển thị màn hình "Chuyến của tôi" (cho Renter - Giai đoạn 1 v2.0.0)
+  async showMyBookingsView() {
     const renterView = document.getElementById('renterSection');
     const myBookingsView = document.getElementById('myBookingsSection');
     const ownerView = document.getElementById('ownerSection');
@@ -218,27 +220,148 @@ const App = {
     document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
     document.getElementById('navMyBookings')?.classList.add('active');
 
-    const bookings = StorageService.getBookings();
-    RenderService.renderMyBookings(bookings);
+    // Cập nhật nút quay về trang chủ chuyên nghiệp trên Header
+    const btnHome = document.getElementById('btnHeaderReturnHome');
+    if (btnHome) {
+      btnHome.classList.add('highlight-back');
+      btnHome.title = "Quay về trang chủ tìm xe";
+      btnHome.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        <span id="txtHeaderHomeLabel">Về trang chủ</span>
+      `;
+    }
+
+    // Ưu tiên tải từ API backend thực tế (RentalAPI.getMyRentals)
+    let bookings = [];
+    if (typeof RentalAPI !== 'undefined' && RentalAPI.getMyRentals && typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
+      try {
+        const res = await RentalAPI.getMyRentals();
+        if (res && (res.code === 200 || res.success) && Array.isArray(res.data)) {
+          bookings = res.data;
+        } else {
+          bookings = StorageService.getBookings();
+        }
+      } catch (e) {
+        console.warn('Lỗi khi tải đơn thuê từ server, sử dụng local storage:', e);
+        bookings = StorageService.getBookings();
+      }
+    } else {
+      bookings = StorageService.getBookings();
+    }
+
+    // Cập nhật thông tin khách thuê thực tế lên tiêu đề
+    if (typeof AuthService !== 'undefined') {
+      const u = AuthService.getCurrentUser();
+      const nameEl = document.getElementById('myTripsCustomerName');
+      const gplxEl = document.getElementById('myTripsCustomerGplx');
+      if (nameEl && u && (u.fullName || u.name)) {
+        nameEl.textContent = u.fullName || u.name;
+      }
+      if (gplxEl && u && (u.driverLicense || u.licenseNumber)) {
+        gplxEl.textContent = `GPLX: ${u.driverLicense || u.licenseNumber} (Đã xác minh)`;
+      }
+    }
+
+    this.cachedMyBookings = bookings;
+    this.currentTripTab = this.currentTripTab || 'ALL';
+    this.currentTripSearch = this.currentTripSearch || '';
+    RenderService.renderMyBookings(bookings, 'myBookingsListContainer', this.currentTripTab, this.currentTripSearch);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
+
+  setTripFilterTab(tab) {
+    this.currentTripTab = tab;
+    if (this.cachedMyBookings) {
+      RenderService.renderMyBookings(this.cachedMyBookings, 'myBookingsListContainer', this.currentTripTab, this.currentTripSearch || '');
+    } else {
+      this.showMyBookingsView();
+    }
+  },
+
+  handleTripSearch(keyword) {
+    this.currentTripSearch = (keyword || '').trim().toLowerCase();
+    if (this.cachedMyBookings) {
+      RenderService.renderMyBookings(this.cachedMyBookings, 'myBookingsListContainer', this.currentTripTab || 'ALL', this.currentTripSearch);
+    }
+  },
+
+  zoomImage(src, caption = '') {
+    const overlay = document.getElementById('imagePreviewModalOverlay');
+    const img = document.getElementById('imagePreviewModalImg');
+    const cap = document.getElementById('imagePreviewModalCaption');
+    if (overlay && img) {
+      img.src = src;
+      if (cap) cap.textContent = caption;
+      overlay.classList.add('open');
+    }
   },
 
   showCatalogView() {
+    // Ẩn Chuyến đi của tôi, hiện lại renterSection
+    const renterView = document.getElementById('renterSection');
+    const myBookingsView = document.getElementById('myBookingsSection');
+    if (renterView) renterView.style.display = 'block';
+    if (myBookingsView) myBookingsView.style.display = 'none';
+
     // Chỉ về Renter view nếu đây là role của user (hoặc chưa đăng nhập)
     const role = this._resolveInitialRole();
     this.switchRole(role);
     document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
     document.getElementById('navCatalog')?.classList.add('active');
+
+    // Đặt lại nút Trang chủ trên Header
+    const btnHome = document.getElementById('btnHeaderReturnHome');
+    if (btnHome) {
+      btnHome.classList.remove('highlight-back');
+      btnHome.title = "Trang chủ";
+      btnHome.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span id="txtHeaderHomeLabel">Trang chủ</span>
+      `;
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
   // Cập nhật số đơn trên navbar
-  updateBookingCountBadge() {
+  async updateBookingCountBadge() {
     const badge = document.getElementById('navBookingBadgeCount');
-    if (badge) {
-      const bookings = StorageService.getBookings();
-      const activeCount = bookings.filter(b => b.status === 'DEPOSIT_PAID' || b.status === 'PENDING').length;
-      badge.textContent = activeCount;
-      badge.style.display = activeCount > 0 ? 'flex' : 'none';
+    if (!badge) return;
+
+    let activeCount = 0;
+    if (typeof RentalAPI !== 'undefined' && RentalAPI.getMyRentals && typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
+      try {
+        const res = await RentalAPI.getMyRentals();
+        if (res && (res.code === 200 || res.success) && Array.isArray(res.data)) {
+          activeCount = res.data.filter(b => 
+            b.status === 'PENDING' || 
+            b.status === 'PENDING_APPROVAL' || 
+            b.status === 'WAITING_PAYMENT' || 
+            b.status === 'CONFIRMED' || 
+            b.status === 'DEPOSIT_PAID' ||
+            b.status === 'IN_PROGRESS'
+          ).length;
+          badge.textContent = activeCount;
+          badge.style.display = activeCount > 0 ? 'flex' : 'none';
+          return;
+        }
+      } catch (e) {}
     }
+
+    const bookings = StorageService.getBookings();
+    activeCount = bookings.filter(b => 
+      b.status === 'DEPOSIT_PAID' || 
+      b.status === 'PENDING' || 
+      b.status === 'PENDING_APPROVAL' ||
+      b.status === 'WAITING_PAYMENT'
+    ).length;
+    badge.textContent = activeCount;
+    badge.style.display = activeCount > 0 ? 'flex' : 'none';
   },
 
   // Lắng nghe và áp dụng bộ lọc
@@ -287,74 +410,240 @@ const App = {
       this.applyFilters();
     });
 
-    // Nút tìm kiếm tại Hero Search Widget
+    // Nút tìm kiếm tại Hero Search Widget (CRP-38 & CRP-39)
     document.getElementById('btnHeroSearch')?.addEventListener('click', () => {
       const locationSelect = document.getElementById('searchLocationSelect');
       if (locationSelect) {
         this.currentFilters.city = locationSelect.value;
+      }
+      const startEl = document.getElementById('searchStartDate');
+      const endEl = document.getElementById('searchEndDate');
+      if (startEl && startEl.value) {
+        this.currentFilters.startDate = startEl.value;
+      }
+      if (endEl && endEl.value) {
+        this.currentFilters.endDate = endEl.value;
       }
       this.applyFilters();
       document.getElementById('catalogSection')?.scrollIntoView({ behavior: 'smooth' });
     });
   },
 
-  // Áp dụng logic lọc danh sách xe
-  applyFilters() {
-    const allCars = StorageService.getCars();
-    // Chỉ lấy xe ACTIVE cho sàn khách thuê
-    let filtered = allCars.filter(c => c.status === 'ACTIVE');
-
-    // Lọc theo thành phố
-    if (this.currentFilters.city && this.currentFilters.city !== 'ALL') {
-      filtered = filtered.filter(c => c.city && c.city.includes(this.currentFilters.city));
+  // Cài đặt ràng buộc ngày nhận và ngày trả xe (tối thiểu cách 1 ngày, không ở quá khứ)
+  initSearchDates() {
+    if (typeof MiotoTimePicker !== 'undefined') {
+      MiotoTimePicker.init();
+      return;
     }
 
-    // Lọc theo Hãng
-    if (this.currentFilters.brand && this.currentFilters.brand !== 'ALL') {
-      filtered = filtered.filter(c => c.brand.toLowerCase() === this.currentFilters.brand.toLowerCase());
+    const startEl = document.getElementById('searchStartDate');
+    const endEl = document.getElementById('searchEndDate');
+    if (!startEl || !endEl) return;
+
+    const today = new Date();
+    // Ngày nhận tối thiểu cách 1 ngày (từ ngày mai)
+    const minStart = new Date(today);
+    minStart.setDate(today.getDate() + 1);
+
+    const defaultEnd = new Date(today);
+    defaultEnd.setDate(today.getDate() + 3);
+
+    const formatYMD = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const minStartStr = formatYMD(minStart);
+    const defaultEndStr = formatYMD(defaultEnd);
+
+    startEl.min = minStartStr;
+    if (!startEl.value || startEl.value < minStartStr) {
+      startEl.value = minStartStr;
     }
 
-    // Lọc theo Số chỗ
-    if (this.currentFilters.seats && this.currentFilters.seats !== 'ALL') {
-      if (this.currentFilters.seats === '4-5') {
-        filtered = filtered.filter(c => c.seat_count <= 5 && c.car_type !== 'PICKUP');
-      } else if (this.currentFilters.seats === '7') {
-        filtered = filtered.filter(c => c.seat_count >= 7);
-      } else if (this.currentFilters.seats === 'PICKUP') {
-        filtered = filtered.filter(c => c.car_type === 'PICKUP');
+    endEl.min = startEl.value;
+    if (!endEl.value || endEl.value < startEl.value) {
+      endEl.value = defaultEndStr;
+    }
+
+    startEl.addEventListener('change', () => {
+      if (startEl.value < minStartStr) {
+        alert('Ngày nhận xe không được ở trong quá khứ và tối thiểu phải cách thời điểm hiện tại 1 ngày (từ ngày mai trở đi)!');
+        startEl.value = minStartStr;
+      }
+      endEl.min = startEl.value;
+      if (endEl.value < startEl.value) {
+        endEl.value = startEl.value;
+      }
+    });
+
+    endEl.addEventListener('change', () => {
+      if (endEl.value < startEl.value) {
+        alert('Ngày trả xe phải sau hoặc bằng ngày nhận xe!');
+        endEl.value = startEl.value;
+      }
+    });
+  },
+
+  // Áp dụng logic lọc danh sách xe (hỗ trợ CarAPI.searchCars & fallback)
+  async applyFilters() {
+    let carsFromApi = null;
+    if (typeof CarAPI !== 'undefined' && CarAPI.searchCars) {
+      try {
+        const params = { page: 0, size: 50 };
+        if (this.currentFilters.city && this.currentFilters.city !== 'ALL') params.province = this.currentFilters.city;
+        if (this.currentFilters.brand && this.currentFilters.brand !== 'ALL') params.brand = this.currentFilters.brand;
+        if (this.currentFilters.startDate) params.startDate = this.currentFilters.startDate;
+        if (this.currentFilters.endDate) params.endDate = this.currentFilters.endDate;
+        if (this.currentFilters.transmission && this.currentFilters.transmission !== 'ALL') params.transmission = this.currentFilters.transmission;
+        if (this.currentFilters.fuel && this.currentFilters.fuel !== 'ALL') params.fuelType = this.currentFilters.fuel;
+        if (this.currentFilters.priceRange && this.currentFilters.priceRange !== 'ALL') {
+          if (this.currentFilters.priceRange === 'UNDER_800') params.maxPrice = 800000;
+          else if (this.currentFilters.priceRange === '800_1200') { params.minPrice = 800000; params.maxPrice = 1200000; }
+          else if (this.currentFilters.priceRange === 'OVER_1200') params.minPrice = 1200000;
+        }
+        if (this.currentFilters.sort === 'PRICE_ASC') params.sortBy = 'price_asc';
+        else if (this.currentFilters.sort === 'PRICE_DESC') params.sortBy = 'price_desc';
+
+        if (this.currentFilters.seats === '7') {
+          params.seats = 7;
+        }
+
+        const res = await CarAPI.searchCars(params);
+        // Backend trả dạng: { data: { items: [...], pagination: {...} } }
+        const items = res?.data?.items || res?.data?.content || res?.result?.items || [];
+        if (items.length > 0) {
+          carsFromApi = items;
+        }
+      } catch (err) {
+        console.warn('CarAPI.searchCars fallback to local:', err);
       }
     }
 
-    // Lọc theo Hộp số
-    if (this.currentFilters.transmission && this.currentFilters.transmission !== 'ALL') {
-      filtered = filtered.filter(c => c.transmission === this.currentFilters.transmission);
-    }
+    let filtered = [];
+    if (carsFromApi) {
+      filtered = [...carsFromApi];
 
-    // Lọc theo Nhiên liệu
-    if (this.currentFilters.fuel && this.currentFilters.fuel !== 'ALL') {
-      filtered = filtered.filter(c => c.fuel_type === this.currentFilters.fuel);
-    }
-
-    // Lọc theo Mức giá
-    if (this.currentFilters.priceRange && this.currentFilters.priceRange !== 'ALL') {
-      if (this.currentFilters.priceRange === 'UNDER_800') {
-        filtered = filtered.filter(c => c.price_per_day < 800000);
-      } else if (this.currentFilters.priceRange === '800_1200') {
-        filtered = filtered.filter(c => c.price_per_day >= 800000 && c.price_per_day <= 1200000);
-      } else if (this.currentFilters.priceRange === 'OVER_1200') {
-        filtered = filtered.filter(c => c.price_per_day > 1200000);
+      // Lọc theo Số chỗ
+      if (this.currentFilters.seats && this.currentFilters.seats !== 'ALL') {
+        if (this.currentFilters.seats === '4-5') {
+          filtered = filtered.filter(c => {
+            const seats = c.seats || c.seat_count || 5;
+            const model = (c.model || '').toLowerCase();
+            return seats <= 5 && !model.includes('ranger');
+          });
+        } else if (this.currentFilters.seats === '7') {
+          filtered = filtered.filter(c => (c.seats || c.seat_count || 0) >= 7);
+        } else if (this.currentFilters.seats === 'PICKUP') {
+          filtered = filtered.filter(c => (c.model || '').toLowerCase().includes('ranger') || c.car_type === 'PICKUP');
+        }
       }
-    }
 
-    // Sắp xếp
-    if (this.currentFilters.sort === 'PRICE_ASC') {
-      filtered.sort((a, b) => a.price_per_day - b.price_per_day);
-    } else if (this.currentFilters.sort === 'PRICE_DESC') {
-      filtered.sort((a, b) => b.price_per_day - a.price_per_day);
-    } else if (this.currentFilters.sort === 'RATING') {
-      filtered.sort((a, b) => b.rating - a.rating);
-    } else if (this.currentFilters.sort === 'TRIPS') {
-      filtered.sort((a, b) => b.trip_count - a.trip_count);
+      // Lọc theo Hộp số
+      if (this.currentFilters.transmission && this.currentFilters.transmission !== 'ALL') {
+        filtered = filtered.filter(c => c.transmission === this.currentFilters.transmission);
+      }
+
+      // Lọc theo Nhiên liệu
+      if (this.currentFilters.fuel && this.currentFilters.fuel !== 'ALL') {
+        filtered = filtered.filter(c => (c.fuel_type || c.fuelType) === this.currentFilters.fuel);
+      }
+
+      // Lọc theo Hãng xe
+      if (this.currentFilters.brand && this.currentFilters.brand !== 'ALL') {
+        filtered = filtered.filter(c => (c.brand || '').toLowerCase() === this.currentFilters.brand.toLowerCase());
+      }
+
+      // Lọc theo Địa điểm / Tỉnh thành
+      if (this.currentFilters.city && this.currentFilters.city !== 'ALL') {
+        filtered = filtered.filter(c => {
+          const prov = (c.province || c.city || '').toLowerCase();
+          return prov.includes(this.currentFilters.city.toLowerCase());
+        });
+      }
+
+      // Lọc theo Mức giá
+      if (this.currentFilters.priceRange && this.currentFilters.priceRange !== 'ALL') {
+        if (this.currentFilters.priceRange === 'UNDER_800') {
+          filtered = filtered.filter(c => Number(c.price_per_day || c.pricePerDay || 0) < 800000);
+        } else if (this.currentFilters.priceRange === '800_1200') {
+          filtered = filtered.filter(c => {
+            const p = Number(c.price_per_day || c.pricePerDay || 0);
+            return p >= 800000 && p <= 1200000;
+          });
+        } else if (this.currentFilters.priceRange === 'OVER_1200') {
+          filtered = filtered.filter(c => Number(c.price_per_day || c.pricePerDay || 0) > 1200000);
+        }
+      }
+
+      // Sắp xếp
+      if (this.currentFilters.sort === 'PRICE_ASC') {
+        filtered.sort((a, b) => Number(a.price_per_day || a.pricePerDay || 0) - Number(b.price_per_day || b.pricePerDay || 0));
+      } else if (this.currentFilters.sort === 'PRICE_DESC') {
+        filtered.sort((a, b) => Number(b.price_per_day || b.pricePerDay || 0) - Number(a.price_per_day || a.pricePerDay || 0));
+      }
+      console.log('[App] Sau khi lọc: còn ' + filtered.length + ' xe phù hợp');
+    } else {
+      // FALLBACK: chỉ dùng khi backend offline hoặc không có kết nối
+      console.warn('[App] Backend không có dữ liệu xe — fallback về local StorageService');
+      const allCars = StorageService.getCars();
+      // Chỉ lấy xe ACTIVE cho sàn khách thuê
+      filtered = allCars.filter(c => c.status === 'ACTIVE');
+
+      // Lọc theo thành phố
+      if (this.currentFilters.city && this.currentFilters.city !== 'ALL') {
+        filtered = filtered.filter(c => c.city && c.city.includes(this.currentFilters.city));
+      }
+
+      // Lọc theo Hãng
+      if (this.currentFilters.brand && this.currentFilters.brand !== 'ALL') {
+        filtered = filtered.filter(c => c.brand.toLowerCase() === this.currentFilters.brand.toLowerCase());
+      }
+
+      // Lọc theo Số chỗ
+      if (this.currentFilters.seats && this.currentFilters.seats !== 'ALL') {
+        if (this.currentFilters.seats === '4-5') {
+          filtered = filtered.filter(c => c.seat_count <= 5 && c.car_type !== 'PICKUP');
+        } else if (this.currentFilters.seats === '7') {
+          filtered = filtered.filter(c => c.seat_count >= 7);
+        } else if (this.currentFilters.seats === 'PICKUP') {
+          filtered = filtered.filter(c => c.car_type === 'PICKUP');
+        }
+      }
+
+      // Lọc theo Hộp số
+      if (this.currentFilters.transmission && this.currentFilters.transmission !== 'ALL') {
+        filtered = filtered.filter(c => c.transmission === this.currentFilters.transmission);
+      }
+
+      // Lọc theo Nhiên liệu
+      if (this.currentFilters.fuel && this.currentFilters.fuel !== 'ALL') {
+        filtered = filtered.filter(c => c.fuel_type === this.currentFilters.fuel);
+      }
+
+      // Lọc theo Mức giá
+      if (this.currentFilters.priceRange && this.currentFilters.priceRange !== 'ALL') {
+        if (this.currentFilters.priceRange === 'UNDER_800') {
+          filtered = filtered.filter(c => c.price_per_day < 800000);
+        } else if (this.currentFilters.priceRange === '800_1200') {
+          filtered = filtered.filter(c => c.price_per_day >= 800000 && c.price_per_day <= 1200000);
+        } else if (this.currentFilters.priceRange === 'OVER_1200') {
+          filtered = filtered.filter(c => c.price_per_day > 1200000);
+        }
+      }
+
+      // Sắp xếp
+      if (this.currentFilters.sort === 'PRICE_ASC') {
+        filtered.sort((a, b) => a.price_per_day - b.price_per_day);
+      } else if (this.currentFilters.sort === 'PRICE_DESC') {
+        filtered.sort((a, b) => b.price_per_day - a.price_per_day);
+      } else if (this.currentFilters.sort === 'RATING') {
+        filtered.sort((a, b) => b.rating - a.rating);
+      } else if (this.currentFilters.sort === 'TRIPS') {
+        filtered.sort((a, b) => b.trip_count - a.trip_count);
+      }
     }
 
     // Cập nhật số lượng xe tìm thấy
@@ -399,18 +688,39 @@ const App = {
 
   // Gợi ý thông minh tự nhiên theo lộ trình (Không có emoji)
   applyPromptSuggestion(type) {
+    // Reset all filter controls visually first
+    document.querySelectorAll('[data-filter-brand]').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-filter-brand="ALL"]')?.classList.add('active');
+    this.currentFilters.brand = 'ALL';
+
+    document.querySelectorAll('[data-filter-seats]').forEach(b => b.classList.remove('active'));
+    const fuelSelect = document.getElementById('selectFuel');
+    if (fuelSelect) fuelSelect.value = 'ALL';
+    this.currentFilters.fuel = 'ALL';
+
+    const priceSelect = document.getElementById('selectPrice');
+    if (priceSelect) priceSelect.value = 'ALL';
+    this.currentFilters.priceRange = 'ALL';
+
     if (type === 'VUNG_TAU') {
       this.currentFilters.seats = '4-5';
       this.currentFilters.priceRange = 'UNDER_800';
-      this.showToast('Gợi ý: Dòng xe 5 chỗ Sedan Vios / Accent tiết kiệm xăng, cốp rộng đi Vũng Tàu', 'info');
+      document.querySelector('[data-filter-seats="4-5"]')?.classList.add('active');
+      if (priceSelect) priceSelect.value = 'UNDER_800';
+      this.showToast('Gợi ý: Dòng xe 4-5 chỗ Sedan / CUV tiết kiệm xăng dưới 800.000 đ/ngày đi Vũng Tàu', 'info');
     } else if (type === 'DA_LAT_7CHO') {
       this.currentFilters.seats = '7';
-      this.showToast('Gợi ý: Dòng MPV/SUV 7 chỗ Xpander / Carnival gầm cao máy khỏe vượt đèo', 'info');
+      document.querySelector('[data-filter-seats="7"]')?.classList.add('active');
+      this.showToast('Gợi ý: Dòng MPV/SUV 7 chỗ Xpander / Fortuner / Carnival gầm cao máy khỏe cho gia đình đi Đà Lạt', 'info');
     } else if (type === 'XE_DIEN') {
       this.currentFilters.fuel = 'ELECTRIC';
-      this.showToast('Gợi ý: SUV điện VinFast VF8 lái êm ái, sạc miễn phí trên toàn quốc', 'info');
+      document.querySelector('[data-filter-seats="ALL"]')?.classList.add('active');
+      if (fuelSelect) fuelSelect.value = 'ELECTRIC';
+      this.showToast('Gợi ý: Dòng xe điện thông minh VinFast VF8 lái êm ái, sạc thông minh', 'info');
     } else if (type === 'TIET_KIEM') {
       this.currentFilters.priceRange = 'UNDER_800';
+      document.querySelector('[data-filter-seats="ALL"]')?.classList.add('active');
+      if (priceSelect) priceSelect.value = 'UNDER_800';
       this.showToast('Gợi ý: Dòng xe giá tốt dưới 800.000 đ/ngày cho chuyến đi tiết kiệm', 'info');
     }
 
@@ -420,16 +730,27 @@ const App = {
 
   // Modal Chi tiết xe
   async openCarDetailModal(carId) {
-    let car = StorageService.getCarById(carId);
+    // Ưu tiên lấy từ backend API (dữ liệu thật)
+    let car = null;
 
-    if (typeof ApiService !== 'undefined' && ApiService.getPublicCarDetail) {
+    const carApi = (typeof CarAPI !== 'undefined' && CarAPI.getPublicCarDetail) ? CarAPI : null;
+    if (carApi) {
       try {
-        const res = await ApiService.getPublicCarDetail(carId);
+        const res = await carApi.getPublicCarDetail(carId);
         if (res && (res.success || res.code === 200) && res.data) {
           car = res.data;
         }
       } catch (err) {
-        console.warn('API getPublicCarDetail fallback to local data:', err);
+        console.warn('[App] API getPublicCarDetail lỗi, thử fallback local:', err);
+      }
+    }
+
+    // Fallback về local chỉ khi carId khớp với data local (không dùng khi backend offline + carId từ API)
+    if (!car) {
+      const localCar = StorageService.getCarById(carId);
+      if (localCar) {
+        car = localCar;
+        console.warn('[App] Dùng dữ liệu local cho xe #' + carId + ' — chỉ hiển thị, không thể đặt xe');
       }
     }
 
@@ -463,15 +784,16 @@ const App = {
 
   // Hiển thị Biên bản giao nhận xe thực tế (Handover Record)
   showHandoverInfo(bookingId) {
-    const bookings = StorageService.getBookings();
-    const bk = bookings.find(b => b.id === bookingId);
+    const allBks = [...(this.cachedMyBookings || []), ...StorageService.getBookings()];
+    const bk = allBks.find(b => b.id == bookingId || b.rental_id == bookingId || b.rentalId == bookingId);
     if (!bk) return;
+    const id = bk.rental_id || bk.rentalId || bk.id;
 
     const html = `
       <div style="font-size: 0.88rem;">
-        <div style="background: var(--primary-light); border: 1px solid var(--primary-subtle); border-radius: var(--radius-md); padding: 0.9rem; margin-bottom: 1.15rem;">
-          <div style="font-weight: 700; color: var(--primary); font-size: 0.95rem; margin-bottom: 0.2rem;">
-            Biên bản bàn giao xe điện tử #${bk.id}
+        <div style="background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: var(--radius-md); padding: 0.9rem; margin-bottom: 1.15rem;">
+          <div style="font-weight: 700; color: #0f766e; font-size: 0.95rem; margin-bottom: 0.2rem;">
+            Biên bản bàn giao xe điện tử #${id}
           </div>
           <div style="color: var(--slate-600); font-size: 0.8rem;">
             Theo quy trình bàn giao xe DriveShare: Kiểm tra chỉ số ODO, vạch xăng và chụp hiện trạng ngoại thất.
@@ -485,12 +807,12 @@ const App = {
           </div>
           <div style="background: var(--slate-50); border: 1px solid var(--slate-200); padding: 0.8rem; border-radius: var(--radius-md);">
             <div style="font-size: 0.72rem; color: var(--slate-500); font-weight: 700; text-transform: uppercase;">Mức nhiên liệu:</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: var(--primary);">8 / 8 Vạch (Đầy bình)</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #0f766e;">8 / 8 Vạch (Đầy bình)</div>
           </div>
         </div>
 
         <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.45rem;">Hiện trạng ngoại thất & Giấy tờ:</h4>
-        <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.35rem; color: var(--slate-700); font-size: 0.82rem; margin-bottom: 1.15rem;">
+        <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.35rem; color: var(--slate-700); font-size: 0.82rem; margin-bottom: 1.15rem; padding-left: 0;">
           <li>- Cavet xe và Bảo hiểm TNDS gốc kèm theo xe</li>
           <li>- Lốp dự phòng, bộ kích nâng xe, tẩu sạc nguyên vẹn</li>
           <li>- Đã chụp ảnh 4 góc xe và lưu trữ trên hệ thống DriveShare</li>
@@ -502,40 +824,45 @@ const App = {
       </div>
     `;
 
-    this.openModal(`Biên bản bàn giao xe #${bookingId}`, html);
+    this.openModal(`Biên bản bàn giao xe #${id}`, html);
   },
 
   // Hiển thị popup Liên hệ Chủ xe
   showContactOwner(bookingId) {
-    const bookings = StorageService.getBookings();
-    const bk = bookings.find(b => b.id === bookingId);
+    const allBks = [...(this.cachedMyBookings || []), ...StorageService.getBookings()];
+    const bk = allBks.find(b => b.id == bookingId || b.rental_id == bookingId || b.rentalId == bookingId);
     if (!bk) return;
+    const id = bk.rental_id || bk.rentalId || bk.id;
+    const carName = (bk.car_brand ? `${bk.car_brand} ${bk.car_model || ''}` : (bk.carBrand ? `${bk.carBrand} ${bk.carModel || ''}` : bk.car_name)) || 'Xe cho thuê';
+    const plate = bk.car_plate_number || bk.carPlateNumber || bk.license_plate || bk.car_plate || '51H-XXXX';
+    const hostName = bk.owner_name || bk.ownerName || bk.host_name || 'Nguyễn Văn Hùng';
+    const hostPhone = bk.owner_phone || bk.ownerPhone || '0901 234 567';
 
     const html = `
       <div style="text-align: center; padding: 0.5rem 0;">
-        <div style="width: 52px; height: 52px; background: var(--primary-light); color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.85rem auto;">
+        <div style="width: 52px; height: 52px; background: #f0fdfa; color: #0f766e; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.85rem auto;">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
           </svg>
         </div>
         <h3 style="font-size: 1.1rem; margin-bottom: 0.4rem;">Liên hệ với Chủ xe</h3>
         <p style="color: var(--slate-600); font-size: 0.86rem; margin-bottom: 1.25rem;">
-          Xe <strong>${bk.car_name}</strong> · Biển số: <strong>${bk.car_plate}</strong>
+          Xe <strong>${carName}</strong> · Biển số: <strong>${plate}</strong>
         </p>
 
         <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: var(--radius-lg); padding: 1.15rem; margin-bottom: 1.25rem;">
           <div style="font-size: 0.82rem; color: var(--slate-500);">Hotline hỗ trợ trực tiếp chủ xe:</div>
-          <div style="font-size: 1.35rem; font-weight: 800; color: var(--primary); margin: 0.3rem 0;">0901 234 567</div>
-          <div style="font-size: 0.8rem; color: var(--slate-500);">Chủ xe: Nguyễn Văn Hùng (Zalo / Điện thoại)</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: #0f766e; margin: 0.3rem 0;">${hostPhone}</div>
+          <div style="font-size: 0.8rem; color: var(--slate-500);">Chủ xe: ${hostName} (Zalo / Điện thoại)</div>
         </div>
 
-        <button class="btn btn-primary" style="width: 100%;" onclick="App.showToast('Đang kết nối tới số 0901 234 567...', 'info'); App.closeModal();">
+        <button class="btn btn-primary" style="width: 100%;" onclick="App.showToast('Đang kết nối tới số ${hostPhone}...', 'info'); App.closeModal();">
           Gọi điện ngay
         </button>
       </div>
     `;
 
-    this.openModal(`Thông tin chủ xe đơn #${bookingId}`, html);
+    this.openModal(`Thông tin chủ xe đơn #${id}`, html);
   },
 
   showReviewPrompt(bookingId) {
@@ -613,8 +940,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
     const user = AuthService.getCurrentUser();
     if (user) {
-      const jwtRole = (user.role || (user.roles && user.roles[0]) || 'RENTER')
-        .replace('ROLE_', '').toUpperCase();
+      const jwtRole = (typeof resolvePrimaryRole === 'function' && user.roles)
+        ? resolvePrimaryRole(user.roles, user.role)
+        : (user.role || (user.roles && user.roles[0]) || 'RENTER').replace('ROLE_', '').toUpperCase();
       // Ép overwrite CURRENT_ROLE theo role thật của user hiện tại
       localStorage.setItem('driveshare_current_role', jwtRole);
     }

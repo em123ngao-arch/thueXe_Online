@@ -1,4 +1,4 @@
-﻿# 📚 THƯ MỤC TÀI LIỆU DRIVESHARE
+# 📚 THƯ MỤC TÀI LIỆU DRIVESHARE
 
 > Đây là điểm xuất phát khi bạn cần tìm bất kỳ tài liệu nào của dự án.
 > Tất cả file `.md` đều đọc được trực tiếp trên GitHub.
@@ -14,6 +14,7 @@ docs/
 ├── FRONTEND_CONVENTION.md       ← Quy ước code Frontend (JS/HTML/CSS)
 ├── GIT_WORKFLOW.md              ← Quy trình Git: branch, commit, PR
 ├── flow_diagrams.md             ← Sơ đồ luồng nghiệp vụ
+├── driveshare_workflow_and_10_product_benchmark.md ← Đánh giá luồng & Đối chiếu 10 sản phẩm thực tế ⭐
 ├── glossary.md                  ← Bảng thuật ngữ dự án
 │
 ├── scrum/

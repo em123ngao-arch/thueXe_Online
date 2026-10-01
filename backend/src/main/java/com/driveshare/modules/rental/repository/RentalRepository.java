@@ -17,6 +17,8 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
     // CRP-42: Đếm số đơn PENDING hiện tại của 1 khách thuê (khống chế tối đa 3)
     long countByRenterIdAndStatus(Long renterId, ERentalStatus status);
 
+    long countByRenterIdAndStatusIn(Long renterId, List<ERentalStatus> statuses);
+
     // CRP-44: Khách thuê xem lịch sử yêu cầu của mình
     List<Rental> findByRenterIdOrderByCreatedAtDesc(Long renterId);
 
@@ -39,6 +41,20 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
             @Param("status") ERentalStatus status
     );
 
+    // Giai đoạn 2 & 3: Tìm các đơn trùng khung giờ theo danh sách trạng thái (PENDING, PENDING_APPROVAL, ON_HOLD)
+    @Query("SELECT r FROM Rental r WHERE r.carId = :carId " +
+           "AND (:excludeRentalId IS NULL OR r.rentalId != :excludeRentalId) " +
+           "AND r.status IN :statuses " +
+           "AND r.startDate <= :endDate " +
+           "AND r.endDate >= :startDate")
+    List<Rental> findCompetingRentals(
+            @Param("carId") Long carId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("excludeRentalId") Long excludeRentalId,
+            @Param("statuses") List<ERentalStatus> statuses
+    );
+
     // CRP-44, 51: Tìm đơn thuê theo ID và Renter ID (bảo mật tránh thao tác chéo đơn người khác)
     java.util.Optional<Rental> findByRentalIdAndRenterId(Long rentalId, Long renterId);
 
@@ -50,6 +66,13 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
     List<Rental> findExpiredPendingRentals(
             @Param("status") ERentalStatus status,
             @Param("threshold") Instant threshold
+    );
+
+    // Giai đoạn 3 v2.0.0: Tìm các đơn WAITING_PAYMENT đã hết hạn 45 phút giữ chỗ
+    @Query("SELECT r FROM Rental r WHERE r.status = :status AND r.paymentExpiresAt <= :now")
+    List<Rental> findExpiredWaitingPaymentRentals(
+            @Param("status") ERentalStatus status,
+            @Param("now") Instant now
     );
 
     // CRP-38: Kiểm tra 1 xe cụ thể có bị trùng lịch trong khoảng ngày [startDate, endDate] không
@@ -71,6 +94,37 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
            "AND r.startDate <= :endDate " +
            "AND r.endDate >= :startDate")
     List<Long> findCarIdsWithConflictingRentals(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("statuses") List<ERentalStatus> statuses
+    );
+
+    /**
+     * Lấy các đơn thuê đang hoạt động/chốt cọc của 1 xe từ mốc thời gian chỉ định
+     */
+    @Query("SELECT r FROM Rental r " +
+           "WHERE r.carId = :carId " +
+           "AND r.status IN :statuses " +
+           "AND r.endDate >= :from " +
+           "AND r.deletedAt IS NULL " +
+           "ORDER BY r.startDate ASC")
+    List<Rental> findActiveRentalsForCar(
+            @Param("carId") Long carId,
+            @Param("statuses") List<ERentalStatus> statuses,
+            @Param("from") LocalDate from
+    );
+
+    // CRP-NEW: Kiểm tra user đã có đơn PENDING/PENDING_APPROVAL trùng ngày cho cùng xe
+    // Ngăn chặn 1 khách gửi 2 yêu cầu thuê cùng xe trong khoảng thời gian trùng lặp
+    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN TRUE ELSE FALSE END FROM Rental r " +
+           "WHERE r.carId = :carId " +
+           "AND r.renterId = :renterId " +
+           "AND r.status IN :statuses " +
+           "AND r.startDate <= :endDate " +
+           "AND r.endDate >= :startDate")
+    boolean hasActiveOrPendingRentalForUserAndCar(
+            @Param("carId") Long carId,
+            @Param("renterId") Long renterId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
             @Param("statuses") List<ERentalStatus> statuses

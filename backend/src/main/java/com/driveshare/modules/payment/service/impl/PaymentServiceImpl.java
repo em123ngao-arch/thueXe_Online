@@ -55,8 +55,8 @@ public class PaymentServiceImpl implements PaymentService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 2. Chỉ đơn APPROVED mới được thanh toán cọc
-        if (rental.getStatus() != ERentalStatus.APPROVED) {
+        // 2. Chỉ đơn APPROVED hoặc WAITING_PAYMENT mới được thanh toán cọc
+        if (rental.getStatus() != ERentalStatus.APPROVED && rental.getStatus() != ERentalStatus.WAITING_PAYMENT) {
             log.warn("Đơn thuê rentalId={} đang ở trạng thái {} không thể đặt cọc", rentalId, rental.getStatus());
             throw new AppException(ErrorCode.RENTAL_NOT_APPROVED);
         }
@@ -156,6 +156,25 @@ public class PaymentServiceImpl implements PaymentService {
         rental.setStatus(ERentalStatus.CONFIRMED);
         rental.setUpdatedAt(Instant.now());
         rentalRepository.save(rental);
+
+        // Giai đoạn 3 & 4: Auto-rejection dọn dẹp các đơn trùng lịch sang REJECTED
+        List<Rental> competingRentals = rentalRepository.findCompetingRentals(
+                rental.getCarId(),
+                rental.getStartDate(),
+                rental.getEndDate(),
+                rental.getRentalId(),
+                List.of(ERentalStatus.ON_HOLD, ERentalStatus.PENDING, ERentalStatus.PENDING_APPROVAL)
+        );
+        if (!competingRentals.isEmpty()) {
+            for (Rental competing : competingRentals) {
+                competing.setStatus(ERentalStatus.REJECTED);
+                competing.setRejectReason("Xe đã được chốt cọc bởi khách hàng khác.");
+                competing.setUpdatedAt(Instant.now());
+            }
+            rentalRepository.saveAll(competingRentals);
+            log.info("Auto-rejection: Đã tự động từ chối {} đơn trùng lịch sau khi rentalId={} chốt cọc",
+                    competingRentals.size(), rental.getRentalId());
+        }
 
         log.info("Đơn rentalId={} đã được chuyển sang trạng thái CONFIRMED sau khi thanh toán", rental.getRentalId());
         return toPaymentResponse(payment, rental);

@@ -440,20 +440,27 @@ public class AdminUserServiceImpl implements AdminUserService {
         List<User> users = userRepository.findAll();
         List<PendingLicenseResponse> result = new ArrayList<>();
         for (User u : users) {
-            if (u.getRenterProfile() != null && u.getRenterProfile().getLicenseNumber() != null && !u.getRenterProfile().getLicenseNumber().trim().isEmpty()) {
-                RenterProfile rp = u.getRenterProfile();
-                result.add(PendingLicenseResponse.builder()
-                        .userId(u.getUserId())
-                        .fullName(rp.getLicenseFullName() != null ? rp.getLicenseFullName() : (u.getFullName() != null ? u.getFullName() : u.getUsername()))
-                        .email(u.getEmail())
-                        .phone(u.getPhone())
-                        .licenseNumber(rp.getLicenseNumber())
-                        .licenseFullName(rp.getLicenseFullName())
-                        .licenseFrontUrl(rp.getLicenseFrontUrl())
-                        .licenseBackUrl(rp.getLicenseBackUrl())
-                        .licenseVerificationStatus(rp.getLicenseVerificationStatus() != null ? rp.getLicenseVerificationStatus() : EVerificationStatus.PENDING)
-                        .submittedAt(rp.getUpdatedAt() != null ? rp.getUpdatedAt() : (u.getCreatedAt() != null ? u.getCreatedAt() : Instant.now()))
-                        .build());
+            RenterProfile rp = u.getRenterProfile();
+            if (rp != null) {
+                boolean hasLicense = (rp.getLicenseNumber() != null && !rp.getLicenseNumber().trim().isEmpty())
+                        || (rp.getLicenseFrontUrl() != null && !rp.getLicenseFrontUrl().trim().isEmpty());
+                boolean isPending = rp.getLicenseVerificationStatus() == EVerificationStatus.PENDING
+                        || rp.getLicenseVerificationStatus() == null;
+
+                if (hasLicense && isPending) {
+                    result.add(PendingLicenseResponse.builder()
+                            .userId(u.getUserId())
+                            .fullName(rp.getLicenseFullName() != null ? rp.getLicenseFullName() : (u.getFullName() != null ? u.getFullName() : u.getUsername()))
+                            .email(u.getEmail())
+                            .phone(u.getPhone())
+                            .licenseNumber(rp.getLicenseNumber() != null ? rp.getLicenseNumber() : "Chờ cập nhật")
+                            .licenseFullName(rp.getLicenseFullName())
+                            .licenseFrontUrl(rp.getLicenseFrontUrl())
+                            .licenseBackUrl(rp.getLicenseBackUrl())
+                            .licenseVerificationStatus(EVerificationStatus.PENDING)
+                            .submittedAt(rp.getUpdatedAt() != null ? rp.getUpdatedAt() : (u.getCreatedAt() != null ? u.getCreatedAt() : Instant.now()))
+                            .build());
+                }
             }
         }
         return result;

@@ -44,6 +44,9 @@ class RentalServiceTest {
     @Mock
     private CarRepository carRepository;
 
+    @Mock
+    private com.driveshare.modules.user.repository.RenterProfileRepository renterProfileRepository;
+
     @InjectMocks
     private RentalServiceImpl rentalService;
 
@@ -105,7 +108,7 @@ class RentalServiceTest {
         assertThat(response.getPricePerDay()).isEqualByComparingTo(BigDecimal.valueOf(500_000));
         assertThat(response.getTotalPrice()).isEqualByComparingTo(BigDecimal.valueOf(1_000_000));
         assertThat(response.getDepositAmount()).isEqualByComparingTo(BigDecimal.valueOf(300_000)); // 30% của 1,000,000
-        assertThat(response.getStatus()).isEqualTo(ERentalStatus.PENDING);
+        assertThat(response.getStatus()).isEqualTo(ERentalStatus.PENDING_APPROVAL);
         assertThat(response.getNote()).isEqualTo("Cần xe sạch sẽ");
 
         verify(rentalRepository).save(any(Rental.class));
@@ -139,6 +142,25 @@ class RentalServiceTest {
         CreateRentalRequest request = CreateRentalRequest.builder()
                 .carId(CAR_ID)
                 .startDate(LocalDate.now().minusDays(1))
+                .endDate(LocalDate.now().plusDays(2))
+                .build();
+
+        when(rentalRepository.countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING)).thenReturn(0L);
+
+        assertThatThrownBy(() -> rentalService.createRentalRequest(request))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> {
+                    AppException appEx = (AppException) ex;
+                    assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.INVALID_RENTAL_DATES);
+                });
+    }
+
+    @Test
+    @DisplayName("Validation: Ngày bắt đầu là hôm nay (< 1 ngày) -> ném INVALID_RENTAL_DATES")
+    void createRentalRequest_StartDateToday_ThrowsException() {
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(LocalDate.now())
                 .endDate(LocalDate.now().plusDays(2))
                 .build();
 
@@ -240,6 +262,37 @@ class RentalServiceTest {
                 .satisfies(ex -> {
                     AppException appEx = (AppException) ex;
                     assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+                });
+    }
+
+    @Test
+    @DisplayName("Giai đoạn 1 & CRP-38: Xe bị trùng lịch thuê -> ném CAR_ALREADY_RENTED")
+    void createRentalRequest_ConflictingDates_ThrowsException() {
+        LocalDate startDate = LocalDate.now().plusDays(1);
+        LocalDate endDate = LocalDate.now().plusDays(3);
+
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
+
+        Car car = Car.builder()
+                .carId(CAR_ID)
+                .ownerId(OWNER_ID)
+                .pricePerDay(BigDecimal.valueOf(500_000))
+                .status(ECarStatus.ACTIVE)
+                .build();
+
+        when(rentalRepository.countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING)).thenReturn(0L);
+        when(carRepository.findByCarIdAndDeletedAtIsNull(CAR_ID)).thenReturn(Optional.of(car));
+        when(rentalRepository.hasDateConflict(eq(CAR_ID), eq(startDate), eq(endDate), anyList())).thenReturn(true);
+
+        assertThatThrownBy(() -> rentalService.createRentalRequest(request))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> {
+                    AppException appEx = (AppException) ex;
+                    assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.CAR_ALREADY_RENTED);
                 });
     }
 }

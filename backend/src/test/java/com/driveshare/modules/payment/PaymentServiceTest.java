@@ -215,6 +215,33 @@ class PaymentServiceTest {
     }
 
     @Test
+    @DisplayName("Giai đoạn 3 & 4: Xác nhận cọc thành công -> Tự động từ chối các đơn trùng lịch")
+    void confirmPayment_Success_AutoRejectsCompetingRentals() {
+        Rental competing = Rental.builder()
+                .rentalId(11L)
+                .carId(1L)
+                .renterId(5L)
+                .status(ERentalStatus.ON_HOLD)
+                .build();
+
+        when(paymentRepository.findById(100L)).thenReturn(Optional.of(samplePayment));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(rentalRepository.findById(10L)).thenReturn(Optional.of(sampleRental));
+        when(rentalRepository.save(any(Rental.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(carRepository.findByCarIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(sampleCar));
+        when(rentalRepository.findCompetingRentals(eq(1L), any(), any(), eq(10L), any()))
+                .thenReturn(List.of(competing));
+
+        PaymentResponse response = paymentService.confirmPayment(100L, 4L);
+
+        assertEquals(ERentalStatus.CONFIRMED, sampleRental.getStatus());
+        assertEquals(ERentalStatus.REJECTED, competing.getStatus());
+        assertEquals("Xe đã được chốt cọc bởi khách hàng khác.", competing.getRejectReason());
+        verify(rentalRepository).saveAll(List.of(competing));
+    }
+
+
+    @Test
     @DisplayName("CRP-52: Đánh dấu thất bại -> Payment chuyển sang FAILED")
     void failPayment_Success() {
         when(paymentRepository.findById(100L)).thenReturn(Optional.of(samplePayment));

@@ -8,6 +8,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Getter
@@ -67,6 +68,9 @@ public class Rental extends BaseEntity {
     @Column(name = "status", length = 30, nullable = false)
     @Builder.Default
     private ERentalStatus status = ERentalStatus.PENDING;
+
+    @Column(name = "payment_expires_at")
+    private Instant paymentExpiresAt;
 
     @Column(name = "reject_reason", length = 500)
     private String rejectReason;

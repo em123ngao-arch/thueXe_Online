@@ -21,4 +21,14 @@ public class PendingLicenseResponse {
     private String licenseBackUrl;
     private EVerificationStatus licenseVerificationStatus;
     private Instant submittedAt;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("license_image_url")
+    public String getLicenseImageUrl() {
+        return licenseFrontUrl;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("licenseImageUrl")
+    public String getLicenseImageUrlCamel() {
+        return licenseFrontUrl;
+    }
 }

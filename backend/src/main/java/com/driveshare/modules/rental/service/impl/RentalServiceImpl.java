@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -30,6 +31,7 @@ public class RentalServiceImpl implements RentalService {
 
     private final RentalRepository rentalRepository;
     private final CarRepository carRepository;
+    private final com.driveshare.modules.user.repository.RenterProfileRepository renterProfileRepository;
 
     private static final int MAX_PENDING_RENTALS = 3;
     private static final BigDecimal DEPOSIT_PERCENTAGE = BigDecimal.valueOf(0.30);
@@ -39,10 +41,11 @@ public class RentalServiceImpl implements RentalService {
     public RentalResponse createRentalRequest(CreateRentalRequest request) {
         Long renterId = getCurrentUserId();
 
-        // 1. CRP-42: Kiểm tra số lượng đơn PENDING hiện tại của khách thuê
-        long pendingCount = rentalRepository.countByRenterIdAndStatus(renterId, ERentalStatus.PENDING);
+        // 1. CRP-42 & Giai đoạn 1: Kiểm tra số lượng đơn chờ duyệt hiện tại của khách thuê
+        long pendingCount = rentalRepository.countByRenterIdAndStatus(renterId, ERentalStatus.PENDING)
+                + rentalRepository.countByRenterIdAndStatus(renterId, ERentalStatus.PENDING_APPROVAL);
         if (pendingCount >= MAX_PENDING_RENTALS) {
-            log.warn("User {} đã có {} đơn PENDING, vượt giới hạn tối đa {}", renterId, pendingCount, MAX_PENDING_RENTALS);
+            log.warn("User {} đã có {} đơn PENDING/PENDING_APPROVAL, vượt giới hạn tối đa {}", renterId, pendingCount, MAX_PENDING_RENTALS);
             throw new AppException(ErrorCode.MAX_PENDING_RENTALS_EXCEEDED);
         }
 
@@ -54,15 +57,28 @@ public class RentalServiceImpl implements RentalService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Ngày bắt đầu và ngày kết thúc không được để trống");
         }
 
-        if (startDate.isBefore(LocalDate.now())) {
-            throw new AppException(ErrorCode.INVALID_RENTAL_DATES, "Ngày bắt đầu thuê không được ở trong quá khứ");
+        boolean isHourly = request.getNote() != null && request.getNote().contains("[Thuê theo giờ");
+        LocalDate minStartDate = isHourly ? LocalDate.now() : LocalDate.now().plusDays(1);
+        if (startDate.isBefore(minStartDate)) {
+            throw new AppException(ErrorCode.INVALID_RENTAL_DATES,
+                    isHourly ? "Ngày nhận xe không được ở trong quá khứ" : "Ngày nhận xe thuê theo ngày tối thiểu phải từ ngày mai trở đi (cách 1 ngày)");
         }
 
         if (endDate.isBefore(startDate)) {
             throw new AppException(ErrorCode.INVALID_RENTAL_DATES, "Ngày kết thúc thuê phải sau hoặc bằng ngày bắt đầu thuê");
         }
 
-        // 3. Kiểm tra xe tồn tại và đang ACTIVE
+        // 3. Giai đoạn 1: Điều kiện tiên quyết kiểm tra hồ sơ khách thuê (eKYC / GPLX)
+        if (renterProfileRepository != null) {
+            renterProfileRepository.findById(renterId).ifPresent(profile -> {
+                if (profile.getLicenseVerificationStatus() == com.driveshare.common.enums.EVerificationStatus.REJECTED
+                        || profile.getVerificationStatus() == com.driveshare.common.enums.EVerificationStatus.REJECTED) {
+                    throw new AppException(ErrorCode.UNAUTHORIZED, "Hồ sơ GPLX/CCCD của bạn đã bị từ chối. Vui lòng cập nhật lại trước khi thuê xe");
+                }
+            });
+        }
+
+        // 4. Kiểm tra xe tồn tại và đang ACTIVE
         Car car = carRepository.findByCarIdAndDeletedAtIsNull(request.getCarId())
                 .orElseThrow(() -> new AppException(ErrorCode.CAR_NOT_FOUND));
 
@@ -75,15 +91,60 @@ public class RentalServiceImpl implements RentalService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Bạn không thể tự thuê xe của chính mình");
         }
 
-        // 4. Tính toán số ngày và tiền thuê (tối thiểu 1 ngày)
+        // 5. Giai đoạn 1 & CRP-38: Kiểm tra xe có bị trùng lịch với đơn đang WAITING_PAYMENT, APPROVED, CONFIRMED, IN_PROGRESS không
+        boolean hasConflict = rentalRepository.hasDateConflict(
+                car.getCarId(),
+                startDate,
+                endDate,
+                List.of(
+                        ERentalStatus.WAITING_PAYMENT,
+                        ERentalStatus.APPROVED,
+                        ERentalStatus.CONFIRMED,
+                        ERentalStatus.IN_PROGRESS
+                )
+        );
+        if (hasConflict) {
+            log.warn("Xe carId={} đã có lịch giữ chỗ/thuê giao nhau trong khoảng {} -> {}", car.getCarId(), startDate, endDate);
+            throw new AppException(ErrorCode.CAR_ALREADY_RENTED, "Xe đã có người giữ chỗ hoặc đang được thuê trong khoảng thời gian này");
+        }
+
+        // 5.5. CRP-NEW: Kiểm tra user này có sẵn đơn PENDING/PENDING_APPROVAL cho cùng xe trong cùng khoảng ngày không
+        boolean hasDuplicateRequest = rentalRepository.hasActiveOrPendingRentalForUserAndCar(
+                car.getCarId(),
+                renterId,
+                startDate,
+                endDate,
+                List.of(ERentalStatus.PENDING, ERentalStatus.PENDING_APPROVAL)
+        );
+        if (hasDuplicateRequest) {
+            log.warn("User renterId={} đã có đơn PENDING/PENDING_APPROVAL trùng ngày [{} -> {}] cho xe carId={}", renterId, startDate, endDate, car.getCarId());
+            throw new AppException(ErrorCode.DUPLICATE_RENTAL_REQUEST);
+        }
+
+        // 6. Tính toán số ngày và tiền thuê (hỗ trợ cả thuê ngày và thuê theo giờ 4h - 8h)
         long daysBetween = ChronoUnit.DAYS.between(startDate, endDate);
         int totalDays = (int) Math.max(1, daysBetween);
 
         BigDecimal pricePerDay = car.getPricePerDay();
-        BigDecimal totalPrice = pricePerDay.multiply(BigDecimal.valueOf(totalDays));
+        BigDecimal totalPrice;
+
+        // Nếu có ghi chú thuê theo giờ (4h - 8h)
+        String noteStr = request.getNote() != null ? request.getNote() : "";
+        if (noteStr.contains("Thuê theo giờ") || noteStr.contains("thuê theo giờ")) {
+            int hours = 4;
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+)\\s*(?:giờ|h)").matcher(noteStr);
+            if (m.find()) {
+                hours = Integer.parseInt(m.group(1));
+            }
+            hours = Math.max(4, Math.min(8, hours)); // Ràng buộc tối thiểu 4h - tối đa 8h
+            BigDecimal hourlyRate = pricePerDay.divide(BigDecimal.valueOf(10), 2, java.math.RoundingMode.HALF_UP);
+            totalPrice = hourlyRate.multiply(BigDecimal.valueOf(hours));
+        } else {
+            totalPrice = pricePerDay.multiply(BigDecimal.valueOf(totalDays));
+        }
         BigDecimal depositAmount = totalPrice.multiply(DEPOSIT_PERCENTAGE);
 
-        // 5. Tạo mới đơn thuê ở trạng thái PENDING
+        // 7. Tạo mới đơn thuê ở trạng thái PENDING_APPROVAL theo đúng Đặc tả v2.0.0
         Rental rental = Rental.builder()
                 .carId(car.getCarId())
                 .renterId(renterId)
@@ -93,13 +154,13 @@ public class RentalServiceImpl implements RentalService {
                 .pricePerDay(pricePerDay)
                 .totalPrice(totalPrice)
                 .depositAmount(depositAmount)
-                .status(ERentalStatus.PENDING)
+                .status(ERentalStatus.PENDING_APPROVAL)
                 .note(request.getNote())
                 .build();
 
         Rental savedRental = rentalRepository.save(rental);
-        log.info("Tạo yêu cầu thuê xe thành công: rentalId={}, carId={}, renterId={}, totalDays={}, totalPrice={}",
-                savedRental.getRentalId(), car.getCarId(), renterId, totalDays, totalPrice);
+        log.info("Tạo yêu cầu thuê xe thành công: rentalId={}, carId={}, renterId={}, totalDays={}, totalPrice={}, status={}",
+                savedRental.getRentalId(), car.getCarId(), renterId, totalDays, totalPrice, savedRental.getStatus());
 
         return RentalResponse.from(savedRental);
     }

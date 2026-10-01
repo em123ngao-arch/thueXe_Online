@@ -38,6 +38,7 @@ import org.springframework.web.bind.annotation.*;
 public class CarController {
 
     private final CarService carService;
+    private final com.driveshare.modules.car.service.CarCalendarService carCalendarService;
 
     // =====================================================================
     // CRP-23 — POST /api/v1/cars
@@ -198,6 +199,72 @@ public class CarController {
                 ApiResponse.<Void>builder()
                         .success(true)
                         .message("Xóa xe thành công")
+                        .build()
+        );
+    }
+
+    // =====================================================================
+    // CRP-40 — Quản lý Lịch Xe & Chặn Ngày Bận (Owner Blackout Dates)
+    // =====================================================================
+
+    @Operation(
+            summary = "Xem toàn bộ lịch xe",
+            description = "Owner xem toàn bộ lịch xe (gồm cả đơn thuê của khách và các ngày tự chặn bận) từ một mốc ngày."
+    )
+    @GetMapping("/{id}/calendar")
+    @PreAuthorize("hasAnyRole('OWNER', 'ROLE_OWNER')")
+    public ResponseEntity<ApiResponse<com.driveshare.modules.car.dto.response.CarCalendarOverviewResponse>> getCarCalendar(
+            @PathVariable Long id,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate fromDate) {
+
+        com.driveshare.modules.car.dto.response.CarCalendarOverviewResponse response = carCalendarService.getCarCalendar(id, fromDate);
+
+        return ResponseEntity.ok(
+                ApiResponse.<com.driveshare.modules.car.dto.response.CarCalendarOverviewResponse>builder()
+                        .success(true)
+                        .message("Lấy lịch xe thành công")
+                        .data(response)
+                        .build()
+        );
+    }
+
+    @Operation(
+            summary = "Chủ xe chặn ngày bận",
+            description = "Owner chặn một khoảng ngày bận cho xe (bảo dưỡng, việc riêng). Hệ thống sẽ tự kiểm tra xung đột đơn thuê."
+    )
+    @PostMapping("/{id}/calendar/blocks")
+    @PreAuthorize("hasAnyRole('OWNER', 'ROLE_OWNER')")
+    public ResponseEntity<ApiResponse<com.driveshare.modules.car.dto.response.CalendarBlockResponse>> addCalendarBlock(
+            @PathVariable Long id,
+            @Valid @RequestBody com.driveshare.modules.car.dto.request.CalendarBlockCreateRequest request) {
+
+        com.driveshare.modules.car.dto.response.CalendarBlockResponse response = carCalendarService.addCalendarBlock(id, request);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                ApiResponse.<com.driveshare.modules.car.dto.response.CalendarBlockResponse>builder()
+                        .success(true)
+                        .message("Chặn lịch ngày bận thành công")
+                        .data(response)
+                        .build()
+        );
+    }
+
+    @Operation(
+            summary = "Chủ xe mở khóa ngày bận",
+            description = "Owner hủy bỏ một khoảng chặn ngày bận đã tạo trước đó để xe rảnh trở lại."
+    )
+    @DeleteMapping("/{id}/calendar/blocks/{blockId}")
+    @PreAuthorize("hasAnyRole('OWNER', 'ROLE_OWNER')")
+    public ResponseEntity<ApiResponse<Void>> deleteCalendarBlock(
+            @PathVariable Long id,
+            @PathVariable Long blockId) {
+
+        carCalendarService.deleteCalendarBlock(id, blockId);
+
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .success(true)
+                        .message("Mở khóa ngày bận thành công")
                         .build()
         );
     }
