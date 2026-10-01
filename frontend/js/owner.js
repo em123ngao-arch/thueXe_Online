@@ -86,6 +86,74 @@ const OwnerService = {
       return typeof StorageService !== 'undefined' ? StorageService.formatCurrency(val) : (val?.toLocaleString('vi-VN') + ' đ');
     };
 
+    const formatDateVN = (dStr) => {
+      if (!dStr) return '';
+      const parts = dStr.split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return dStr;
+    };
+
+    // Quản lý tab đang hiển thị
+    const activeTab = this.currentActiveTab || 'CARS';
+
+    // Bộ lọc thông minh tab yêu cầu thuê (ALL, PENDING, ACTIVE, HISTORY) và theo xe
+    const currentRentalTab = this.rentalFilterTab || 'ALL';
+    const currentRentalCarId = this.rentalFilterCarId || 'ALL';
+
+    const isPending = (s) => s === 'PENDING' || s === 'PENDING_APPROVAL';
+    const isActiveRental = (s) => ['WAITING_PAYMENT', 'APPROVED', 'ON_HOLD', 'CONFIRMED', 'DEPOSIT_PAID', 'IN_PROGRESS'].includes(s);
+    const isHistory = (s) => ['COMPLETED', 'REJECTED', 'WITHDRAWN_BY_GUEST', 'EXPIRED', 'AUTO_EXPIRED_NO_HOST_ACTION'].includes(s);
+
+    const pendingCount = ownerBookings.filter(b => isPending(b.status)).length;
+    const activeCount = ownerBookings.filter(b => isActiveRental(b.status)).length;
+    const historyCount = ownerBookings.filter(b => isHistory(b.status)).length;
+
+    // Lọc danh sách theo Tab và theo Xe
+    const filteredBookings = ownerBookings.filter(b => {
+      if (currentRentalTab === 'PENDING' && !isPending(b.status)) return false;
+      if (currentRentalTab === 'ACTIVE' && !isActiveRental(b.status)) return false;
+      if (currentRentalTab === 'HISTORY' && !isHistory(b.status)) return false;
+
+      if (currentRentalCarId !== 'ALL') {
+        const bCarId = b.car_id || b.carId;
+        if (bCarId != currentRentalCarId) return false;
+      }
+      return true;
+    });
+
+    // Nhóm các đơn thuê theo từng Phương Tiện (Asset-Centric Grouping)
+    const carGroupsMap = new Map();
+    filteredBookings.forEach(b => {
+      const cId = b.car_id || b.carId || ('plate_' + (b.car_plate_number || b.license_plate || 'unknown'));
+      if (!carGroupsMap.has(cId)) {
+        const matchedCar = ownerCars.find(c => c.id == cId);
+        carGroupsMap.set(cId, {
+          car: matchedCar || {
+            id: cId,
+            brand: b.car_brand || b.carBrand || '',
+            model: b.car_model || b.carModel || b.car_name || b.carName || 'Xe của bạn',
+            license_plate: b.car_plate_number || b.carPlateNumber || b.license_plate || '',
+            image_url: b.car_image_url || b.carImageUrl || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80',
+            price_per_day: b.price_per_day || b.pricePerDay || 0
+          },
+          bookings: []
+        });
+      }
+      carGroupsMap.get(cId).bookings.push(b);
+    });
+
+    // Sắp xếp đơn trong mỗi xe: Ưu tiên đơn chờ duyệt (PENDING) lên đầu
+    carGroupsMap.forEach(group => {
+      group.bookings.sort((a, b) => {
+        const aPending = isPending(a.status) ? 1 : 0;
+        const bPending = isPending(b.status) ? 1 : 0;
+        if (aPending !== bPending) return bPending - aPending;
+        return (b.rental_id || b.rentalId || b.id) - (a.rental_id || a.rentalId || a.id);
+      });
+    });
+
+    const carGroupsList = Array.from(carGroupsMap.values());
+
     container.innerHTML = `
       <div class="portal-header">
         <div class="container">
@@ -115,13 +183,13 @@ const OwnerService = {
 
           <!-- Tabs -->
           <div class="portal-tabs">
-            <button class="portal-tab-btn active" id="ownerTabCars" onclick="OwnerService.switchOwnerTab('CARS')">
+            <button class="portal-tab-btn ${activeTab === 'CARS' ? 'active' : ''}" id="ownerTabCars" onclick="OwnerService.switchOwnerTab('CARS')">
               Danh sách xe (${ownerCars.length})
             </button>
-            <button class="portal-tab-btn" id="ownerTabRequests" onclick="OwnerService.switchOwnerTab('REQUESTS')">
+            <button class="portal-tab-btn ${activeTab === 'REQUESTS' ? 'active' : ''}" id="ownerTabRequests" onclick="OwnerService.switchOwnerTab('REQUESTS')">
               Yêu cầu thuê (${ownerBookings.length})
             </button>
-            <button class="portal-tab-btn" id="ownerTabAdd" onclick="OwnerService.switchOwnerTab('ADD')">
+            <button class="portal-tab-btn ${activeTab === 'ADD' ? 'active' : ''}" id="ownerTabAdd" onclick="OwnerService.switchOwnerTab('ADD')">
               Đăng xe mới
             </button>
           </div>
@@ -185,7 +253,7 @@ const OwnerService = {
         </div>
 
         <!-- Tab Content: Danh sách xe -->
-        <div id="ownerTabCarsContent">
+        <div id="ownerTabCarsContent" style="display: ${activeTab === 'CARS' ? 'block' : 'none'};">
           <div class="admin-table-card">
             <div class="admin-table-header">
               <h3>Đội xe cho thuê của bạn</h3>
@@ -199,7 +267,7 @@ const OwnerService = {
                     <th style="width: 140px; text-align: center;">Biển số</th>
                     <th style="width: 130px;">Giá thuê/ngày</th>
                     <th>Địa điểm giao xe</th>
-                    <th style="width: 155px; text-align: center;">Trạng thái</th>
+                    <th style="width: 175px; text-align: center;">Trạng thái</th>
                     <th style="width: 180px; text-align: center;">Thao tác</th>
                   </tr>
                 </thead>
@@ -224,13 +292,57 @@ const OwnerService = {
                       <td style="font-size: 0.84rem;">${c.pickup_address}</td>
                       <td style="text-align: center; white-space: nowrap;">
                         ${c.status === 'ACTIVE' || c.status === 'INACTIVE' ? `
-                          <div class="status-toggle-container" onclick="OwnerService.toggleCarStatus(${c.id}, '${c.status}', '${c.brand} ${c.model}')" title="${c.status === 'ACTIVE' ? 'Đang nhận khách — Bấm để tạm ẩn' : 'Đang tạm ẩn — Bấm để mở nhận khách'}">
-                            <span class="custom-switch ${c.status === 'ACTIVE' ? 'active' : ''}">
-                              <span class="custom-switch-knob"></span>
-                            </span>
-                            <span class="toggle-label ${c.status === 'ACTIVE' ? 'active' : 'inactive'}">
-                              ${c.status === 'ACTIVE' ? 'Hoạt động' : 'Tạm ẩn'}
-                            </span>
+                          <div class="bmw-gear-selector ${c.status === 'ACTIVE' ? 'gear-drive' : 'gear-park'}"
+                               onclick="OwnerService.toggleCarStatus(${c.id}, '${c.status}', '${c.brand} ${c.model}')"
+                               title="${c.status === 'ACTIVE' ? 'Cần số điện tử: Đang vào số [D] (Drive - Sẵn sàng nhận khách). Bấm để về số [P] (Park - Tạm ẩn)' : 'Cần số điện tử: Đang ở số [P] (Park - Tạm ẩn). Bấm để gạt vào số [D] (Drive - Nhận khách)'}">
+                            
+                            <!-- Cần số điện tử dáng BMW Joystick cao cấp -->
+                            <div class="bmw-shifter-box">
+                              <svg class="bmw-shifter-graphic" viewBox="0 0 44 48" width="32" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                  <linearGradient id="metalGrad_${c.id}" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stop-color="#ffffff"/>
+                                    <stop offset="35%" stop-color="#cbd5e1"/>
+                                    <stop offset="70%" stop-color="#94a3b8"/>
+                                    <stop offset="100%" stop-color="#475569"/>
+                                  </linearGradient>
+                                  <linearGradient id="pianoBlack_${c.id}" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#1e293b"/>
+                                    <stop offset="100%" stop-color="#020617"/>
+                                  </linearGradient>
+                                  <linearGradient id="glassReflection_${c.id}" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.45"/>
+                                    <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+                                  </linearGradient>
+                                </defs>
+                                <ellipse cx="22" cy="42" rx="16" ry="5" fill="#1e293b" stroke="#475569" stroke-width="1.2"/>
+                                <ellipse cx="22" cy="42" rx="12" ry="3.2" fill="#020617"/>
+                                <g class="shifter-lever-group">
+                                  <path d="M19 32 L20 41 L24 41 L25 32 Z" fill="url(#metalGrad_${c.id})" stroke="#64748b" stroke-width="0.6"/>
+                                  <path d="M14 11 C14 6 18 4 24 4 C29 4 32 7 32 12 C32 18 29 28 26 33 C25 34 21 34 19 32 C16 27 14 18 14 11 Z" fill="url(#metalGrad_${c.id})" stroke="#334155" stroke-width="0.8"/>
+                                  <path d="M17 11 C17 8 20 6.5 24 6.5 C27.5 6.5 29.5 8.5 29.5 12 C29.5 16 27.5 23 25 28 C24 30 22 30 20.5 28 C18.5 23 17 16 17 11 Z" fill="url(#pianoBlack_${c.id})" stroke="#0f172a" stroke-width="0.5"/>
+                                  <path d="M18 10 C18 8 20 7 23 7 C20 12 19 19 18 24 C17.8 19 17.8 13 18 10 Z" fill="url(#glassReflection_${c.id})"/>
+                                  <rect class="bmw-p-button" x="19" y="3.2" width="9" height="4.5" rx="1.8" stroke="#475569" stroke-width="0.6"/>
+                                  <text class="bmw-p-text" x="23.5" y="6.8" font-size="3.2" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" text-anchor="middle">P</text>
+                                  <text x="23.5" y="12" font-size="3.2" font-family="'Segoe UI', Roboto, sans-serif" font-weight="800" text-anchor="middle" fill="#64748b">R</text>
+                                  <text x="23.5" y="17" font-size="3.2" font-family="'Segoe UI', Roboto, sans-serif" font-weight="800" text-anchor="middle" fill="#64748b">N</text>
+                                  <text class="bmw-d-letter" x="24.5" y="23" font-size="3.8" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" text-anchor="middle">D</text>
+                                  <circle class="bmw-d-led" cx="19.5" cy="21.8" r="1.3"/>
+                                </g>
+                              </svg>
+                            </div>
+
+                            <!-- Màn hình điện tử Taplo hiển thị số (Cluster LCD) -->
+                            <div class="bmw-cluster-lcd">
+                              <div class="lcd-gear-badge ${c.status === 'ACTIVE' ? 'drive' : 'park'}">
+                                ${c.status === 'ACTIVE' ? 'D' : 'P'}
+                              </div>
+                              <div class="lcd-status-info">
+                                <span class="lcd-title">${c.status === 'ACTIVE' ? 'HOẠT ĐỘNG' : 'TẠM ẨN'}</span>
+                                <span class="lcd-subtitle">${c.status === 'ACTIVE' ? 'Sẵn sàng chạy' : 'Đang đỗ xe'}</span>
+                              </div>
+                            </div>
+
                           </div>
                         ` : (c.status === 'REJECTED' 
                               ? '<span class="badge badge-danger">Từ chối duyệt</span>' 
@@ -259,109 +371,196 @@ const OwnerService = {
           </div>
         </div>
 
-        <!-- Tab Content: Yêu cầu thuê -->
-        <div id="ownerTabRequestsContent" style="display: none;">
-          <div class="admin-table-card">
-            <div class="admin-table-header">
-              <h3>Đơn đặt cọc & Chuyến đi đang diễn ra</h3>
-              <span class="badge badge-info">${ownerBookings.length} đơn</span>
+        <!-- Tab Content: Yêu cầu thuê (Gom nhóm theo từng xe & Cảnh báo trùng lịch) -->
+        <div id="ownerTabRequestsContent" style="display: ${activeTab === 'REQUESTS' ? 'block' : 'none'};">
+          <!-- 1. Thanh Lọc Trạng Thái & Chọn Xe Thông Minh -->
+          <div class="rental-filter-header">
+            <div class="rental-status-tabs">
+              <button type="button" class="rental-tab-pill ${currentRentalTab === 'ALL' ? 'active' : ''}" onclick="OwnerService.setRentalFilterTab('ALL')">
+                Tất cả (${ownerBookings.length})
+              </button>
+              <button type="button" class="rental-tab-pill ${currentRentalTab === 'PENDING' ? 'active' : ''}" onclick="OwnerService.setRentalFilterTab('PENDING')">
+                <span class="tab-indicator red"></span> Cần duyệt (${pendingCount})
+              </button>
+              <button type="button" class="rental-tab-pill ${currentRentalTab === 'ACTIVE' ? 'active' : ''}" onclick="OwnerService.setRentalFilterTab('ACTIVE')">
+                <span class="tab-indicator green"></span> Đang hoạt động (${activeCount})
+              </button>
+              <button type="button" class="rental-tab-pill ${currentRentalTab === 'HISTORY' ? 'active' : ''}" onclick="OwnerService.setRentalFilterTab('HISTORY')">
+                <span class="tab-indicator gray"></span> Lịch sử & Đã hủy (${historyCount})
+              </button>
             </div>
-            <div class="table-responsive">
-              <table class="custom-table">
-                <thead>
-                  <tr>
-                    <th>Mã đơn</th>
-                    <th>Xe cho thuê</th>
-                    <th>Khách thuê</th>
-                    <th>Thời gian thuê</th>
-                    <th>Tiền cọc nhận được</th>
-                    <th>Trạng thái</th>
-                    <th>Hành động</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${ownerBookings.length === 0 ? `
-                    <tr><td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--slate-500);">Chưa có yêu cầu đặt thuê nào cho các xe của bạn.</td></tr>
-                  ` : ownerBookings.map(b => {
-                    const id = b.rental_id || b.rentalId || b.id;
-                    const carBrand = b.car_brand || b.carBrand || '';
-                    const carModel = b.car_model || b.carModel || '';
-                    const carName = (carBrand ? `${carBrand} ${carModel}`.trim() : (b.car_name || b.carName)) || 'Xe của bạn';
-                    const plate = b.car_plate_number || b.carPlateNumber || b.license_plate || b.plateNumber || '';
-                    const renterName = b.renter_full_name || b.renterFullName || b.renter_name || b.renterName || 'Khách thuê';
-                    const renterPhone = b.renter_phone || b.renterPhone || '---';
-                    const startDate = b.start_date || b.startDate || '';
-                    const endDate = b.end_date || b.endDate || '';
-                    const totalDays = b.total_days || b.totalDays || 1;
-                    const deposit = b.deposit_amount || b.depositAmount || b.rental_amount || 0;
-                    const note = b.note || b.trip_purpose || '';
-                    
-                    let badge = `<span class="badge badge-info">${b.status}</span>`;
-                    let action = '<span style="color: var(--slate-400); font-size: 0.8rem;">—</span>';
 
-                    if (b.status === 'PENDING' || b.status === 'PENDING_APPROVAL') {
-                      badge = '<span class="badge badge-warning" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a;">Chờ duyệt hồ sơ</span>';
-                      action = `
-                        <div style="display:flex; gap:4px;">
-                          <button class="btn btn-primary btn-xs" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="OwnerService.approveRental(${id})">Duyệt</button>
-                          <button class="btn btn-outline-danger btn-xs" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color:var(--danger); border:1px solid var(--danger); background:transparent;" onclick="OwnerService.rejectRentalPrompt(${id})">Từ chối</button>
-                        </div>
-                      `;
-                    } else if (b.status === 'WAITING_PAYMENT' || b.status === 'APPROVED') {
-                      badge = '<span class="badge badge-primary" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">Chờ khách cọc (45p)</span>';
-                    } else if (b.status === 'ON_HOLD') {
-                      badge = '<span class="badge" style="background:#fef9c3; color:#a16207; border:1px solid #fef08a;">Tạm hoãn (Soft Lock)</span>';
-                    } else if (b.status === 'CONFIRMED' || b.status === 'DEPOSIT_PAID') {
-                      badge = '<span class="badge badge-success">Đã chốt cọc 30%</span>';
-                      action = `
-                        <button class="btn btn-primary btn-xs" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: #059669; border-color: #059669;" onclick="OwnerService.startRental(${id})">
-                          Bắt đầu chuyến
-                        </button>
-                      `;
-                    } else if (b.status === 'IN_PROGRESS') {
-                      badge = '<span class="badge badge-info">Đang trong chuyến đi</span>';
-                      action = `
-                        <button class="btn btn-primary btn-xs" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: #2563eb; border-color: #2563eb;" onclick="OwnerService.completeRental(${id})">
-                          Hoàn tất chuyến
-                        </button>
-                      `;
-                    } else if (b.status === 'COMPLETED') {
-                      badge = '<span class="badge badge-neutral">Đã hoàn thành</span>';
-                    } else if (b.status === 'REJECTED') {
-                      badge = '<span class="badge badge-danger">Đã từ chối</span>';
-                    } else if (b.status === 'WITHDRAWN_BY_GUEST') {
-                      badge = '<span class="badge" style="background:#f1f5f9; color:#64748b;">Khách đã rút</span>';
-                    } else if (b.status === 'EXPIRED' || b.status === 'AUTO_EXPIRED_NO_HOST_ACTION') {
-                      badge = '<span class="badge badge-secondary" style="background:#f1f5f9; color:#94a3b8;">Hết hạn</span>';
-                    }
-
-                    return `
-                    <tr>
-                      <td><span class="booking-code">#${id}</span></td>
-                      <td>
-                        <strong>${carName}</strong>
-                        ${plate ? `<div style="font-size:0.75rem; color:var(--slate-500); font-family:monospace;">${plate}</div>` : ''}
-                      </td>
-                      <td>
-                        <strong>${renterName}</strong><br/>
-                        <span style="font-size: 0.76rem; color: var(--slate-500);">${renterPhone}</span>
-                        ${note ? `<div style="font-size: 0.73rem; color: #0284c7; margin-top:2px;" title="Mục đích chuyến đi">Lộ trình: ${note}</div>` : ''}
-                      </td>
-                      <td style="font-size: 0.82rem;">${startDate} &rarr; ${endDate} (${totalDays} ngày)</td>
-                      <td style="color: #047857; font-weight: 700;">${formatMoney(deposit)}</td>
-                      <td>${badge}</td>
-                      <td>${action}</td>
-                    </tr>
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
+            <div class="rental-car-filter" style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Lọc theo xe:</span>
+              <select class="form-control" style="font-size: 0.82rem; padding: 5px 10px; border-radius: 8px; width: auto; min-width: 190px;" onchange="OwnerService.setRentalFilterCar(this.value)">
+                <option value="ALL">Tất cả phương tiện (${ownerCars.length} xe)</option>
+                ${ownerCars.map(c => `
+                  <option value="${c.id}" ${currentRentalCarId == c.id ? 'selected' : ''}>
+                    ${c.brand} ${c.model} (${c.license_plate})
+                  </option>
+                `).join('')}
+              </select>
             </div>
           </div>
+
+          <!-- 2. Danh Sách Thẻ Xe (Mỗi xe là 1 Card chứa các đơn của riêng xe đó) -->
+          ${carGroupsList.length === 0 ? `
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; text-align: center; padding: 3rem 1.5rem; color: var(--slate-500);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.8" style="margin-bottom: 8px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              <div style="font-weight: 700; color: #334155; font-size: 1rem;">Không có yêu cầu thuê nào</div>
+              <div style="font-size: 0.84rem; color: #64748b; margin-top: 4px;">Không tìm thấy đơn đặt thuê nào phù hợp với bộ lọc đã chọn.</div>
+            </div>
+          ` : carGroupsList.map(({ car, bookings }) => {
+            const carPending = bookings.filter(b => isPending(b.status));
+            const carActive = bookings.filter(b => isActiveRental(b.status));
+            const conflictsMap = this.detectDateConflicts(bookings);
+
+            return `
+            <div class="car-rental-group-card">
+              <!-- Header Thẻ Xe -->
+              <div class="car-rental-card-header">
+                <div class="car-header-left">
+                  <img src="${car.image_url || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80'}" class="car-header-thumb" alt="${car.brand}" style="cursor: zoom-in;" onclick="OwnerService.zoomImage(this.src, '${car.brand} ${car.model}')" title="Phóng to ảnh xe" />
+                  <div>
+                    <div class="car-header-title">
+                      <strong style="font-size: 1.02rem;">${car.brand} ${car.model}</strong>
+                      ${car.license_plate ? `<span class="vn-license-plate">${car.license_plate}</span>` : ''}
+                    </div>
+                    <div class="car-header-subtitle">
+                      Giá niêm yết: <strong style="color: var(--primary);">${formatMoney(car.price_per_day)}/ngày</strong> · <strong>${bookings.length}</strong> đơn trong danh mục
+                    </div>
+                  </div>
+                </div>
+
+                <div class="car-header-right">
+                  ${carPending.length > 0 ? `
+                    <span class="badge badge-warning" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-weight: 700; font-size: 0.78rem;">
+                      ⚡ ${carPending.length} đơn cần duyệt
+                    </span>
+                  ` : ''}
+                  ${carActive.length > 0 ? `
+                    <span class="badge badge-success" style="font-size: 0.78rem;">
+                      🟢 ${carActive.length} đơn đang chạy
+                    </span>
+                  ` : ''}
+                  <button type="button" class="btn btn-outline btn-xs" style="color: #7c3aed; border-color: #c4b5fd; background: #faf5ff; font-weight: 600; padding: 4px 10px;" onclick="OwnerService.openCalendarModal(${car.id})">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 3px; vertical-align: -1px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Xem lịch xe
+                  </button>
+                </div>
+              </div>
+
+              <!-- Bảng Đơn Thuê Của Xe Này -->
+              <div class="table-responsive">
+                <table class="custom-table" style="margin-bottom: 0;">
+                  <thead>
+                    <tr>
+                      <th style="width: 80px;">Mã đơn</th>
+                      <th style="min-width: 190px;">Khách thuê</th>
+                      <th style="min-width: 240px;">Thời gian thuê</th>
+                      <th style="width: 140px;">Tiền cọc (30%)</th>
+                      <th style="width: 150px; text-align: center;">Trạng thái</th>
+                      <th style="width: 150px; text-align: center;">Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${bookings.map(b => {
+                      const id = b.rental_id || b.rentalId || b.id;
+                      const renterName = b.renter_full_name || b.renterFullName || b.renter_name || b.renterName || 'Khách thuê';
+                      const renterPhone = b.renter_phone || b.renterPhone || '---';
+                      const startDate = b.start_date || b.startDate || '';
+                      const endDate = b.end_date || b.endDate || '';
+                      const totalDays = b.total_days || b.totalDays || 1;
+                      const deposit = b.deposit_amount || b.depositAmount || b.rental_amount || 0;
+                      const note = b.note || b.trip_purpose || '';
+                      const initial = renterName.trim().charAt(0).toUpperCase() || 'K';
+                      
+                      const conflictList = conflictsMap.get(id) || [];
+                      const hasConflict = conflictList.length > 0;
+
+                      let badge = `<span class="badge badge-info">${b.status}</span>`;
+                      let action = '<span style="color: var(--slate-400); font-size: 0.8rem;">—</span>';
+
+                      if (b.status === 'PENDING' || b.status === 'PENDING_APPROVAL') {
+                        badge = '<span class="badge badge-warning" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-weight:700;">Chờ duyệt hồ sơ</span>';
+                        action = `
+                          <div style="display:flex; gap:6px; justify-content:center;">
+                            <button class="btn btn-primary btn-sm" style="background:#0f766e; border-color:#0f766e; font-weight:700; padding:4px 10px; font-size: 0.78rem;" onclick="OwnerService.approveRental(${id})">Duyệt</button>
+                            <button class="btn btn-outline btn-sm" style="color:#ef4444; border-color:#fecaca; background:#fff5f5; font-weight:600; padding:4px 10px; font-size: 0.78rem;" onclick="OwnerService.rejectRentalPrompt(${id})">Từ chối</button>
+                          </div>
+                        `;
+                      } else if (b.status === 'WAITING_PAYMENT' || b.status === 'APPROVED') {
+                        badge = '<span class="badge badge-primary" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:700;">Chờ khách cọc (45p)</span>';
+                      } else if (b.status === 'ON_HOLD') {
+                        badge = '<span class="badge" style="background:#fef9c3; color:#a16207; border:1px solid #fef08a; font-weight:700;">Tạm hoãn (Soft Lock)</span>';
+                      } else if (b.status === 'CONFIRMED' || b.status === 'DEPOSIT_PAID') {
+                        badge = '<span class="badge badge-success" style="font-weight:700;">Đã chốt cọc 30%</span>';
+                        action = `
+                          <button class="btn btn-primary btn-sm" style="padding: 4px 12px; font-size: 0.78rem; background: #059669; border-color: #059669; font-weight:700;" onclick="OwnerService.startRental(${id})">
+                            Bắt đầu chuyến
+                          </button>
+                        `;
+                      } else if (b.status === 'IN_PROGRESS') {
+                        badge = '<span class="badge badge-info" style="font-weight:700;">Đang trong chuyến đi</span>';
+                        action = `
+                          <button class="btn btn-primary btn-sm" style="padding: 4px 12px; font-size: 0.78rem; background: #2563eb; border-color: #2563eb; font-weight:700;" onclick="OwnerService.completeRental(${id})">
+                            Hoàn tất chuyến
+                          </button>
+                        `;
+                      } else if (b.status === 'COMPLETED') {
+                        badge = '<span class="badge badge-neutral">Đã hoàn thành</span>';
+                      } else if (b.status === 'REJECTED') {
+                        badge = '<span class="badge badge-danger">Đã từ chối</span>';
+                      } else if (b.status === 'WITHDRAWN_BY_GUEST') {
+                        badge = '<span class="badge" style="background:#f1f5f9; color:#64748b;">Khách đã rút</span>';
+                      } else if (b.status === 'EXPIRED' || b.status === 'AUTO_EXPIRED_NO_HOST_ACTION') {
+                        badge = '<span class="badge badge-secondary" style="background:#f1f5f9; color:#94a3b8;">Hết hạn</span>';
+                      }
+
+                      return `
+                      <tr ${hasConflict ? 'style="background: #fffdf5;"' : ''}>
+                        <td><span class="booking-code" style="font-weight: 800;">#${id}</span></td>
+                        <td>
+                          <div class="renter-cell">
+                            <div class="renter-avatar-circle">${initial}</div>
+                            <div>
+                              <strong style="color: #0f172a; font-size: 0.88rem;">${renterName}</strong>
+                              <div style="font-size: 0.76rem; color: var(--slate-500);">${renterPhone}</div>
+                              ${note ? `<div style="font-size: 0.72rem; color: #0284c7; margin-top: 1px;" title="Mục đích">Lộ trình: ${note}</div>` : ''}
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="rental-date-badge">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <span>${formatDateVN(startDate)} &rarr; ${formatDateVN(endDate)}</span>
+                            <span class="rental-date-days">(${totalDays} ngày)</span>
+                          </div>
+                          ${hasConflict ? `
+                            <div class="conflict-alert-tag" title="Khoảng thời gian thuê của đơn này bị trùng với đơn khác cùng xe">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                              Trùng lịch với đơn #${conflictList.join(', #')} · Chỉ duyệt 1 đơn
+                            </div>
+                          ` : ''}
+                        </td>
+                        <td style="color: #047857; font-weight: 800; font-size: 0.9rem; white-space: nowrap;">
+                          ${formatMoney(deposit)}
+                        </td>
+                        <td style="text-align: center; white-space: nowrap;">${badge}</td>
+                        <td style="text-align: center; white-space: nowrap;">${action}</td>
+                      </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            `;
+          }).join('')}
         </div>
 
         <!-- Tab Content: Đăng xe mới (Dàn hàng ngang chia row tối ưu diện tích) -->
-        <div id="ownerTabAddContent" style="display: none;">
+        <div id="ownerTabAddContent" style="display: ${activeTab === 'ADD' ? 'block' : 'none'};">
           <div class="form-card" style="padding: 1.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
               <div>
@@ -629,7 +828,63 @@ const OwnerService = {
     if (placeholder) placeholder.style.display = 'none';
   },
 
+  // Phát hiện các đơn thuê trùng lịch trên cùng 1 xe
+  detectDateConflicts(bookings) {
+    const conflictsMap = new Map();
+    if (!Array.isArray(bookings) || bookings.length < 2) return conflictsMap;
+
+    const activeStatuses = [
+      'PENDING', 'PENDING_APPROVAL', 'WAITING_PAYMENT', 
+      'APPROVED', 'ON_HOLD', 'CONFIRMED', 'DEPOSIT_PAID', 'IN_PROGRESS'
+    ];
+
+    const validBookings = bookings.filter(b => activeStatuses.includes(b.status));
+
+    for (let i = 0; i < validBookings.length; i++) {
+      const b1 = validBookings[i];
+      const id1 = b1.rental_id || b1.rentalId || b1.id;
+      const start1 = b1.start_date || b1.startDate;
+      const end1 = b1.end_date || b1.endDate;
+
+      if (!start1 || !end1) continue;
+
+      for (let j = i + 1; j < validBookings.length; j++) {
+        const b2 = validBookings[j];
+        const id2 = b2.rental_id || b2.rentalId || b2.id;
+        const start2 = b2.start_date || b2.startDate;
+        const end2 = b2.end_date || b2.endDate;
+
+        if (!start2 || !end2) continue;
+
+        // Trùng lịch: start1 <= end2 && end1 >= start2
+        if (start1 <= end2 && end1 >= start2) {
+          if (!conflictsMap.has(id1)) conflictsMap.set(id1, []);
+          if (!conflictsMap.has(id2)) conflictsMap.set(id2, []);
+          if (!conflictsMap.get(id1).includes(id2)) conflictsMap.get(id1).push(id2);
+          if (!conflictsMap.get(id2).includes(id1)) conflictsMap.get(id2).push(id1);
+        }
+      }
+    }
+
+    return conflictsMap;
+  },
+
+  // Bộ lọc Tab Yêu cầu thuê: ALL, PENDING, ACTIVE, HISTORY
+  setRentalFilterTab(tab) {
+    this.rentalFilterTab = tab;
+    this.currentActiveTab = 'REQUESTS';
+    this.renderOwnerPortal();
+  },
+
+  // Bộ lọc Xe trong Yêu cầu thuê: ALL hoặc carId
+  setRentalFilterCar(carId) {
+    this.rentalFilterCarId = carId;
+    this.currentActiveTab = 'REQUESTS';
+    this.renderOwnerPortal();
+  },
+
   switchOwnerTab(tabName) {
+    this.currentActiveTab = tabName;
     document.getElementById('ownerTabCars')?.classList.toggle('active', tabName === 'CARS');
     document.getElementById('ownerTabRequests')?.classList.toggle('active', tabName === 'REQUESTS');
     document.getElementById('ownerTabAdd')?.classList.toggle('active', tabName === 'ADD');
@@ -1946,10 +2201,10 @@ const OwnerService = {
     const resolvedName = carName || (car ? `${car.brand} ${car.model}` : `xe #${carId}`);
 
     const isCurrentlyActive = resolvedStatus === 'ACTIVE';
-    const actionText = isCurrentlyActive ? 'TẮT KÍCH HOẠT (ẨN XE)' : 'KÍCH HOẠT (MỞ XE CHO THUÊ)';
+    const actionText = isCurrentlyActive ? 'VỀ SỐ [P] (TẠM ẨN KHỎI TÌM KIẾM)' : 'VÀO SỐ [D] (MỞ XE NHẬN KHÁCH)';
     const newStatus = isCurrentlyActive ? 'INACTIVE' : 'ACTIVE';
 
-    if (!confirm(`Bạn có chắc muốn ${actionText} cho ${resolvedName}?\n\n- Nếu tắt: Xe sẽ bị ẩn khỏi danh sách tìm kiếm của khách hàng.\n- Nếu bật: Xe sẽ xuất hiện để khách thuê có thể tìm và đặt xe.`)) {
+    if (!confirm(`Xác nhận gạt cần số: ${actionText} cho ${resolvedName}?\n\n- Số P (Park): Xe tạm dừng hoạt động, ẩn khỏi tìm kiếm khách thuê.\n- Số D (Drive): Xe sẵn sàng lăn bánh đón khách thuê.`)) {
       return;
     }
 
@@ -1963,7 +2218,7 @@ const OwnerService = {
           StorageService.save();
         }
       }
-      this.showToast(`Đã chuyển trạng thái ${resolvedName} sang ${newStatus === 'ACTIVE' ? 'Đang hoạt động' : 'Tạm ẩn'} thành công!`, 'success');
+      this.showToast(`Đã gạt cần số sang ${newStatus === 'ACTIVE' ? '[D] (Hoạt động)' : '[P] (Tạm ẩn)'} cho ${resolvedName}!`, 'success');
       await this.renderOwnerPortal();
     } catch (err) {
       console.error('Lỗi khi đổi trạng thái xe:', err);
