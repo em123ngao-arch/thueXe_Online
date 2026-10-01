@@ -51,6 +51,12 @@ class CarServiceImplTest {
     private OwnerProfileRepository ownerProfileRepository;
 
     @Mock
+    private com.driveshare.modules.rental.repository.RentalRepository rentalRepository;
+
+    @Mock
+    private com.driveshare.modules.car.repository.CarCalendarBlockRepository carCalendarBlockRepository;
+
+    @Mock
     private SecurityContext securityContext;
 
     @Mock

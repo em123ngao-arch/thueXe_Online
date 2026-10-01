@@ -52,6 +52,8 @@ public enum ErrorCode {
     CAR_HAS_ACTIVE_BOOKING("CAR_HAS_ACTIVE_BOOKING", "Xe đang có chuyến đi hoạt động, không thể xóa", HttpStatus.BAD_REQUEST),
     CAR_ALREADY_PROCESSED("CAR_ALREADY_PROCESSED", "Xe đã được xử lý thẩm định trước đó", HttpStatus.BAD_REQUEST),
     OWNER_NOT_APPROVED("OWNER_NOT_APPROVED", "Hồ sơ chủ xe của bạn chưa được phê duyệt để đăng xe", HttpStatus.FORBIDDEN),
+    CALENDAR_BLOCK_NOT_FOUND("CALENDAR_BLOCK_NOT_FOUND", "Không tìm thấy lịch chặn bận của xe", HttpStatus.NOT_FOUND),
+    CALENDAR_BLOCK_CONFLICT("CALENDAR_BLOCK_CONFLICT", "Khoảng thời gian này đã có lịch chặn hoặc có đơn thuê xe đang hoạt động", HttpStatus.CONFLICT),
 
     // Document & Admin (Khiêm - feat/Backend)
     DOCUMENT_NOT_FOUND("DOCUMENT_NOT_FOUND", "Không tìm thấy giấy tờ yêu cầu", HttpStatus.NOT_FOUND),
@@ -60,6 +62,8 @@ public enum ErrorCode {
     RENTAL_NOT_FOUND("RENTAL_NOT_FOUND", "Không tìm thấy yêu cầu thuê xe", HttpStatus.NOT_FOUND),
     MAX_PENDING_RENTALS_EXCEEDED("MAX_PENDING_RENTALS_EXCEEDED", "Bạn chỉ có thể gửi tối đa 3 yêu cầu thuê xe cùng một lúc", HttpStatus.BAD_REQUEST),
     RENTAL_CANNOT_BE_CANCELLED("RENTAL_CANNOT_BE_CANCELLED", "Yêu cầu thuê xe không thể hủy ở trạng thái hiện tại", HttpStatus.BAD_REQUEST),
+    RENTAL_CANNOT_BE_STARTED("RENTAL_CANNOT_BE_STARTED", "Chuyến đi phải ở trạng thái đã chốt cọc (CONFIRMED) để bắt đầu", HttpStatus.BAD_REQUEST),
+    RENTAL_CANNOT_BE_COMPLETED("RENTAL_CANNOT_BE_COMPLETED", "Chuyến đi phải ở trạng thái đang diễn ra (IN_PROGRESS) để hoàn thành", HttpStatus.BAD_REQUEST),
     RENTAL_ALREADY_PROCESSED("RENTAL_ALREADY_PROCESSED", "Yêu cầu thuê xe đã được xử lý", HttpStatus.BAD_REQUEST),
     INVALID_RENTAL_DATES("INVALID_RENTAL_DATES", "Ngày kết thúc thuê phải sau ngày bắt đầu thuê", HttpStatus.BAD_REQUEST),
     CAR_ALREADY_RENTED("CAR_ALREADY_RENTED", "Xe đã có người thuê trong khoảng thời gian này", HttpStatus.CONFLICT),
@@ -69,7 +73,10 @@ public enum ErrorCode {
     PAYMENT_NOT_FOUND("PAYMENT_NOT_FOUND", "Không tìm thấy thông tin giao dịch thanh toán", HttpStatus.NOT_FOUND),
     RENTAL_NOT_APPROVED("RENTAL_NOT_APPROVED", "Chuyến đi chưa được phê duyệt để thanh toán cọc", HttpStatus.BAD_REQUEST),
     PAYMENT_ALREADY_COMPLETED("PAYMENT_ALREADY_COMPLETED", "Giao dịch thanh toán đã được hoàn tất trước đó", HttpStatus.BAD_REQUEST),
-    INVALID_PAYMENT_AMOUNT("INVALID_PAYMENT_AMOUNT", "Số tiền thanh toán không khớp với số tiền cọc yêu cầu", HttpStatus.BAD_REQUEST);
+    INVALID_PAYMENT_AMOUNT("INVALID_PAYMENT_AMOUNT", "Số tiền thanh toán không khớp với số tiền cọc yêu cầu", HttpStatus.BAD_REQUEST),
+
+    // CRP-NEW: Ngăn chặn 2 đơn thuê trùng ngày cùng 1 xe từ 1 người dùng
+    DUPLICATE_RENTAL_REQUEST("DUPLICATE_RENTAL_REQUEST", "Bạn đã có yêu cầu thuê xe này trong khoảng thời gian trùng lặp. Vui lòng hủy đơn cũ trước khi gửi yêu cầu mới.", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

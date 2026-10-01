@@ -49,6 +49,27 @@ public class CurrentUserProfileResponse {
     @JsonProperty("verificationStatus")
     private String verificationStatus;
 
+    @JsonProperty("idCardNumber")
+    private String idCardNumber;
+
+    @JsonProperty("idCardFrontUrl")
+    private String idCardFrontUrl;
+
+    @JsonProperty("idCardBackUrl")
+    private String idCardBackUrl;
+
+    @JsonProperty("idCardVerificationStatus")
+    private String idCardVerificationStatus;
+
+    @JsonProperty("licenseNumber")
+    private String licenseNumber;
+
+    @JsonProperty("licenseImageUrl")
+    private String licenseImageUrl;
+
+    @JsonProperty("licenseVerificationStatus")
+    private String licenseVerificationStatus;
+
     @JsonProperty("profile")
     private SubProfileDetail profile;
 
@@ -68,6 +89,18 @@ public class CurrentUserProfileResponse {
 
         @JsonProperty("licenseImageUrl")
         private String licenseImageUrl;
+
+        @JsonProperty("licenseVerificationStatus")
+        private String licenseVerificationStatus;
+
+        @JsonProperty("idCardFrontUrl")
+        private String idCardFrontUrl;
+
+        @JsonProperty("idCardBackUrl")
+        private String idCardBackUrl;
+
+        @JsonProperty("idCardVerificationStatus")
+        private String idCardVerificationStatus;
 
         // OWNER fields
         @JsonProperty("bankName")

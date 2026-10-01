@@ -43,6 +43,8 @@ public class CarServiceImpl implements CarService {
     private final OwnerProfileRepository ownerProfileRepository;
     private final CarImageRepository carImageRepository;
     private final UserRepository userRepository;
+    private final com.driveshare.modules.rental.repository.RentalRepository rentalRepository;
+    private final com.driveshare.modules.car.repository.CarCalendarBlockRepository carCalendarBlockRepository;
 
     /**
      * Tập trạng thái được phép khi Owner tự đổi trạng thái xe.
@@ -279,6 +281,36 @@ public class CarServiceImpl implements CarService {
 
         log.info("Lấy thông tin chi tiết xe công khai: carId={}, brand={}", carId, car.getBrand());
 
+        // CRP-37 & CRP-40: Tính toán các ngày bận thực tế (đơn thuê đã duyệt/chốt cọc + chủ xe tự chặn lịch)
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.util.List<com.driveshare.common.enums.ERentalStatus> activeStatuses = java.util.List.of(
+                com.driveshare.common.enums.ERentalStatus.APPROVED,
+                com.driveshare.common.enums.ERentalStatus.WAITING_PAYMENT,
+                com.driveshare.common.enums.ERentalStatus.CONFIRMED,
+                com.driveshare.common.enums.ERentalStatus.IN_PROGRESS
+        );
+        java.util.List<com.driveshare.modules.rental.entity.Rental> activeRentals =
+                rentalRepository.findActiveRentalsForCar(carId, activeStatuses, today);
+
+        java.util.List<com.driveshare.modules.car.entity.CarCalendarBlock> blocks =
+                carCalendarBlockRepository.findByCarIdAndEndDateGreaterThanEqualAndDeletedAtIsNullOrderByStartDateAsc(carId, today);
+
+        java.util.Set<java.time.LocalDate> unavailableDatesSet = new java.util.TreeSet<>();
+        for (com.driveshare.modules.rental.entity.Rental r : activeRentals) {
+            java.time.LocalDate cur = r.getStartDate().isBefore(today) ? today : r.getStartDate();
+            while (!cur.isAfter(r.getEndDate())) {
+                unavailableDatesSet.add(cur);
+                cur = cur.plusDays(1);
+            }
+        }
+        for (com.driveshare.modules.car.entity.CarCalendarBlock b : blocks) {
+            java.time.LocalDate cur = b.getStartDate().isBefore(today) ? today : b.getStartDate();
+            while (!cur.isAfter(b.getEndDate())) {
+                unavailableDatesSet.add(cur);
+                cur = cur.plusDays(1);
+            }
+        }
+
         return com.driveshare.modules.car.dto.response.CarDetailResponse.builder()
                 .carId(car.getCarId())
                 .plateNumberMasked(maskedPlate)
@@ -298,7 +330,7 @@ public class CarServiceImpl implements CarService {
                 .status(car.getStatus())
                 .images(images)
                 .owner(ownerInfo)
-                .unavailableDates(new java.util.ArrayList<>())
+                .unavailableDates(new java.util.ArrayList<>(unavailableDatesSet))
                 .build();
     }
 
@@ -315,6 +347,12 @@ public class CarServiceImpl implements CarService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<CarResponse> searchCars(com.driveshare.modules.car.dto.request.CarSearchRequest request) {
+        if (request.getStartDate() != null && request.getEndDate() != null) {
+            if (request.getStartDate().isAfter(request.getEndDate())) {
+                throw new AppException(ErrorCode.INVALID_RENTAL_DATES);
+            }
+        }
+
         // Xử lý tiêu chí Sắp xếp (Sort)
         Sort sort = Sort.by(Sort.Direction.DESC, "createdAt"); // Mặc định: mới nhất
         if ("price_asc".equalsIgnoreCase(request.getSortBy())) {

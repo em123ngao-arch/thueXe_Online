@@ -5,50 +5,49 @@ description: Use when creating a GitHub pull request for this repo. Defines what
 
 # Create GitHub PR
 
-How to open a clean, reviewable pull request against `main` for this repo.
+Quy chuẩn tạo Pull Request chuẩn mực vào nhánh `develop` cho dự án DriveShare.
 
-## Branch
-Work on a branch named `lesson/<NN>-<kebab-slug>` (e.g. `lesson/02-setup-simple-spring-ai`). Never commit directly to `main`.
+## Branch Naming
+Đặt tên nhánh theo mã task Jira hoặc loại công việc:
+- `feature/<task-id>-<slug>` (e.g. `feature/CRP-41-rental-request`)
+- `fix/<task-id>-<slug>` (e.g. `fix/profile-avatar-upload`)
+*Tuyệt đối không commit trực tiếp vào `develop` hoặc `main`.*
 
-## Pre-flight
-- `./gradlew build` passes (compiles + runs all tests).
-- `git status` clean, no secrets/API keys staged.
+## Pre-flight (Kiểm tra trước khi tạo PR)
+1. Chạy toàn bộ bài test:
+   ```powershell
+   cd backend; .\mvnw.cmd test
+   ```
+   Bắt buộc phải đạt **`BUILD SUCCESS (103/103 tests pass)`**.
+2. Kiểm tra `git status` sạch sẽ, không commit file tạm, file log, mật khẩu hay API key.
 
-## PR title
-Conventional-commit prefix + short summary:
-- `feat: add product suggestion endpoint`
-- `fix: ...` / `refactor: ...`
+## PR Title
+Theo chuẩn Conventional Commits kèm mã task:
+- `feat(rental): CRP-41 implement rental request submission`
+- `fix(auth): fix password reset token expiration check`
+- `refactor(car): optimize search query with date availability`
 
-## PR description — copy this template
-
+## PR Description Template
 ```markdown
-## Summary
-<!-- What does this PR do? 1-3 sentences. -->
+## 📌 Nhiệm vụ & Mã Jira
+- Mã Task: CRP-XX (hoặc mô tả ngắn)
+- Người thực hiện: [Tên thành viên]
 
-## Changes
-<!-- Bullet list of key changes. -->
+## 🛠️ Các thay đổi chính
+- Thêm API / DTO / Service nào?
+- Sửa đổi logic gì trong module?
 
-## Testing
-<!-- How was it tested? e.g. `./gradlew test`, manual curl. -->
+## 🧪 Kết quả kiểm thử
+- [x] Đã chạy `cd backend; .\mvnw.cmd test` (103/103 tests pass)
+- [x] Đã test thủ công bằng PowerShell / Postman
 
-## Checklist
-- [ ] Build passes (`./gradlew build`)
-- [ ] Tests pass
-- [ ] No secrets committed
-
-## API examples (if applicable)
-<!-- Sample request/response. -->
+## ⚠️ Checklist an toàn
+- [x] Không xung đột với nhánh `develop`
+- [x] Không commit mật khẩu, JWT secret hay file cấu hình nhạy cảm
 ```
 
-## Commands
-
+## Lệnh tạo PR
 ```bash
-git push -u origin <branch>
-gh pr create --base main --head <branch> --title "feat: ..." --body "..."
+git push -u origin <branch_name>
+gh pr create --base develop --head <branch_name> --title "feat(...): ..." --body "..."
 ```
-
-## Must-haves for every PR
-1. Clear, prefixed title.
-2. Description with Summary / Changes / Testing.
-3. Green build + tests.
-4. No secrets.

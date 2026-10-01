@@ -17,20 +17,31 @@ const STORAGE_KEYS = {
 const StorageService = {
   // Khởi tạo dữ liệu nếu chưa có trong LocalStorage
   init() {
+    // Tự động dọn sạch cache mock cũ nếu có
+    const cleanedFlag = 'driveshare_mock_cleaned_v3';
+    if (!localStorage.getItem(cleanedFlag)) {
+      localStorage.removeItem(STORAGE_KEYS.CARS);
+      localStorage.removeItem(STORAGE_KEYS.BOOKINGS);
+      localStorage.removeItem(STORAGE_KEYS.RENTERS);
+      localStorage.removeItem(STORAGE_KEYS.OWNERS);
+      localStorage.removeItem(STORAGE_KEYS.USERS);
+      localStorage.setItem(cleanedFlag, 'true');
+    }
+
     if (!localStorage.getItem(STORAGE_KEYS.CARS)) {
-      localStorage.setItem(STORAGE_KEYS.CARS, JSON.stringify(INITIAL_DATA.cars));
+      localStorage.setItem(STORAGE_KEYS.CARS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.BOOKINGS)) {
-      localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(INITIAL_DATA.bookings));
+      localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.RENTERS)) {
-      localStorage.setItem(STORAGE_KEYS.RENTERS, JSON.stringify(INITIAL_DATA.renters));
+      localStorage.setItem(STORAGE_KEYS.RENTERS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.OWNERS)) {
-      localStorage.setItem(STORAGE_KEYS.OWNERS, JSON.stringify(INITIAL_DATA.owners));
+      localStorage.setItem(STORAGE_KEYS.OWNERS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_DATA.users || []));
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.CURRENT_ROLE)) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_ROLE, 'RENTER'); // RENTER | OWNER | ADMIN
@@ -294,6 +305,39 @@ const StorageService = {
   formatCurrency(amount) {
     if (!amount && amount !== 0) return '0 đ';
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  },
+
+  // Quản lý ngày chặn bận của xe (Blackout dates)
+  getCalendarBlocks(carId) {
+    try {
+      const data = localStorage.getItem('driveshare_calendar_blocks_v1');
+      const all = data ? JSON.parse(data) : [];
+      return all.filter(b => String(b.carId || b.car_id) === String(carId));
+    } catch (e) {
+      return [];
+    }
+  },
+
+  saveCalendarBlock(block) {
+    try {
+      const data = localStorage.getItem('driveshare_calendar_blocks_v1');
+      const all = data ? JSON.parse(data) : [];
+      const newBlock = { ...block, blockId: Date.now(), createdAt: new Date().toISOString() };
+      all.push(newBlock);
+      localStorage.setItem('driveshare_calendar_blocks_v1', JSON.stringify(all));
+      return newBlock;
+    } catch (e) {
+      return block;
+    }
+  },
+
+  deleteCalendarBlock(blockId) {
+    try {
+      const data = localStorage.getItem('driveshare_calendar_blocks_v1');
+      const all = data ? JSON.parse(data) : [];
+      const filtered = all.filter(b => String(b.blockId) !== String(blockId));
+      localStorage.setItem('driveshare_calendar_blocks_v1', JSON.stringify(filtered));
+    } catch (e) {}
   }
 };
 

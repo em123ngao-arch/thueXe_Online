@@ -48,6 +48,9 @@ public class RentalResponse {
     @JsonProperty("status")
     private ERentalStatus status;
 
+    @JsonProperty("payment_expires_at")
+    private Instant paymentExpiresAt;
+
     @JsonProperty("reject_reason")
     private String rejectReason;
 
@@ -72,6 +75,7 @@ public class RentalResponse {
                 .totalPrice(rental.getTotalPrice())
                 .depositAmount(rental.getDepositAmount())
                 .status(rental.getStatus())
+                .paymentExpiresAt(rental.getPaymentExpiresAt())
                 .rejectReason(rental.getRejectReason())
                 .note(rental.getNote())
                 .createdAt(rental.getCreatedAt())

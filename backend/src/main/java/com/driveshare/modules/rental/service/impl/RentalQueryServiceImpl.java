@@ -55,15 +55,15 @@ public class RentalQueryServiceImpl implements RentalQueryService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // Chỉ được hủy khi đơn đang ở trạng thái PENDING
-        if (rental.getStatus() != ERentalStatus.PENDING) {
-            log.warn("Đơn rentalId={} ở trạng thái {} không thể hủy", rentalId, rental.getStatus());
+        // Chỉ được rút/hủy khi đơn đang ở trạng thái PENDING hoặc PENDING_APPROVAL
+        if (rental.getStatus() != ERentalStatus.PENDING && rental.getStatus() != ERentalStatus.PENDING_APPROVAL) {
+            log.warn("Đơn rentalId={} ở trạng thái {} không thể hủy hoặc rút yêu cầu", rentalId, rental.getStatus());
             throw new AppException(ErrorCode.RENTAL_CANNOT_BE_CANCELLED);
         }
 
-        rental.setStatus(ERentalStatus.CANCELLED);
+        rental.setStatus(ERentalStatus.WITHDRAWN_BY_GUEST);
         rental = rentalRepository.save(rental);
-        log.info("Đã hủy thành công đơn rentalId={} bởi khách hàng renterId={}", rentalId, currentUserId);
+        log.info("Đã rút thành công yêu cầu thuê xe rentalId={} bởi khách hàng renterId={}", rentalId, currentUserId);
 
         return RentalSummaryResponse.fromEntity(rental);
     }

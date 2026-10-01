@@ -41,6 +41,7 @@ public class RentalSummaryResponse {
 
     // Trạng thái & ghi chú
     private ERentalStatus status;
+    private Instant paymentExpiresAt;
     private String rejectReason;
     private String note;
     private Instant createdAt;
@@ -75,6 +76,7 @@ public class RentalSummaryResponse {
                 .totalPrice(rental.getTotalPrice())
                 .depositAmount(rental.getDepositAmount())
                 .status(rental.getStatus())
+                .paymentExpiresAt(rental.getPaymentExpiresAt())
                 .rejectReason(rental.getRejectReason())
                 .note(rental.getNote())
                 .createdAt(rental.getCreatedAt())

@@ -205,11 +205,23 @@ public class AuthService {
                 .expiresAt(claims.expiresAt)
                 .build());
 
+        List<String> roleList = details.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList());
+        String primaryRole = resolvePrimaryRole(roleList);
+
         return AuthResponse.builder()
                 .accessToken(access).refreshToken(refresh).tokenType("Bearer")
                 .userId(user.getUserId()).username(user.getUsername()).email(user.getEmail())
-                .roles(details.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()))
+                .role(primaryRole)
+                .roles(roleList)
                 .build();
+    }
+
+    private String resolvePrimaryRole(List<String> roles) {
+        if (roles == null || roles.isEmpty()) return "ROLE_RENTER";
+        if (roles.contains("ROLE_ADMIN")) return "ROLE_ADMIN";
+        if (roles.contains("ROLE_OWNER")) return "ROLE_OWNER";
+        if (roles.contains("ROLE_STAFF")) return "ROLE_STAFF";
+        return "ROLE_RENTER";
     }
 
     @Transactional
@@ -244,6 +256,7 @@ public class AuthService {
                 .expiresAt(claims.expiresAt)
                 .build());
 
+        List<String> refreshRoles = details.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList());
         return AuthResponse.builder()
                 .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)
@@ -251,7 +264,8 @@ public class AuthService {
                 .userId(user.getUserId())
                 .username(user.getUsername())
                 .email(user.getEmail())
-                .roles(details.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()))
+                .role(resolvePrimaryRole(refreshRoles))
+                .roles(refreshRoles)
                 .build();
     }
 

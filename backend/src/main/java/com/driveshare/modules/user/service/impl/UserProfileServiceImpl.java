@@ -53,16 +53,44 @@ public class UserProfileServiceImpl implements UserProfileService {
                 ? List.of("fullName", "nationalId", "nationalIdImages")
                 : Collections.emptyList();
 
+        String idCardFrontUrl = ownerProfile != null && ownerProfile.getIdCardFrontUrl() != null
+                ? ownerProfile.getIdCardFrontUrl()
+                : (renterProfile != null ? renterProfile.getIdCardFrontUrl() : null);
+
+        String idCardBackUrl = ownerProfile != null && ownerProfile.getIdCardBackUrl() != null
+                ? ownerProfile.getIdCardBackUrl()
+                : (renterProfile != null ? renterProfile.getIdCardBackUrl() : null);
+
+        String idCardVerificationStatus = ownerProfile != null && ownerProfile.getVerificationStatus() != null
+                ? ownerProfile.getVerificationStatus().name()
+                : (renterProfile != null && renterProfile.getVerificationStatus() != null ? renterProfile.getVerificationStatus().name() : null);
+
+        String licenseNumber = renterProfile != null ? renterProfile.getLicenseNumber() : null;
+        String licenseImageUrl = renterProfile != null ? renterProfile.getLicenseFrontUrl() : null;
+        String licenseVerificationStatus = renterProfile != null && renterProfile.getLicenseVerificationStatus() != null
+                ? renterProfile.getLicenseVerificationStatus().name()
+                : null;
+
         CurrentUserProfileResponse.SubProfileDetail subProfile = null;
         if ("RENTER".equalsIgnoreCase(role)) {
             subProfile = CurrentUserProfileResponse.SubProfileDetail.builder()
-                    .licenseNumber(renterProfile != null ? renterProfile.getLicenseNumber() : null)
-                    .licenseImageUrl(renterProfile != null ? renterProfile.getLicenseFrontUrl() : null)
+                    .licenseNumber(licenseNumber)
+                    .licenseImageUrl(licenseImageUrl)
+                    .licenseVerificationStatus(licenseVerificationStatus)
+                    .idCardFrontUrl(idCardFrontUrl)
+                    .idCardBackUrl(idCardBackUrl)
+                    .idCardVerificationStatus(idCardVerificationStatus)
                     .build();
         } else if ("OWNER".equalsIgnoreCase(role)) {
             subProfile = CurrentUserProfileResponse.SubProfileDetail.builder()
                     .bankName(ownerProfile != null ? ownerProfile.getBankName() : null)
                     .bankAccountNumber(ownerProfile != null ? ownerProfile.getBankAccountNumber() : null)
+                    .licenseNumber(licenseNumber)
+                    .licenseImageUrl(licenseImageUrl)
+                    .licenseVerificationStatus(licenseVerificationStatus)
+                    .idCardFrontUrl(idCardFrontUrl)
+                    .idCardBackUrl(idCardBackUrl)
+                    .idCardVerificationStatus(idCardVerificationStatus)
                     .build();
         }
 
@@ -77,6 +105,13 @@ public class UserProfileServiceImpl implements UserProfileService {
                 .role(role)
                 .status(user.getStatus() != null ? user.getStatus().name() : "ACTIVE")
                 .verificationStatus(isApproved ? "APPROVED" : verificationStatus)
+                .idCardNumber(user.getIdCardNumber())
+                .idCardFrontUrl(idCardFrontUrl)
+                .idCardBackUrl(idCardBackUrl)
+                .idCardVerificationStatus(idCardVerificationStatus)
+                .licenseNumber(licenseNumber)
+                .licenseImageUrl(licenseImageUrl)
+                .licenseVerificationStatus(licenseVerificationStatus)
                 .profile(subProfile)
                 .lockedFields(lockedFields)
                 .build();
