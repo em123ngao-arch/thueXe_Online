@@ -199,8 +199,8 @@ const OwnerService = {
                     <th style="width: 140px; text-align: center;">Biển số</th>
                     <th style="width: 130px;">Giá thuê/ngày</th>
                     <th>Địa điểm giao xe</th>
-                    <th style="width: 130px; text-align: center;">Trạng thái duyệt</th>
-                    <th style="width: 190px; text-align: center;">Thao tác</th>
+                    <th style="width: 155px; text-align: center;">Trạng thái</th>
+                    <th style="width: 180px; text-align: center;">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -223,55 +223,32 @@ const OwnerService = {
                       <td style="color: var(--primary); font-weight: 700; white-space: nowrap;">${formatMoney(c.price_per_day)}</td>
                       <td style="font-size: 0.84rem;">${c.pickup_address}</td>
                       <td style="text-align: center; white-space: nowrap;">
-                        ${c.status === 'ACTIVE' 
-                          ? '<span class="badge badge-success">Đang hoạt động</span>' 
-                          : (c.status === 'INACTIVE' 
-                              ? '<span class="badge" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a;">Tạm ẩn</span>' 
-                              : (c.status === 'REJECTED' 
-                                  ? '<span class="badge badge-danger">Từ chối duyệt</span>' 
-                                  : '<span class="badge badge-warning">Chờ Admin duyệt</span>'))}
+                        ${c.status === 'ACTIVE' || c.status === 'INACTIVE' ? `
+                          <div class="status-toggle-container" onclick="OwnerService.toggleCarStatus(${c.id}, '${c.status}', '${c.brand} ${c.model}')" title="${c.status === 'ACTIVE' ? 'Đang nhận khách — Bấm để tạm ẩn' : 'Đang tạm ẩn — Bấm để mở nhận khách'}">
+                            <span class="custom-switch ${c.status === 'ACTIVE' ? 'active' : ''}">
+                              <span class="custom-switch-knob"></span>
+                            </span>
+                            <span class="toggle-label ${c.status === 'ACTIVE' ? 'active' : 'inactive'}">
+                              ${c.status === 'ACTIVE' ? 'Hoạt động' : 'Tạm ẩn'}
+                            </span>
+                          </div>
+                        ` : (c.status === 'REJECTED' 
+                              ? '<span class="badge badge-danger">Từ chối duyệt</span>' 
+                              : '<span class="badge badge-warning">Chờ Admin duyệt</span>')}
                       </td>
-                      <td>
-                        <div class="table-actions">
-                          <!-- 1. Nút Lịch xe: Hành động thường nhật chính -->
-                          <button class="btn btn-outline btn-sm" style="color: #7c3aed; border-color: #7c3aed; background: #faf5ff; font-weight: 600;" title="Quản lý lịch xe & chặn ngày bận" onclick="OwnerService.openCalendarModal(${c.id})">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 3px; vertical-align: -1px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                      <td style="text-align: center;">
+                        <div class="table-actions" style="justify-content: center; gap: 8px;">
+                          <!-- 1. Nút Lịch xe: Thao tác thường nhật chính -->
+                          <button class="btn btn-outline btn-sm" style="color: #7c3aed; border-color: #c4b5fd; background: #faf5ff; font-weight: 600; padding: 5px 12px; border-radius: 6px;" title="Quản lý lịch xe & chặn ngày bận" onclick="OwnerService.openCalendarModal(${c.id})">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px; vertical-align: -1px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                             Lịch xe
                           </button>
 
-                          <!-- 2. Nút Ẩn/Hiện: Chuyển trạng thái 1 chạm -->
-                          ${c.status === 'ACTIVE' 
-                            ? `<button class="btn btn-outline btn-sm" style="color: #d97706; border-color: #f59e0b; background: #fffbeb; font-weight: 600;" title="Tạm ẩn xe khỏi tìm kiếm" onclick="OwnerService.toggleCarStatus(${c.id})">Ẩn xe</button>` 
-                            : (c.status === 'INACTIVE' 
-                                ? `<button class="btn btn-outline btn-sm" style="color: #059669; border-color: #10b981; background: #ecfdf5; font-weight: 600;" title="Mở hiển thị cho thuê" onclick="OwnerService.toggleCarStatus(${c.id})">Hiện xe</button>` 
-                                : '')}
-
-                          <!-- 3. Menu 3 chấm (•••): Chứa các thao tác ít dùng & xóa xe -->
-                          <div class="action-dropdown-wrapper">
-                            <button type="button" class="btn-action-more" id="btnActionMore_${c.id}" title="Thao tác khác" onclick="OwnerService.toggleActionDropdown(${c.id}, event)">
-                              •••
-                            </button>
-                            <div class="action-dropdown-menu" id="actionDropdown_${c.id}">
-                              <button type="button" class="action-dropdown-item" onclick="OwnerService.closeAllActionDropdowns(); OwnerService.viewCarDetail(${c.id})">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                Xem chi tiết
-                              </button>
-                              <button type="button" class="action-dropdown-item" onclick="OwnerService.closeAllActionDropdowns(); OwnerService.openEditCarModal(${c.id})">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                Chỉnh sửa xe
-                              </button>
-                              <button type="button" class="action-dropdown-item" onclick="OwnerService.closeAllActionDropdowns(); OwnerService.openPhotosModal(${c.id})">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                                Quản lý bộ ảnh
-                              </button>
-                              <div class="action-dropdown-divider"></div>
-                              <button type="button" class="action-dropdown-item danger" onclick="OwnerService.closeAllActionDropdowns(); OwnerService.deleteCar(${c.id})">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                Xóa phương tiện
-                              </button>
-                            </div>
-                          </div>
-
+                          <!-- 2. Nút Chỉnh sửa: Trung tâm quản lý thông số, bộ ảnh và xe -->
+                          <button class="btn btn-outline btn-sm" style="color: #0284c7; border-color: #bae6fd; background: #f0f9ff; font-weight: 600; padding: 5px 12px; border-radius: 6px;" title="Chỉnh sửa thông số, tiện ích, ảnh xe" onclick="OwnerService.openEditCarModal(${c.id})">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right: 4px; vertical-align: -1px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            Chỉnh sửa
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1135,12 +1112,32 @@ const OwnerService = {
                 </div>
                 <input type="hidden" id="editCarImageUrl" value="${currentImg}" />
               </div>
+
+              <!-- Thẻ liên kết Quản lý Bộ sưu tập ảnh xe -->
+              <div style="margin-top: 10px; padding: 10px 12px; background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 700; font-size: 0.82rem; color: #0f766e; display: flex; align-items: center; gap: 5px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    Bộ sưu tập ảnh xe
+                  </div>
+                  <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">Tải lên tối đa 10 ảnh các góc</div>
+                </div>
+                <button type="button" class="btn btn-outline btn-xs" style="color: #0f766e; border-color: #0f766e; background: #ffffff; font-weight: 600; padding: 4px 10px;" onclick="OwnerService.openPhotosModal(${carId}, '${currentBrand} ${currentModel}')">
+                  Quản lý ảnh
+                </button>
+              </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div style="display: flex; gap: 0.5rem; margin-top: auto; padding-top: 0.5rem;">
-              <button type="button" class="btn btn-outline btn-sm" style="flex: 1;" onclick="document.getElementById('editCarModalOverlay').classList.remove('open')">Đóng</button>
-              <button type="submit" class="btn btn-primary btn-sm" style="flex: 2; font-weight: 700;">Lưu thay đổi</button>
+            <!-- Action Buttons: Danger Zone (Xóa xe) & Lưu thay đổi -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid #f1f5f9; gap: 8px;">
+              <button type="button" class="btn btn-ghost btn-xs" style="color: #ef4444; border: 1px solid #fecaca; background: #fff5f5; font-size: 0.76rem; padding: 5px 8px; border-radius: 6px;" title="Xóa phương tiện này" onclick="document.getElementById('editCarModalOverlay').classList.remove('open'); OwnerService.deleteCar(${carId}, '${currentBrand} ${currentModel}')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 3px; vertical-align: -1px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Xóa xe
+              </button>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('editCarModalOverlay').classList.remove('open')">Đóng</button>
+                <button type="submit" class="btn btn-primary btn-sm" style="font-weight: 700;">Lưu thay đổi</button>
+              </div>
             </div>
           </div>
         </div>

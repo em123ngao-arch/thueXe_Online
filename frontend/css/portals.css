@@ -496,6 +496,72 @@
   right: 3px;
 }
 
+/* Status Toggle Switch (Trạng thái hoạt động 1 chạm) */
+.status-toggle-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.status-toggle-container:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.custom-switch {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  background-color: #cbd5e1;
+  border-radius: 20px;
+  transition: background-color 0.25s ease;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.custom-switch.active {
+  background-color: #10b981;
+}
+
+.custom-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.custom-switch.active .custom-switch-knob {
+  transform: translateX(14px);
+}
+
+.toggle-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.toggle-label.active {
+  color: #059669;
+}
+
+.toggle-label.inactive {
+  color: #d97706;
+}
+
 /* Table Actions & Dropdown Menu */
 .table-actions {
   display: flex;
