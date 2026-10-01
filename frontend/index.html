@@ -17,7 +17,7 @@
     <!-- CSS Stylesheets -->
     <link rel="stylesheet" href="css/base.css?v=20260928_v5" />
     <link rel="stylesheet" href="css/components.css?v=20260928_v5" />
-    <link rel="stylesheet" href="css/portals.css?v=20260928_v5" />
+    <link rel="stylesheet" href="css/portals.css?v=20261001_v6" />
     <link rel="stylesheet" href="css/mioto-time.css?v=20260928_v5" />
   </head>
   <body>
@@ -831,9 +831,8 @@
                   </svg>
                   Lịch Sử Chuyến Đi Của Tôi
                 </h2>
-                <div class="portal-subtitle">
-                  Khách thuê: <strong>Lê Hoàng Nam</strong> · GPLX Hạng B2 (Đã
-                  xác minh)
+                <div class="portal-subtitle" id="myTripsCustomerSubtitle">
+                  Khách thuê: <strong id="myTripsCustomerName">Khách hàng</strong> · <span id="myTripsCustomerGplx">GPLX (Đã xác minh)</span>
                 </div>
               </div>
               <button
@@ -922,6 +921,17 @@
       </div>
     </div>
 
+    <!-- Modal Phóng To Xem Ảnh (Lightbox) -->
+    <div class="modal-overlay" id="imagePreviewModalOverlay" onclick="this.classList.remove('open')">
+      <div class="modal-dialog" style="max-width: 720px; background: transparent; box-shadow: none; border: none; text-align: center;" onclick="event.stopPropagation()">
+        <div style="position: relative; display: inline-block; max-width: 100%;">
+          <button class="modal-close-btn" style="position: absolute; top: -14px; right: -14px; background: #0f172a; color: #fff; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff; font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="document.getElementById('imagePreviewModalOverlay').classList.remove('open')">&times;</button>
+          <img id="imagePreviewModalImg" src="" alt="Ảnh phóng to" style="max-width: 100%; max-height: 82vh; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); object-fit: contain; background: #fff;" />
+          <div id="imagePreviewModalCaption" style="margin-top: 10px; color: #fff; font-weight: 700; font-size: 15px; text-shadow: 0 2px 4px rgba(0,0,0,0.9);"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Footer -->
     <footer
       style="
@@ -981,12 +991,12 @@
     <script src="js/api.js?v=20260928_v5"></script>
     <script src="js/toast.js?v=20260928_v5"></script>
     <script src="js/auth.js?v=20260928_v5"></script>
-    <script src="js/render.js?v=20260928_v5"></script>
+    <script src="js/render.js?v=20261001_v6"></script>
     <script src="js/mioto-time.js?v=20260928_v5"></script>
     <script src="js/booking.js?v=20260928_v5"></script>
     <script src="js/owner.js?v=20260928_v5"></script>
     <script src="js/admin.js?v=20260928_v5"></script>
-    <script src="js/app.js?v=20260928_v5"></script>
+    <script src="js/app.js?v=20261001_v6"></script>
     <script src="js/chat-ai.js?v=20260928_v5"></script>
   </body>
 </html>

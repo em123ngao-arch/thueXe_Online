@@ -47,6 +47,12 @@ const App = {
 
     // 5. Cài đặt ràng buộc ngày nhận/trả xe (tối thiểu cách 1 ngày, không ở quá khứ)
     this.initSearchDates();
+
+    // 6. Kiểm tra URL param hoặc hash để mở trực tiếp Chuyến đi
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'trips' || window.location.hash === '#trips' || window.location.hash === '#my-trips') {
+      setTimeout(() => this.showMyBookingsView(), 150);
+    }
   },
 
   // Xác định role ban đầu dựa vào JWT (tài khoản đã đăng nhập) hoặc StorageService
@@ -245,8 +251,51 @@ const App = {
       bookings = StorageService.getBookings();
     }
 
-    RenderService.renderMyBookings(bookings);
+    // Cập nhật thông tin khách thuê thực tế lên tiêu đề
+    if (typeof AuthService !== 'undefined') {
+      const u = AuthService.getCurrentUser();
+      const nameEl = document.getElementById('myTripsCustomerName');
+      const gplxEl = document.getElementById('myTripsCustomerGplx');
+      if (nameEl && u && (u.fullName || u.name)) {
+        nameEl.textContent = u.fullName || u.name;
+      }
+      if (gplxEl && u && (u.driverLicense || u.licenseNumber)) {
+        gplxEl.textContent = `GPLX: ${u.driverLicense || u.licenseNumber} (Đã xác minh)`;
+      }
+    }
+
+    this.cachedMyBookings = bookings;
+    this.currentTripTab = this.currentTripTab || 'ALL';
+    this.currentTripSearch = this.currentTripSearch || '';
+    RenderService.renderMyBookings(bookings, 'myBookingsListContainer', this.currentTripTab, this.currentTripSearch);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
+
+  setTripFilterTab(tab) {
+    this.currentTripTab = tab;
+    if (this.cachedMyBookings) {
+      RenderService.renderMyBookings(this.cachedMyBookings, 'myBookingsListContainer', this.currentTripTab, this.currentTripSearch || '');
+    } else {
+      this.showMyBookingsView();
+    }
+  },
+
+  handleTripSearch(keyword) {
+    this.currentTripSearch = (keyword || '').trim().toLowerCase();
+    if (this.cachedMyBookings) {
+      RenderService.renderMyBookings(this.cachedMyBookings, 'myBookingsListContainer', this.currentTripTab || 'ALL', this.currentTripSearch);
+    }
+  },
+
+  zoomImage(src, caption = '') {
+    const overlay = document.getElementById('imagePreviewModalOverlay');
+    const img = document.getElementById('imagePreviewModalImg');
+    const cap = document.getElementById('imagePreviewModalCaption');
+    if (overlay && img) {
+      img.src = src;
+      if (cap) cap.textContent = caption;
+      overlay.classList.add('open');
+    }
   },
 
   showCatalogView() {
@@ -735,15 +784,16 @@ const App = {
 
   // Hiển thị Biên bản giao nhận xe thực tế (Handover Record)
   showHandoverInfo(bookingId) {
-    const bookings = StorageService.getBookings();
-    const bk = bookings.find(b => b.id === bookingId);
+    const allBks = [...(this.cachedMyBookings || []), ...StorageService.getBookings()];
+    const bk = allBks.find(b => b.id == bookingId || b.rental_id == bookingId || b.rentalId == bookingId);
     if (!bk) return;
+    const id = bk.rental_id || bk.rentalId || bk.id;
 
     const html = `
       <div style="font-size: 0.88rem;">
-        <div style="background: var(--primary-light); border: 1px solid var(--primary-subtle); border-radius: var(--radius-md); padding: 0.9rem; margin-bottom: 1.15rem;">
-          <div style="font-weight: 700; color: var(--primary); font-size: 0.95rem; margin-bottom: 0.2rem;">
-            Biên bản bàn giao xe điện tử #${bk.id}
+        <div style="background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: var(--radius-md); padding: 0.9rem; margin-bottom: 1.15rem;">
+          <div style="font-weight: 700; color: #0f766e; font-size: 0.95rem; margin-bottom: 0.2rem;">
+            Biên bản bàn giao xe điện tử #${id}
           </div>
           <div style="color: var(--slate-600); font-size: 0.8rem;">
             Theo quy trình bàn giao xe DriveShare: Kiểm tra chỉ số ODO, vạch xăng và chụp hiện trạng ngoại thất.
@@ -757,12 +807,12 @@ const App = {
           </div>
           <div style="background: var(--slate-50); border: 1px solid var(--slate-200); padding: 0.8rem; border-radius: var(--radius-md);">
             <div style="font-size: 0.72rem; color: var(--slate-500); font-weight: 700; text-transform: uppercase;">Mức nhiên liệu:</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: var(--primary);">8 / 8 Vạch (Đầy bình)</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #0f766e;">8 / 8 Vạch (Đầy bình)</div>
           </div>
         </div>
 
         <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.45rem;">Hiện trạng ngoại thất & Giấy tờ:</h4>
-        <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.35rem; color: var(--slate-700); font-size: 0.82rem; margin-bottom: 1.15rem;">
+        <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.35rem; color: var(--slate-700); font-size: 0.82rem; margin-bottom: 1.15rem; padding-left: 0;">
           <li>- Cavet xe và Bảo hiểm TNDS gốc kèm theo xe</li>
           <li>- Lốp dự phòng, bộ kích nâng xe, tẩu sạc nguyên vẹn</li>
           <li>- Đã chụp ảnh 4 góc xe và lưu trữ trên hệ thống DriveShare</li>
@@ -774,40 +824,45 @@ const App = {
       </div>
     `;
 
-    this.openModal(`Biên bản bàn giao xe #${bookingId}`, html);
+    this.openModal(`Biên bản bàn giao xe #${id}`, html);
   },
 
   // Hiển thị popup Liên hệ Chủ xe
   showContactOwner(bookingId) {
-    const bookings = StorageService.getBookings();
-    const bk = bookings.find(b => b.id === bookingId);
+    const allBks = [...(this.cachedMyBookings || []), ...StorageService.getBookings()];
+    const bk = allBks.find(b => b.id == bookingId || b.rental_id == bookingId || b.rentalId == bookingId);
     if (!bk) return;
+    const id = bk.rental_id || bk.rentalId || bk.id;
+    const carName = (bk.car_brand ? `${bk.car_brand} ${bk.car_model || ''}` : (bk.carBrand ? `${bk.carBrand} ${bk.carModel || ''}` : bk.car_name)) || 'Xe cho thuê';
+    const plate = bk.car_plate_number || bk.carPlateNumber || bk.license_plate || bk.car_plate || '51H-XXXX';
+    const hostName = bk.owner_name || bk.ownerName || bk.host_name || 'Nguyễn Văn Hùng';
+    const hostPhone = bk.owner_phone || bk.ownerPhone || '0901 234 567';
 
     const html = `
       <div style="text-align: center; padding: 0.5rem 0;">
-        <div style="width: 52px; height: 52px; background: var(--primary-light); color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.85rem auto;">
+        <div style="width: 52px; height: 52px; background: #f0fdfa; color: #0f766e; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.85rem auto;">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
           </svg>
         </div>
         <h3 style="font-size: 1.1rem; margin-bottom: 0.4rem;">Liên hệ với Chủ xe</h3>
         <p style="color: var(--slate-600); font-size: 0.86rem; margin-bottom: 1.25rem;">
-          Xe <strong>${bk.car_name}</strong> · Biển số: <strong>${bk.car_plate}</strong>
+          Xe <strong>${carName}</strong> · Biển số: <strong>${plate}</strong>
         </p>
 
         <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: var(--radius-lg); padding: 1.15rem; margin-bottom: 1.25rem;">
           <div style="font-size: 0.82rem; color: var(--slate-500);">Hotline hỗ trợ trực tiếp chủ xe:</div>
-          <div style="font-size: 1.35rem; font-weight: 800; color: var(--primary); margin: 0.3rem 0;">0901 234 567</div>
-          <div style="font-size: 0.8rem; color: var(--slate-500);">Chủ xe: Nguyễn Văn Hùng (Zalo / Điện thoại)</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: #0f766e; margin: 0.3rem 0;">${hostPhone}</div>
+          <div style="font-size: 0.8rem; color: var(--slate-500);">Chủ xe: ${hostName} (Zalo / Điện thoại)</div>
         </div>
 
-        <button class="btn btn-primary" style="width: 100%;" onclick="App.showToast('Đang kết nối tới số 0901 234 567...', 'info'); App.closeModal();">
+        <button class="btn btn-primary" style="width: 100%;" onclick="App.showToast('Đang kết nối tới số ${hostPhone}...', 'info'); App.closeModal();">
           Gọi điện ngay
         </button>
       </div>
     `;
 
-    this.openModal(`Thông tin chủ xe đơn #${bookingId}`, html);
+    this.openModal(`Thông tin chủ xe đơn #${id}`, html);
   },
 
   showReviewPrompt(bookingId) {

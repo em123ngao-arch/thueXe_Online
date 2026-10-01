@@ -1254,3 +1254,429 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
+/* ==================== PHÂN HỆ KHÁCH THUÊ: QUẢN LÝ CHUYẾN ĐI (CLEAN & PROFESSIONAL - NO EMOJIS) ==================== */
+
+/* Stats Grid Khách Hàng */
+.renter-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 992px) {
+  .renter-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .renter-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Thanh Lọc & Tìm Kiếm Khách Hàng */
+.renter-filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.65rem 1rem;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.renter-status-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.renter-tab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.renter-tab-pill:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.renter-tab-pill.active {
+  background: #0f766e;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.25);
+}
+
+.renter-tab-pill.active .tab-indicator {
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+}
+
+.renter-search-box {
+  display: flex;
+  align-items: center;
+  position: relative;
+  min-width: 260px;
+}
+
+.renter-search-box svg {
+  position: absolute;
+  left: 10px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.renter-search-box input {
+  width: 100%;
+  padding: 6px 12px 6px 32px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.82rem;
+  color: #1e293b;
+  background: #f8fafc;
+  transition: all 0.15s ease;
+}
+
+.renter-search-box input:focus {
+  background: #ffffff;
+  border-color: #0f766e;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+}
+
+/* Thẻ Chuyến Đi Khách Thuê (Renter Trip Card) */
+.renter-trip-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.renter-trip-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+  transform: translateY(-2px);
+}
+
+/* Header Thẻ Chuyến Đi */
+.renter-trip-header {
+  background: #f8fafc;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.renter-trip-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.trip-order-code {
+  font-family: monospace;
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: #0f172a;
+  background: #e2e8f0;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.trip-created-time {
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+/* Body Thẻ Chuyến Đi (Grid 3 Cột) */
+.renter-trip-body {
+  padding: 1.25rem;
+  display: grid;
+  grid-template-columns: 200px 1fr 240px;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 992px) {
+  .renter-trip-body {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Cột 1: Thumbnail Xe */
+.trip-thumb-wrapper {
+  position: relative;
+  width: 100%;
+  height: 135px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.trip-thumb-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.25s ease;
+}
+
+.trip-thumb-wrapper:hover img {
+  transform: scale(1.04);
+}
+
+.trip-thumb-tag {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+}
+
+/* Cột 2: Thông Tin Hành Trình */
+.trip-main-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.trip-car-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.trip-host-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.trip-host-info svg {
+  color: #0f766e;
+  flex-shrink: 0;
+}
+
+.trip-schedule-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.trip-route-note {
+  font-size: 0.78rem;
+  color: #0284c7;
+  background: #f0f9ff;
+  border: 1px solid #e0f2fe;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Thanh Tiến Trình Chuyến Đi (Minimalist Trip Stepper) */
+.trip-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed #e2e8f0;
+  position: relative;
+}
+
+.stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  flex: 1;
+}
+
+.stepper-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  border: 2px solid #cbd5e1;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+  transition: all 0.2s ease;
+}
+
+.stepper-label {
+  font-size: 0.68rem;
+  color: #64748b;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.stepper-step.completed .stepper-circle {
+  background: #059669;
+  border-color: #059669;
+  color: #ffffff;
+}
+
+.stepper-step.completed .stepper-label {
+  color: #059669;
+}
+
+.stepper-step.active .stepper-circle {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+}
+
+.stepper-step.active .stepper-label {
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.stepper-line {
+  position: absolute;
+  top: 19px;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: #e2e8f0;
+  z-index: 1;
+}
+
+.stepper-line-fill {
+  height: 100%;
+  background: #059669;
+  transition: width 0.3s ease;
+}
+
+/* Cột 3: Hộp Tài Chính & Nút Thao Tác */
+.trip-financial-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.trip-financial-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trip-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.trip-price-row.total {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 5px;
+  margin-bottom: 2px;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.trip-price-row.deposit {
+  color: #047857;
+  font-weight: 700;
+}
+
+.trip-price-row.remaining {
+  color: #475569;
+}
+
+.trip-actions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trip-actions-container .btn {
+  width: 100%;
+  text-align: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 6px 12px;
+}
+
+/* Thông Báo Khẩn Cấp (Soft Lock 45p, Hết Hạn, v.v.) */
+.trip-alert-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.trip-alert-banner.warning {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #92400e;
+}
+
+.trip-alert-banner.info {
+  background: #f0fdfa;
+  border: 1px solid #ccfbf1;
+  color: #0f766e;
+}
+
+.trip-alert-banner.danger {
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #991b1b;
+}
+
