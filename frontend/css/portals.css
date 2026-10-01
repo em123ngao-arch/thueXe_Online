@@ -455,11 +455,159 @@
   flex-shrink: 0;
 }
 
+/* Vietnamese License Plate Badge (Chuẩn Biển Số Xe Việt Nam) */
+.vn-license-plate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  background: #ffffff;
+  color: #0f172a;
+  border: 1.5px solid #1e293b;
+  border-radius: 5px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  position: relative;
+  user-select: all;
+}
+
+.vn-license-plate::before,
+.vn-license-plate::after {
+  content: '';
+  position: absolute;
+  width: 3.5px;
+  height: 3.5px;
+  background: #cbd5e1;
+  border: 1px solid #94a3b8;
+  border-radius: 50%;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.vn-license-plate::before {
+  left: 3px;
+}
+
+.vn-license-plate::after {
+  right: 3px;
+}
+
+/* Table Actions & Dropdown Menu */
 .table-actions {
   display: flex;
   align-items: center;
   gap: 0.45rem;
   white-space: nowrap;
+  flex-wrap: nowrap;
+  position: relative;
+}
+
+.action-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.btn-action-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  background: #ffffff;
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius-sm);
+  color: var(--slate-700);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.btn-action-more:hover,
+.btn-action-more.active {
+  background: var(--slate-100);
+  border-color: var(--slate-400);
+  color: var(--slate-900);
+}
+
+.action-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 175px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  padding: 5px 0;
+  z-index: 100;
+  text-align: left;
+}
+
+.action-dropdown-menu.show {
+  display: block;
+  animation: fadeInDown 0.15s ease-out;
+}
+
+.action-dropdown-menu.dropup {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.action-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: #334155;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.action-dropdown-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.action-dropdown-item.danger {
+  color: #ef4444;
+}
+
+.action-dropdown-item.danger:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.action-dropdown-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: #f1f5f9;
 }
 
 /* License Verification Box */

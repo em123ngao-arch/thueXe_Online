@@ -195,12 +195,12 @@ const OwnerService = {
               <table class="custom-table">
                 <thead>
                   <tr>
-                    <th>Phương tiện</th>
-                    <th>Biển số</th>
-                    <th>Giá thuê/ngày</th>
+                    <th style="min-width: 220px;">Phương tiện</th>
+                    <th style="width: 140px; text-align: center;">Biển số</th>
+                    <th style="width: 130px;">Giá thuê/ngày</th>
                     <th>Địa điểm giao xe</th>
-                    <th>Trạng thái duyệt</th>
-                    <th>Thao tác</th>
+                    <th style="width: 130px; text-align: center;">Trạng thái duyệt</th>
+                    <th style="width: 190px; text-align: center;">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -212,15 +212,17 @@ const OwnerService = {
                         <div class="table-car-cell">
                           <img class="table-car-thumb" src="${c.image_url}" alt="${c.brand}" style="cursor: zoom-in;" title="Bấm để phóng to xem ảnh" onclick="OwnerService.zoomImage('${c.image_url}', '${c.brand} ${c.model} (${c.license_plate})')" />
                           <div>
-                            <strong>${c.brand} ${c.model}</strong>
+                            <strong style="cursor: pointer; color: var(--slate-900);" title="Bấm để xem chi tiết xe" onclick="OwnerService.viewCarDetail(${c.id})">${c.brand} ${c.model}</strong>
                             <div style="font-size: 0.76rem; color: var(--slate-500);">${c.year} · ${c.seat_count} chỗ · ${c.transmission === 'AUTOMATIC' ? 'Số tự động' : 'Số sàn'}</div>
                           </div>
                         </div>
                       </td>
-                      <td><strong style="font-family: monospace;">${c.license_plate}</strong></td>
-                      <td style="color: var(--primary); font-weight: 700;">${formatMoney(c.price_per_day)}</td>
+                      <td style="text-align: center;">
+                        <span class="vn-license-plate" title="Biển số đăng ký">${c.license_plate}</span>
+                      </td>
+                      <td style="color: var(--primary); font-weight: 700; white-space: nowrap;">${formatMoney(c.price_per_day)}</td>
                       <td style="font-size: 0.84rem;">${c.pickup_address}</td>
-                      <td>
+                      <td style="text-align: center; white-space: nowrap;">
                         ${c.status === 'ACTIVE' 
                           ? '<span class="badge badge-success">Đang hoạt động</span>' 
                           : (c.status === 'INACTIVE' 
@@ -230,17 +232,46 @@ const OwnerService = {
                                   : '<span class="badge badge-warning">Chờ Admin duyệt</span>'))}
                       </td>
                       <td>
-                        <div class="table-actions" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-                          <button class="btn btn-outline btn-sm" title="Xem chi tiết thông số xe" onclick="OwnerService.viewCarDetail(${c.id})">Chi tiết</button>
-                          <button class="btn btn-outline btn-sm" style="color: #7c3aed; border-color: #7c3aed;" title="Quản lý lịch bận và nhận đơn" onclick="OwnerService.openCalendarModal(${c.id})">Lịch xe</button>
-                          <button class="btn btn-outline btn-sm" style="color: #0f766e; border-color: #0f766e;" title="Bộ sưu tập ảnh xe" onclick="OwnerService.openPhotosModal(${c.id})">Ảnh xe</button>
-                          <button class="btn btn-outline btn-sm" style="color: #2563eb; border-color: #2563eb;" title="Chỉnh sửa thông tin xe" onclick="OwnerService.openEditCarModal(${c.id})">Sửa xe</button>
+                        <div class="table-actions">
+                          <!-- 1. Nút Lịch xe: Hành động thường nhật chính -->
+                          <button class="btn btn-outline btn-sm" style="color: #7c3aed; border-color: #7c3aed; background: #faf5ff; font-weight: 600;" title="Quản lý lịch xe & chặn ngày bận" onclick="OwnerService.openCalendarModal(${c.id})">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 3px; vertical-align: -1px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            Lịch xe
+                          </button>
+
+                          <!-- 2. Nút Ẩn/Hiện: Chuyển trạng thái 1 chạm -->
                           ${c.status === 'ACTIVE' 
-                            ? `<button class="btn btn-outline btn-sm" style="color: #d97706; border-color: #f59e0b; background: #fffbeb;" title="Ẩn xe khỏi tìm kiếm" onclick="OwnerService.toggleCarStatus(${c.id})">Ẩn xe</button>` 
+                            ? `<button class="btn btn-outline btn-sm" style="color: #d97706; border-color: #f59e0b; background: #fffbeb; font-weight: 600;" title="Tạm ẩn xe khỏi tìm kiếm" onclick="OwnerService.toggleCarStatus(${c.id})">Ẩn xe</button>` 
                             : (c.status === 'INACTIVE' 
-                                ? `<button class="btn btn-outline btn-sm" style="color: #059669; border-color: #10b981; background: #ecfdf5;" title="Mở hiển thị cho thuê" onclick="OwnerService.toggleCarStatus(${c.id})">Hiện xe</button>` 
+                                ? `<button class="btn btn-outline btn-sm" style="color: #059669; border-color: #10b981; background: #ecfdf5; font-weight: 600;" title="Mở hiển thị cho thuê" onclick="OwnerService.toggleCarStatus(${c.id})">Hiện xe</button>` 
                                 : '')}
-                          <button class="btn btn-ghost btn-sm" style="color: #ef4444; border: 1px solid #fecaca; background: #fff5f5;" title="Xóa xe này khỏi hệ thống" onclick="OwnerService.deleteCar(${c.id})">Xóa</button>
+
+                          <!-- 3. Menu 3 chấm (•••): Chứa các thao tác ít dùng & xóa xe -->
+                          <div class="action-dropdown-wrapper">
+                            <button type="button" class="btn-action-more" id="btnActionMore_${c.id}" title="Thao tác khác" onclick="OwnerService.toggleActionDropdown(${c.id}, event)">
+                              •••
+                            </button>
+                            <div class="action-dropdown-menu" id="actionDropdown_${c.id}">
+                              <button type="button" class="action-dropdown-item" onclick="OwnerService.closeAllActionDropdowns(); OwnerService.viewCarDetail(${c.id})">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                Xem chi tiết
+                              </button>
+                              <button type="button" class="action-dropdown-item" onclick="OwnerService.closeAllActionDropdowns(); OwnerService.openEditCarModal(${c.id})">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                Chỉnh sửa xe
+                              </button>
+                              <button type="button" class="action-dropdown-item" onclick="OwnerService.closeAllActionDropdowns(); OwnerService.openPhotosModal(${c.id})">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                Quản lý bộ ảnh
+                              </button>
+                              <div class="action-dropdown-divider"></div>
+                              <button type="button" class="action-dropdown-item danger" onclick="OwnerService.closeAllActionDropdowns(); OwnerService.deleteCar(${c.id})">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                Xóa phương tiện
+                              </button>
+                            </div>
+                          </div>
+
                         </div>
                       </td>
                     </tr>
@@ -2062,5 +2093,55 @@ const OwnerService = {
       }
     }
     this.showToast(`Hoàn tất chuyến đi #${rentalId}.`, 'info');
+  },
+
+  // CRP_31-37: Quản lý Dropdown menu thao tác mở rộng của bảng xe
+  toggleActionDropdown(carId, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const menu = document.getElementById(`actionDropdown_${carId}`);
+    const btn = document.getElementById(`btnActionMore_${carId}`);
+    if (!menu) return;
+    const isShowing = menu.classList.contains('show');
+
+    // Đóng tất cả dropdown đang mở
+    this.closeAllActionDropdowns();
+
+    // Nếu chưa mở thì mở lên
+    if (!isShowing) {
+      // Kiểm tra khoảng cách phía dưới màn hình, nếu hẹp thì bung lên trên (dropup)
+      if (btn) {
+        const rect = btn.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        if (spaceBelow < 210 && rect.top > 210) {
+          menu.classList.add('dropup');
+        } else {
+          menu.classList.remove('dropup');
+        }
+        btn.classList.add('active');
+      }
+      menu.classList.add('show');
+    }
+  },
+
+  closeAllActionDropdowns() {
+    document.querySelectorAll('.action-dropdown-menu.show').forEach(m => {
+      m.classList.remove('show');
+      m.classList.remove('dropup');
+    });
+    document.querySelectorAll('.btn-action-more.active').forEach(b => b.classList.remove('active'));
   }
 };
+
+// Đăng ký sự kiện click ngoài để đóng dropdown tự động
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.action-dropdown-wrapper')) {
+      if (typeof OwnerService !== 'undefined' && OwnerService.closeAllActionDropdowns) {
+        OwnerService.closeAllActionDropdowns();
+      }
+    }
+  });
+}
