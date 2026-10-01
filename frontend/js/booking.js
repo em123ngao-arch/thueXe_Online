@@ -367,7 +367,7 @@ const BookingService = {
             <div style="width: 64px; height: 64px; background: #dcfce7; color: #16a34a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1rem auto;">&#10003;</div>
             <h3 style="font-size: 1.25rem; font-weight: 800; color: #166534; margin-bottom: 0.5rem;">Gửi Yêu Cầu Thuê Xe Thành Công!</h3>
             <p style="color: var(--slate-600); font-size: 0.9rem; line-height: 1.5; max-width: 420px; margin: 0 auto 1.25rem auto;">
-              Mã đơn thuê của bạn là <strong>#${rentalId}</strong>. Đơn đang ở trạng thái <strong>Chờ chủ xe duyệt (PENDING_APPROVAL)</strong>. Bạn sẽ nhận được thông báo để đặt cọc 30% ngay khi Chủ xe đồng ý.
+              Mã đơn thuê của bạn là <strong>#${rentalId}</strong>. Đơn đang ở trạng thái <strong>Chờ chủ xe duyệt (PENDING)</strong>. Bạn sẽ nhận được thông báo để đặt cọc 30% ngay khi Chủ xe đồng ý.
             </p>
             <div style="display: flex; gap: 0.75rem; justify-content: center;">
               <button class="btn btn-primary btn-md" onclick="App.closeModal(); App.showMyBookingsView();">

@@ -41,11 +41,10 @@ public class RentalServiceImpl implements RentalService {
     public RentalResponse createRentalRequest(CreateRentalRequest request) {
         Long renterId = getCurrentUserId();
 
-        // 1. CRP-42 & Giai đoạn 1: Kiểm tra số lượng đơn chờ duyệt hiện tại của khách thuê
-        long pendingCount = rentalRepository.countByRenterIdAndStatus(renterId, ERentalStatus.PENDING)
-                + rentalRepository.countByRenterIdAndStatus(renterId, ERentalStatus.PENDING_APPROVAL);
+        // 1. CRP-42: Kiểm tra số lượng đơn chờ duyệt (PENDING) hiện tại của khách thuê (tối đa 3 đơn PENDING)
+        long pendingCount = rentalRepository.countByRenterIdAndStatus(renterId, ERentalStatus.PENDING);
         if (pendingCount >= MAX_PENDING_RENTALS) {
-            log.warn("User {} đã có {} đơn PENDING/PENDING_APPROVAL, vượt giới hạn tối đa {}", renterId, pendingCount, MAX_PENDING_RENTALS);
+            log.warn("User {} đã có {} đơn PENDING, vượt giới hạn tối đa {}", renterId, pendingCount, MAX_PENDING_RENTALS);
             throw new AppException(ErrorCode.MAX_PENDING_RENTALS_EXCEEDED);
         }
 
@@ -144,7 +143,7 @@ public class RentalServiceImpl implements RentalService {
         }
         BigDecimal depositAmount = totalPrice.multiply(DEPOSIT_PERCENTAGE);
 
-        // 7. Tạo mới đơn thuê ở trạng thái PENDING_APPROVAL theo đúng Đặc tả v2.0.0
+        // 7. CRP-41: Tạo mới đơn thuê ở trạng thái PENDING
         Rental rental = Rental.builder()
                 .carId(car.getCarId())
                 .renterId(renterId)
@@ -154,7 +153,7 @@ public class RentalServiceImpl implements RentalService {
                 .pricePerDay(pricePerDay)
                 .totalPrice(totalPrice)
                 .depositAmount(depositAmount)
-                .status(ERentalStatus.PENDING_APPROVAL)
+                .status(ERentalStatus.PENDING)
                 .note(request.getNote())
                 .build();
 

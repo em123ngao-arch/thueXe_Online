@@ -108,10 +108,16 @@ class RentalServiceTest {
         assertThat(response.getPricePerDay()).isEqualByComparingTo(BigDecimal.valueOf(500_000));
         assertThat(response.getTotalPrice()).isEqualByComparingTo(BigDecimal.valueOf(1_000_000));
         assertThat(response.getDepositAmount()).isEqualByComparingTo(BigDecimal.valueOf(300_000)); // 30% của 1,000,000
-        assertThat(response.getStatus()).isEqualTo(ERentalStatus.PENDING_APPROVAL);
+        assertThat(response.getStatus()).isEqualTo(ERentalStatus.PENDING);
         assertThat(response.getNote()).isEqualTo("Cần xe sạch sẽ");
 
-        verify(rentalRepository).save(any(Rental.class));
+        org.mockito.ArgumentCaptor<Rental> rentalCaptor = org.mockito.ArgumentCaptor.forClass(Rental.class);
+        verify(rentalRepository).save(rentalCaptor.capture());
+        Rental savedRental = rentalCaptor.getValue();
+        assertThat(savedRental.getStatus()).isEqualTo(ERentalStatus.PENDING);
+        assertThat(savedRental.getTotalDays()).isEqualTo(2);
+        assertThat(savedRental.getTotalPrice()).isEqualByComparingTo(BigDecimal.valueOf(1_000_000));
+        assertThat(savedRental.getDepositAmount()).isEqualByComparingTo(BigDecimal.valueOf(300_000));
     }
 
     @Test
@@ -134,6 +140,118 @@ class RentalServiceTest {
 
         verify(carRepository, never()).findByCarIdAndDeletedAtIsNull(anyLong());
         verify(rentalRepository, never()).save(any(Rental.class));
+    }
+
+    @Test
+    @DisplayName("CRP-41: User chưa đăng nhập -> ném UNAUTHENTICATED")
+    void createRentalRequest_Unauthenticated_ThrowsException() {
+        SecurityContextHolder.clearContext();
+
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(LocalDate.now().plusDays(1))
+                .endDate(LocalDate.now().plusDays(2))
+                .build();
+
+        assertThatThrownBy(() -> rentalService.createRentalRequest(request))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> {
+                    AppException appEx = (AppException) ex;
+                    assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.UNAUTHENTICATED);
+                });
+
+        verify(rentalRepository, never()).save(any(Rental.class));
+    }
+
+    @Test
+    @DisplayName("CRP-42: User có 0 đơn PENDING -> tạo được rental thành công")
+    void createRentalRequest_WhenPendingCountIs0_Success() {
+        LocalDate startDate = LocalDate.now().plusDays(1);
+        LocalDate endDate = LocalDate.now().plusDays(2);
+
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
+
+        Car car = Car.builder()
+                .carId(CAR_ID)
+                .ownerId(OWNER_ID)
+                .pricePerDay(BigDecimal.valueOf(500_000))
+                .status(ECarStatus.ACTIVE)
+                .build();
+
+        when(rentalRepository.countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING)).thenReturn(0L);
+        when(carRepository.findByCarIdAndDeletedAtIsNull(CAR_ID)).thenReturn(Optional.of(car));
+        when(rentalRepository.save(any(Rental.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RentalResponse response = rentalService.createRentalRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatus()).isEqualTo(ERentalStatus.PENDING);
+        verify(rentalRepository).save(any(Rental.class));
+    }
+
+    @Test
+    @DisplayName("CRP-42: User có 1 đơn PENDING -> tạo được đơn thứ 2 thành công")
+    void createRentalRequest_WhenPendingCountIs1_Success() {
+        LocalDate startDate = LocalDate.now().plusDays(1);
+        LocalDate endDate = LocalDate.now().plusDays(2);
+
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
+
+        Car car = Car.builder()
+                .carId(CAR_ID)
+                .ownerId(OWNER_ID)
+                .pricePerDay(BigDecimal.valueOf(500_000))
+                .status(ECarStatus.ACTIVE)
+                .build();
+
+        when(rentalRepository.countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING)).thenReturn(1L);
+        when(carRepository.findByCarIdAndDeletedAtIsNull(CAR_ID)).thenReturn(Optional.of(car));
+        when(rentalRepository.save(any(Rental.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RentalResponse response = rentalService.createRentalRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatus()).isEqualTo(ERentalStatus.PENDING);
+        verify(rentalRepository).save(any(Rental.class));
+    }
+
+    @Test
+    @DisplayName("CRP-42: Chỉ đếm request PENDING của chính renter hiện tại, không đếm của user khác")
+    void createRentalRequest_CountsOnlyCurrentRenterPendingRequests_NotOtherUsers() {
+        LocalDate startDate = LocalDate.now().plusDays(1);
+        LocalDate endDate = LocalDate.now().plusDays(2);
+
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
+
+        Car car = Car.builder()
+                .carId(CAR_ID)
+                .ownerId(OWNER_ID)
+                .pricePerDay(BigDecimal.valueOf(500_000))
+                .status(ECarStatus.ACTIVE)
+                .build();
+
+        // Renter hiện tại chỉ có 0 đơn PENDING
+        when(rentalRepository.countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING)).thenReturn(0L);
+        when(carRepository.findByCarIdAndDeletedAtIsNull(CAR_ID)).thenReturn(Optional.of(car));
+        when(rentalRepository.save(any(Rental.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        rentalService.createRentalRequest(request);
+
+        // Xác nhận chỉ đếm cho RENTER_ID hiện tại
+        verify(rentalRepository).countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING);
+        verify(rentalRepository, never()).countByRenterIdAndStatus(eq(999L), any());
     }
 
     @Test
@@ -293,6 +411,119 @@ class RentalServiceTest {
                 .satisfies(ex -> {
                     AppException appEx = (AppException) ex;
                     assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.CAR_ALREADY_RENTED);
+                });
+    }
+
+    @Test
+    @DisplayName("CRP-42: Khách đã có 2 đơn PENDING (< 3) -> tạo đơn thứ 3 thành công")
+    void createRentalRequest_WhenPendingCountIs2_Success() {
+        LocalDate startDate = LocalDate.now().plusDays(1);
+        LocalDate endDate = LocalDate.now().plusDays(2);
+
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
+
+        Car car = Car.builder()
+                .carId(CAR_ID)
+                .ownerId(OWNER_ID)
+                .pricePerDay(BigDecimal.valueOf(500_000))
+                .status(ECarStatus.ACTIVE)
+                .build();
+
+        when(rentalRepository.countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING)).thenReturn(2L);
+        when(carRepository.findByCarIdAndDeletedAtIsNull(CAR_ID)).thenReturn(Optional.of(car));
+        when(rentalRepository.save(any(Rental.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RentalResponse response = rentalService.createRentalRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatus()).isEqualTo(ERentalStatus.PENDING);
+        verify(rentalRepository).save(any(Rental.class));
+    }
+
+    @Test
+    @DisplayName("CRP-42: Các đơn cũ đã sang EXPIRED/REJECTED/CANCELLED không tính vào giới hạn PENDING")
+    void createRentalRequest_OldRequestsNotPending_DoesNotCountTowardsLimit() {
+        LocalDate startDate = LocalDate.now().plusDays(1);
+        LocalDate endDate = LocalDate.now().plusDays(2);
+
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
+
+        Car car = Car.builder()
+                .carId(CAR_ID)
+                .ownerId(OWNER_ID)
+                .pricePerDay(BigDecimal.valueOf(500_000))
+                .status(ECarStatus.ACTIVE)
+                .build();
+
+        // Khách từng có 5 đơn cũ nhưng chỉ 1 đơn ở PENDING, các đơn khác đã EXPIRED/REJECTED/CANCELLED
+        when(rentalRepository.countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING)).thenReturn(1L);
+        when(carRepository.findByCarIdAndDeletedAtIsNull(CAR_ID)).thenReturn(Optional.of(car));
+        when(rentalRepository.save(any(Rental.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RentalResponse response = rentalService.createRentalRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatus()).isEqualTo(ERentalStatus.PENDING);
+        // Đảm bảo không đếm PENDING_APPROVAL
+        verify(rentalRepository, never()).countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING_APPROVAL);
+    }
+
+    @Test
+    @DisplayName("CRP-41: Renter đã có đơn PENDING trùng ngày cho cùng xe -> ném DUPLICATE_RENTAL_REQUEST")
+    void createRentalRequest_DuplicateRequestSameCarAndDates_ThrowsException() {
+        LocalDate startDate = LocalDate.now().plusDays(1);
+        LocalDate endDate = LocalDate.now().plusDays(2);
+
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
+
+        Car car = Car.builder()
+                .carId(CAR_ID)
+                .ownerId(OWNER_ID)
+                .pricePerDay(BigDecimal.valueOf(500_000))
+                .status(ECarStatus.ACTIVE)
+                .build();
+
+        when(rentalRepository.countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING)).thenReturn(0L);
+        when(carRepository.findByCarIdAndDeletedAtIsNull(CAR_ID)).thenReturn(Optional.of(car));
+        when(rentalRepository.hasActiveOrPendingRentalForUserAndCar(eq(CAR_ID), eq(RENTER_ID), eq(startDate), eq(endDate), anyList()))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> rentalService.createRentalRequest(request))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> {
+                    AppException appEx = (AppException) ex;
+                    assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.DUPLICATE_RENTAL_REQUEST);
+                });
+    }
+
+    @Test
+    @DisplayName("Validation: Ngày thuê null -> ném INVALID_REQUEST")
+    void createRentalRequest_DatesNull_ThrowsException() {
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(null)
+                .endDate(null)
+                .build();
+
+        when(rentalRepository.countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING)).thenReturn(0L);
+
+        assertThatThrownBy(() -> rentalService.createRentalRequest(request))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> {
+                    AppException appEx = (AppException) ex;
+                    assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
                 });
     }
 }
