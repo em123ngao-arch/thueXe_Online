@@ -2,7 +2,7 @@ databases:
   # Dịch vụ 1: Database PostgreSQL miễn phí trên Render
   - name: driveshare-db
     databaseName: driveshare_db
-    user: postgres
+    user: driveshare_user
     plan: free
     region: singapore
 
@@ -54,7 +54,3 @@ services:
       - path: /*
         name: Access-Control-Allow-Origin
         value: "*"
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
