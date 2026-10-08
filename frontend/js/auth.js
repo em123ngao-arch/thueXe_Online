@@ -11,7 +11,7 @@ const AUTH_STORAGE_KEY = "driveshare_current_auth_user";
 
 const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? "http://localhost:8080/api/v1"
-  : "https://driveshare-backend.onrender.com/api/v1";
+  : "https://driveshare-backend-9ppk.onrender.com/api/v1";
 
 
 // ─────────────────────────────────────────────────────────────

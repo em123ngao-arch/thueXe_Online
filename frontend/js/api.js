@@ -14,7 +14,7 @@
 const API_CONFIG = {
   BASE_URL: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:8080/api/v1'
-    : 'https://driveshare-backend.onrender.com/api/v1',
+    : 'https://driveshare-backend-9ppk.onrender.com/api/v1',
   TIMEOUT_MS: 10000
 };
 
@@ -213,7 +213,7 @@ const CarAPI = {
     const formData = new FormData();
     formData.append('file', file);
     const token = typeof TokenService !== 'undefined' ? TokenService.getToken() : localStorage.getItem('access_token');
-    const res = await fetch(`http://localhost:8080/api/v1/cars/${carId}/photos`, {
+    const res = await fetch(`${API_CONFIG.BASE_URL}/cars/${carId}/photos`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`
