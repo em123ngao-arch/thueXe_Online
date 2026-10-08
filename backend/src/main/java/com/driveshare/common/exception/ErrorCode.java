@@ -76,7 +76,13 @@ public enum ErrorCode {
     INVALID_PAYMENT_AMOUNT("INVALID_PAYMENT_AMOUNT", "Số tiền thanh toán không khớp với số tiền cọc yêu cầu", HttpStatus.BAD_REQUEST),
 
     // CRP-NEW: Ngăn chặn 2 đơn thuê trùng ngày cùng 1 xe từ 1 người dùng
-    DUPLICATE_RENTAL_REQUEST("DUPLICATE_RENTAL_REQUEST", "Bạn đã có yêu cầu thuê xe này trong khoảng thời gian trùng lặp. Vui lòng hủy đơn cũ trước khi gửi yêu cầu mới.", HttpStatus.CONFLICT);
+    DUPLICATE_RENTAL_REQUEST("DUPLICATE_RENTAL_REQUEST", "Bạn đã có yêu cầu thuê xe này trong khoảng thời gian trùng lặp. Vui lòng hủy đơn cũ trước khi gửi yêu cầu mới.", HttpStatus.CONFLICT),
+
+    // Sprint 3: Inspection & Review (Vĩ, Quân)
+    INSPECTION_ALREADY_EXISTS("INSPECTION_ALREADY_EXISTS", "Biên bản bàn giao/trả xe đã được lập trước đó", HttpStatus.CONFLICT),
+    INSPECTION_NOT_FOUND("INSPECTION_NOT_FOUND", "Không tìm thấy biên bản kiểm tra bàn giao xe", HttpStatus.NOT_FOUND),
+    REVIEW_ALREADY_EXISTS("REVIEW_ALREADY_EXISTS", "Đơn thuê xe này đã được đánh giá trước đó", HttpStatus.CONFLICT),
+    RENTAL_NOT_COMPLETED_FOR_REVIEW("RENTAL_NOT_COMPLETED_FOR_REVIEW", "Chuyến đi phải ở trạng thái hoàn tất (COMPLETED) mới có thể đánh giá", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;
