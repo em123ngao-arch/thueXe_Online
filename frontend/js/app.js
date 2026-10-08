@@ -53,6 +53,18 @@ const App = {
     if (urlParams.get('tab') === 'trips' || window.location.hash === '#trips' || window.location.hash === '#my-trips') {
       setTimeout(() => this.showMyBookingsView(), 150);
     }
+    const paramCarId = urlParams.get('carId');
+    if (paramCarId) {
+      setTimeout(() => this.openCarDetailModal(paramCarId), 250);
+    }
+    const paramBookCarId = urlParams.get('bookCarId');
+    if (paramBookCarId) {
+      setTimeout(() => {
+        if (typeof AuthService !== 'undefined' && typeof BookingService !== 'undefined') {
+          AuthService.requireLoginThen(() => BookingService.startBookingFlow(paramBookCarId));
+        }
+      }, 300);
+    }
   },
 
   // Xác định role ban đầu dựa vào JWT (tài khoản đã đăng nhập) hoặc StorageService
@@ -874,34 +886,191 @@ const App = {
     this.openModal(`Thông tin chủ xe đơn #${id}`, html);
   },
 
-  showReviewPrompt(bookingId) {
+  // ─────────────────────────────────────────────────────────────
+  // SPRINT 3 - NHIỆM VỤ 4: MODAL ĐÁNH GIÁ 5 SAO CHO KHÁCH THUÊ
+  // ─────────────────────────────────────────────────────────────
+  currentReviewRating: 5,
+
+  async showReviewPrompt(bookingId) {
+    this.currentReviewRating = 5;
+
+    // Kiểm tra xem đơn này đã có đánh giá chưa
+    let existingReview = null;
+    if (typeof ReviewAPI !== 'undefined' && ReviewAPI.getRentalReview) {
+      try {
+        const res = await ReviewAPI.getRentalReview(bookingId);
+        if (res && res.success && res.data) {
+          existingReview = res.data;
+        }
+      } catch (_) {}
+    }
+
+    if (existingReview) {
+      const starsStr = '★'.repeat(existingReview.rating) + '☆'.repeat(5 - existingReview.rating);
+      const html = `
+        <div style="text-align: center; padding: 10px 0;">
+          <div style="font-size: 2.2rem; color: #f59e0b; margin-bottom: 6px; letter-spacing: 4px;">${starsStr}</div>
+          <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px;">
+            Đã đánh giá: ${existingReview.rating}/5 sao
+          </div>
+          ${existingReview.comment ? `
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 0.88rem; color: #475569; font-style: italic; max-width: 460px; margin: 0 auto 14px auto;">
+              "${existingReview.comment}"
+            </div>
+          ` : ''}
+          <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 14px;">
+            Cảm ơn bạn đã gửi phản hồi giúp nâng cao chất lượng dịch vụ trên DriveShare.
+          </p>
+          <button class="btn btn-primary btn-md" onclick="App.closeModal()">Đóng</button>
+        </div>
+      `;
+      this.openModal(`Đánh giá chuyến đi #${bookingId}`, html);
+      return;
+    }
+
     const html = `
-      <div>
-        <p style="color: var(--slate-600); font-size: 0.88rem; margin-bottom: 1rem;">
-          Chuyến đi của bạn thế nào? Hãy chia sẻ đánh giá để giúp cộng đồng thuê xe an tâm hơn.
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <p style="color: var(--slate-600); font-size: 0.88rem; margin: 0; line-height: 1.5; text-align: center;">
+          Chuyến đi của bạn đã hoàn tất! Hãy chấm điểm và chia sẻ cảm nghĩ để giúp cộng đồng thuê xe an tâm hơn.
         </p>
 
-        <div style="display: flex; justify-content: center; gap: 0.65rem; margin-bottom: 1.25rem;">
-          <button class="btn btn-outline btn-sm" style="color: #ea580c; font-weight: 700;">5 Sao - Rất tốt</button>
-          <button class="btn btn-outline btn-sm">4 Sao - Tốt</button>
-          <button class="btn btn-outline btn-sm">3 Sao - Trung bình</button>
+        <!-- Widget 5 Ngôi sao tương tác (⭐⭐⭐⭐⭐) -->
+        <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; padding: 16px; text-align: center;">
+          <div class="star-rating-box" id="starRatingBox" style="display: flex; justify-content: center; gap: 10px; font-size: 2.4rem; cursor: pointer; user-select: none;">
+            <span class="star-item" data-star="1" style="color: #f59e0b; transition: transform 0.15s ease;" onclick="App.setReviewStar(1)" onmouseover="App.hoverReviewStar(1)" onmouseout="App.resetReviewStar()">★</span>
+            <span class="star-item" data-star="2" style="color: #f59e0b; transition: transform 0.15s ease;" onclick="App.setReviewStar(2)" onmouseover="App.hoverReviewStar(2)" onmouseout="App.resetReviewStar()">★</span>
+            <span class="star-item" data-star="3" style="color: #f59e0b; transition: transform 0.15s ease;" onclick="App.setReviewStar(3)" onmouseover="App.hoverReviewStar(3)" onmouseout="App.resetReviewStar()">★</span>
+            <span class="star-item" data-star="4" style="color: #f59e0b; transition: transform 0.15s ease;" onclick="App.setReviewStar(4)" onmouseover="App.hoverReviewStar(4)" onmouseout="App.resetReviewStar()">★</span>
+            <span class="star-item" data-star="5" style="color: #f59e0b; transition: transform 0.15s ease;" onclick="App.setReviewStar(5)" onmouseover="App.hoverReviewStar(5)" onmouseout="App.resetReviewStar()">★</span>
+          </div>
+          <div id="reviewRatingLabel" style="font-weight: 800; color: #b45309; font-size: 0.95rem; margin-top: 6px;">
+            Tuyệt vời (5 / 5 sao)
+          </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Nhận xét của bạn</label>
-          <textarea class="form-control" rows="3" placeholder="Xe sạch sẽ, chủ xe bàn giao đúng giờ và hỗ trợ nhiệt tình..."></textarea>
+        <!-- Ô nhận xét cảm nghĩ -->
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label" style="font-weight: 700; color: #0f172a; margin-bottom: 6px;">
+            Nhận xét cảm nghĩ của bạn <span style="font-weight: 400; color: #64748b;">(Tùy chọn)</span>
+          </label>
+          <textarea id="reviewCommentText" class="form-control" rows="3" placeholder="Xe sạch sẽ, êm ái, chủ xe bàn giao đúng giờ và hỗ trợ rất nhiệt tình..." style="font-size: 0.88rem;"></textarea>
+          
+          <!-- Quick suggestions chips -->
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+            <button type="button" class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; cursor:pointer;" onclick="App.appendReviewChip('Xe sạch sẽ & thơm tho')">+ Xe sạch sẽ</button>
+            <button type="button" class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; cursor:pointer;" onclick="App.appendReviewChip('Chủ xe thân thiện, đúng giờ')">+ Chủ xe đúng hẹn</button>
+            <button type="button" class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; cursor:pointer;" onclick="App.appendReviewChip('Tiết kiệm nhiên liệu, máy bốc')">+ Tiết kiệm xăng</button>
+            <button type="button" class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; cursor:pointer;" onclick="App.appendReviewChip('Tài xế lái xe an toàn, lịch sự')">+ Tài xế lịch sự</button>
+          </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
-          <button class="btn btn-outline btn-sm" onclick="App.closeModal()">Để sau</button>
-          <button class="btn btn-primary btn-sm" onclick="App.showToast('Cảm ơn bạn đã gửi đánh giá chuyến đi!', 'success'); App.closeModal();">
-            Gửi đánh giá
+        <!-- Nút Gửi đánh giá -->
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+          <button class="btn btn-outline btn-md" onclick="App.closeModal()">Để sau</button>
+          <button id="btnSubmitReview" class="btn btn-primary btn-md" style="background: #f59e0b; border-color: #f59e0b; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;" onclick="App.submitReview(${bookingId})">
+            <span>⭐</span>
+            <span>Gửi Đánh Giá</span>
           </button>
         </div>
       </div>
     `;
 
     this.openModal(`Đánh giá chuyến đi #${bookingId}`, html);
+  },
+
+  setReviewStar(star) {
+    this.currentReviewRating = star;
+    this.updateStarsUI(star);
+  },
+
+  hoverReviewStar(star) {
+    this.updateStarsUI(star);
+  },
+
+  resetReviewStar() {
+    this.updateStarsUI(this.currentReviewRating);
+  },
+
+  updateStarsUI(star) {
+    const starItems = document.querySelectorAll('#starRatingBox .star-item');
+    if (!starItems || starItems.length === 0) return;
+
+    const labels = {
+      1: 'Rất không hài lòng (1 / 5 sao)',
+      2: 'Chưa hài lòng (2 / 5 sao)',
+      3: 'Bình thường (3 / 5 sao)',
+      4: 'Hài lòng (4 / 5 sao)',
+      5: 'Tuyệt vời (5 / 5 sao)'
+    };
+
+    starItems.forEach((el, idx) => {
+      const val = idx + 1;
+      if (val <= star) {
+        el.textContent = '★';
+        el.style.color = '#f59e0b';
+        el.style.transform = 'scale(1.1)';
+      } else {
+        el.textContent = '☆';
+        el.style.color = '#cbd5e1';
+        el.style.transform = 'scale(1.0)';
+      }
+    });
+
+    const lbl = document.getElementById('reviewRatingLabel');
+    if (lbl) {
+      lbl.textContent = labels[star] || `${star} / 5 sao`;
+    }
+  },
+
+  appendReviewChip(text) {
+    const txt = document.getElementById('reviewCommentText');
+    if (!txt) return;
+    if (txt.value.trim()) {
+      txt.value += ', ' + text;
+    } else {
+      txt.value = text;
+    }
+  },
+
+  async submitReview(bookingId) {
+    const btn = document.getElementById('btnSubmitReview');
+    const comment = document.getElementById('reviewCommentText')?.value.trim() || '';
+    const rating = this.currentReviewRating || 5;
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang gửi đánh giá...';
+    }
+
+    try {
+      if (typeof ReviewAPI !== 'undefined' && ReviewAPI.createReview) {
+        const res = await ReviewAPI.createReview(bookingId, { rating, comment });
+        if (res && (res.success || res.code === 200)) {
+          this.showToast(`Cảm ơn bạn đã gửi đánh giá ${rating} sao cho chuyến đi #${bookingId}!`, 'success');
+          if (typeof NotificationAPI !== 'undefined' && NotificationAPI.addNotification) {
+            NotificationAPI.addNotification('Đánh giá thành công ⭐', `Bạn đã gửi đánh giá ${rating} sao cho đơn thuê #${bookingId}.`, 'REVIEW_SENT', bookingId);
+          }
+          this.closeModal();
+          // Cập nhật lại view chuyến đi
+          this.showMyBookingsView();
+          return;
+        } else {
+          alert(res.message || 'Không thể gửi đánh giá. Vui lòng thử lại!');
+        }
+      } else {
+        this.showToast(`Cảm ơn bạn đã gửi đánh giá ${rating} sao!`, 'success');
+        this.closeModal();
+        this.showMyBookingsView();
+      }
+    } catch (err) {
+      console.error('Lỗi khi submit review:', err);
+      this.showToast('Lỗi kết nối khi gửi đánh giá!', 'error');
+    }
+
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>⭐</span><span>Gửi Đánh Giá</span>';
+    }
   },
 
   // Toast Notification

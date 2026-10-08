@@ -496,19 +496,33 @@ const OwnerService = {
                       } else if (b.status === 'CONFIRMED' || b.status === 'DEPOSIT_PAID') {
                         badge = '<span class="badge badge-success" style="font-weight:700;">Đã chốt cọc 30%</span>';
                         action = `
-                          <button class="btn btn-primary btn-sm" style="padding: 4px 12px; font-size: 0.78rem; background: #059669; border-color: #059669; font-weight:700;" onclick="OwnerService.startRental(${id})">
-                            Bắt đầu chuyến
-                          </button>
+                          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                            <button class="btn btn-primary btn-sm" style="padding: 4px 12px; font-size: 0.78rem; background: #059669; border-color: #059669; font-weight:700; display: inline-flex; align-items: center; gap: 4px;" onclick="OwnerService.openCheckInModal(${id})">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                              Check-in Bàn giao
+                            </button>
+                          </div>
                         `;
                       } else if (b.status === 'IN_PROGRESS') {
                         badge = '<span class="badge badge-info" style="font-weight:700;">Đang trong chuyến đi</span>';
                         action = `
-                          <button class="btn btn-primary btn-sm" style="padding: 4px 12px; font-size: 0.78rem; background: #2563eb; border-color: #2563eb; font-weight:700;" onclick="OwnerService.completeRental(${id})">
-                            Hoàn tất chuyến
-                          </button>
+                          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                            <button class="btn btn-primary btn-sm" style="padding: 4px 12px; font-size: 0.78rem; background: #2563eb; border-color: #2563eb; font-weight:700; display: inline-flex; align-items: center; gap: 4px;" onclick="OwnerService.openCheckOutModal(${id})">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                              Check-out Nghiệm thu
+                            </button>
+                            <button class="btn btn-ghost btn-xs" style="color: #0f766e; font-size: 0.72rem; text-decoration: underline;" onclick="OwnerService.viewInspections(${id})">
+                              Xem biên bản giao
+                            </button>
+                          </div>
                         `;
                       } else if (b.status === 'COMPLETED') {
                         badge = '<span class="badge badge-neutral">Đã hoàn thành</span>';
+                        action = `
+                          <button class="btn btn-outline btn-xs" style="color: #0f766e; border-color: #99f6e4; font-size: 0.73rem; font-weight: 600;" onclick="OwnerService.viewInspections(${id})">
+                            Xem biên bản xe
+                          </button>
+                        `;
                       } else if (b.status === 'REJECTED') {
                         badge = '<span class="badge badge-danger">Đã từ chối</span>';
                       } else if (b.status === 'WITHDRAWN_BY_GUEST') {
@@ -2307,44 +2321,591 @@ const OwnerService = {
     this.showToast(`Đã ghi nhận từ chối yêu cầu #${rentalId}.`, 'info');
   },
 
-  async startRental(rentalId) {
-    if (!confirm(`Xác nhận bắt đầu chuyến đi cho đơn #${rentalId} (Bàn giao xe cho khách thuê)?`)) {
-      return;
+  // Modal container dùng chung cho các phân hệ của Chủ xe
+  showModal(title, bodyHtml, maxWidth = '680px') {
+    let overlay = document.getElementById('ownerDynamicModalOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'ownerDynamicModalOverlay';
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal-dialog" id="ownerDynamicModalDialog" style="max-width: ${maxWidth}; width: 95%; max-height: 90vh; overflow-y: auto;">
+          <div class="modal-header">
+            <h3 class="modal-title" id="ownerDynamicModalTitle">${title}</h3>
+            <button class="modal-close-btn" onclick="OwnerService.closeModal()">&times;</button>
+          </div>
+          <div class="modal-body" id="ownerDynamicModalBody">${bodyHtml}</div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    } else {
+      document.getElementById('ownerDynamicModalTitle').textContent = title;
+      document.getElementById('ownerDynamicModalBody').innerHTML = bodyHtml;
+      document.getElementById('ownerDynamicModalDialog').style.maxWidth = maxWidth;
     }
-    if (typeof RentalAPI !== 'undefined' && RentalAPI.startRental) {
-      try {
-        const res = await RentalAPI.startRental(rentalId);
-        if (res && res.success) {
-          this.showToast(`Chuyến đi #${rentalId} đã bắt đầu! Trạng thái: IN_PROGRESS.`, 'success');
-          await this.renderOwnerPortal();
-          this.switchOwnerTab('REQUESTS');
-          return;
-        }
-      } catch (err) {
-        console.warn('Lỗi startRental API:', err);
-      }
-    }
-    this.showToast(`Bắt đầu chuyến đi #${rentalId}.`, 'info');
+    overlay.classList.add('open');
   },
 
-  async completeRental(rentalId) {
-    if (!confirm(`Xác nhận hoàn tất chuyến đi cho đơn #${rentalId} (Khách đã bàn giao lại xe an toàn)?`)) {
+  closeModal() {
+    const overlay = document.getElementById('ownerDynamicModalOverlay');
+    if (overlay) overlay.classList.remove('open');
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // SPRINT 3 - NHIỆM VỤ 2: MODAL BÀN GIAO XE (CHECK-IN CHO CHỦ XE)
+  // ─────────────────────────────────────────────────────────────
+  openCheckInModal(rentalId) {
+    const b = (this.ownerBookings || []).find(x => (x.rental_id || x.rentalId || x.id) == rentalId) || {};
+    const c = (this.ownerCars || []).find(x => x.id == (b.car_id || b.carId)) || {};
+    const renterName = b.renter_full_name || b.renterFullName || b.renter_name || b.renterName || 'Khách thuê';
+    const carName = c.brand ? `${c.brand} ${c.model}` : (b.car_model || b.carModel || 'Xe cho thuê');
+    const plate = c.license_plate || b.car_plate_number || b.license_plate || '---';
+
+    const html = `
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <!-- Header tóm tắt đơn thuê -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <div style="font-size: 0.8rem; color: #64748b; font-weight: 600;">ĐƠN THUÊ XE #${rentalId}</div>
+            <strong style="font-size: 1.05rem; color: #0f172a;">${carName}</strong>
+            <span class="vn-license-plate" style="margin-left: 6px;">${plate}</span>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.8rem; color: #64748b;">Khách thuê: <strong style="color: #0f172a;">${renterName}</strong></div>
+            <span class="badge badge-success" style="font-size: 0.75rem; font-weight: 700;">Đã cọc 30% VietQR</span>
+          </div>
+        </div>
+
+        <p style="font-size: 0.85rem; color: #475569; margin: 0; line-height: 1.5;">
+          Vui lòng ghi nhận chỉ số thực tế của xe lúc giao và chụp 4 góc ngoại quan để bảo vệ quyền lợi đối chiếu khi nhận lại xe.
+        </p>
+
+        <!-- Form Check-in -->
+        <form id="formCheckIn" onsubmit="event.preventDefault(); OwnerService.submitCheckIn(${rentalId});" style="display: flex; flex-direction: column; gap: 14px;">
+          
+          <!-- 1. Số ODO (km) -->
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" style="font-weight: 700; color: #1e293b; display: flex; justify-content: space-between;">
+              <span>1. Số ODO lúc xuất phát (km) <span style="color:#ef4444;">*</span></span>
+              <small style="color: #64748b; font-weight: 500;">Công tơ mét hiện tại</small>
+            </label>
+            <input type="number" id="checkInOdo" class="form-control" min="0" value="15200" placeholder="VD: 15200" required style="font-size: 0.95rem; font-weight: 700; color: #0f172a;" />
+          </div>
+
+          <!-- 2. Thanh trượt mức xăng / Pin 0 - 100% -->
+          <div class="form-group" style="margin: 0; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label class="form-label" style="font-weight: 700; color: #166534; margin: 0;">
+                2. Mức nhiên liệu (Xăng / Pin lúc giao) <span style="color:#ef4444;">*</span>
+              </label>
+              <span id="lblCheckInFuel" style="font-size: 1.15rem; font-weight: 800; color: #059669; background: #dcfce7; padding: 2px 10px; border-radius: 999px;">100%</span>
+            </div>
+            <input type="range" id="checkInFuel" min="0" max="100" value="100" step="5" style="width: 100%; accent-color: #059669; cursor: pointer;" oninput="document.getElementById('lblCheckInFuel').textContent = this.value + '%'" />
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #15803d; margin-top: 4px; font-weight: 600;">
+              <span>0% (Cạn xăng)</span>
+              <span>50% (Nửa bình)</span>
+              <span>100% (Đầy bình)</span>
+            </div>
+          </div>
+
+          <!-- 3. Bốn ô chọn / dán link ảnh ngoại quan xe -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label class="form-label" style="font-weight: 700; color: #1e293b; margin: 0;">
+                3. Ảnh ngoại quan 4 góc xe <span style="color:#ef4444;">*</span>
+              </label>
+              <button type="button" class="btn btn-outline btn-xs" style="color: #0f766e; border-color: #0f766e; font-weight: 700;" onclick="OwnerService.setCheckInSamplePhotos()">
+                ⚡ Chọn nhanh 4 ảnh mẫu
+              </button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+              <!-- Ô 1: Đầu xe -->
+              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 8px; background: #fafafa; text-align: center;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 4px;">1. Đầu xe</div>
+                <input type="text" id="checkInImg1" class="form-control" placeholder="URL ảnh..." style="font-size: 0.75rem; padding: 4px 6px; margin-bottom: 6px;" onchange="OwnerService.previewThumb(this, 'prevIn1')" />
+                <img id="prevIn1" src="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 75px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" alt="Đầu xe" />
+              </div>
+              <!-- Ô 2: Đuôi xe -->
+              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 8px; background: #fafafa; text-align: center;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 4px;">2. Đuôi xe</div>
+                <input type="text" id="checkInImg2" class="form-control" placeholder="URL ảnh..." style="font-size: 0.75rem; padding: 4px 6px; margin-bottom: 6px;" onchange="OwnerService.previewThumb(this, 'prevIn2')" />
+                <img id="prevIn2" src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 75px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" alt="Đuôi xe" />
+              </div>
+              <!-- Ô 3: Sườn trái -->
+              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 8px; background: #fafafa; text-align: center;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 4px;">3. Sườn trái</div>
+                <input type="text" id="checkInImg3" class="form-control" placeholder="URL ảnh..." style="font-size: 0.75rem; padding: 4px 6px; margin-bottom: 6px;" onchange="OwnerService.previewThumb(this, 'prevIn3')" />
+                <img id="prevIn3" src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 75px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" alt="Sườn trái" />
+              </div>
+              <!-- Ô 4: Sườn phải -->
+              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 8px; background: #fafafa; text-align: center;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 4px;">4. Sườn phải</div>
+                <input type="text" id="checkInImg4" class="form-control" placeholder="URL ảnh..." style="font-size: 0.75rem; padding: 4px 6px; margin-bottom: 6px;" onchange="OwnerService.previewThumb(this, 'prevIn4')" />
+                <img id="prevIn4" src="https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 75px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" alt="Sườn phải" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Ghi chú tình trạng trước khi xuất phát -->
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" style="font-weight: 700; color: #1e293b;">
+              4. Ghi chú tình trạng trước khi xuất phát
+            </label>
+            <textarea id="checkInNotes" class="form-control" rows="2" placeholder="VD: Xe sạch sẽ, vết trầy nhẹ ở cản trước góc phải, đầy đủ lốp dự phòng và kích nâng..." style="font-size: 0.85rem;"></textarea>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+              <span class="badge" style="background:#f1f5f9; color:#475569; cursor:pointer;" onclick="OwnerService.appendNote('checkInNotes', 'Xe rửa sạch bóng')">+ Xe sạch bóng</span>
+              <span class="badge" style="background:#f1f5f9; color:#475569; cursor:pointer;" onclick="OwnerService.appendNote('checkInNotes', 'Ngoại quan đẹp, không trầy xước')">+ Ngoại quan đẹp</span>
+              <span class="badge" style="background:#f1f5f9; color:#475569; cursor:pointer;" onclick="OwnerService.appendNote('checkInNotes', 'Có kèm camera hành trình & ETC')">+ Kèm camera & ETC</span>
+            </div>
+          </div>
+
+          <!-- Nút hành động -->
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+            <button type="button" class="btn btn-outline btn-md" onclick="OwnerService.closeModal()">Hủy bỏ</button>
+            <button type="submit" id="btnSubmitCheckIn" class="btn btn-primary btn-md" style="background: #059669; border-color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              Xác nhận bàn giao xe
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    this.showModal(`Biên Bản Bàn Giao Xe (Check-in) — Đơn #${rentalId}`, html, '650px');
+    // Điền sẵn link ảnh mẫu ban đầu
+    this.setCheckInSamplePhotos();
+  },
+
+  setCheckInSamplePhotos() {
+    const urls = [
+      'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=600&q=80'
+    ];
+    for (let i = 1; i <= 4; i++) {
+      const inp = document.getElementById(`checkInImg${i}`);
+      const prev = document.getElementById(`prevIn${i}`);
+      if (inp) inp.value = urls[i - 1];
+      if (prev) prev.src = urls[i - 1];
+    }
+  },
+
+  previewThumb(input, imgId) {
+    const img = document.getElementById(imgId);
+    if (img && input.value.trim()) {
+      img.src = input.value.trim();
+    }
+  },
+
+  appendNote(textareaId, text) {
+    const el = document.getElementById(textareaId);
+    if (!el) return;
+    if (el.value.trim()) {
+      el.value += ', ' + text;
+    } else {
+      el.value = text;
+    }
+  },
+
+  async submitCheckIn(rentalId) {
+    const btn = document.getElementById('btnSubmitCheckIn');
+    const odo = parseInt(document.getElementById('checkInOdo')?.value || '0', 10);
+    const fuel = parseInt(document.getElementById('checkInFuel')?.value || '100', 10);
+    const notes = document.getElementById('checkInNotes')?.value.trim() || '';
+
+    const imgs = [];
+    for (let i = 1; i <= 4; i++) {
+      const val = document.getElementById(`checkInImg${i}`)?.value.trim();
+      if (val) imgs.push(val);
+    }
+    const imagesStr = imgs.join(',');
+
+    if (isNaN(odo) || odo < 0) {
+      alert('Vui lòng nhập số ODO hợp lệ (lớn hơn hoặc bằng 0)!');
       return;
     }
-    if (typeof RentalAPI !== 'undefined' && RentalAPI.completeRental) {
-      try {
-        const res = await RentalAPI.completeRental(rentalId);
-        if (res && res.success) {
-          this.showToast(`Chuyến đi #${rentalId} đã hoàn tất thành công! Trạng thái: COMPLETED.`, 'success');
-          await this.renderOwnerPortal();
-          this.switchOwnerTab('REQUESTS');
-          return;
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang lập biên bản...';
+    }
+
+    const payload = {
+      odoMeter: odo,
+      fuelLevel: fuel,
+      images: imagesStr,
+      notes: notes || 'Xe bàn giao trong tình trạng sạch sẽ, hoạt động hoàn hảo'
+    };
+
+    try {
+      const res = await RentalAPI.checkInRental(rentalId, payload);
+      if (res && (res.success || res.code === 200)) {
+        this.showToast(`Lập biên bản bàn giao xe đơn #${rentalId} thành công! Chuyến đi đã bắt đầu.`, 'success');
+        if (typeof NotificationAPI !== 'undefined' && NotificationAPI.addNotification) {
+          NotificationAPI.addNotification('Bàn giao xe thành công', `Chủ xe đã lập biên bản Check-in đơn #${rentalId}. Chúc quý khách chuyến đi an toàn!`, 'INSPECTION_CHECK_IN', rentalId);
         }
-      } catch (err) {
-        console.warn('Lỗi completeRental API:', err);
+        this.closeModal();
+        await this.renderOwnerPortal();
+        this.switchOwnerTab('REQUESTS');
+      } else {
+        alert(res.message || 'Không thể lập biên bản bàn giao xe. Vui lòng thử lại!');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Xác nhận bàn giao xe';
+        }
+      }
+    } catch (err) {
+      console.error('Lỗi khi submit Check-in:', err);
+      this.showToast('Lỗi kết nối khi gửi biên bản bàn giao!', 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Xác nhận bàn giao xe';
       }
     }
-    this.showToast(`Hoàn tất chuyến đi #${rentalId}.`, 'info');
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // SPRINT 3 - NHIỆM VỤ 3: MODAL NGHIỆM THU TRẢ XE (CHECK-OUT CHO CHỦ XE)
+  // ─────────────────────────────────────────────────────────────
+  async openCheckOutModal(rentalId) {
+    const b = (this.ownerBookings || []).find(x => (x.rental_id || x.rentalId || x.id) == rentalId) || {};
+    const c = (this.ownerCars || []).find(x => x.id == (b.car_id || b.carId)) || {};
+    const renterName = b.renter_full_name || b.renterFullName || b.renter_name || b.renterName || 'Khách thuê';
+    const carName = c.brand ? `${c.brand} ${c.model}` : (b.car_model || b.carModel || 'Xe cho thuê');
+    const plate = c.license_plate || b.car_plate_number || b.license_plate || '---';
+
+    // Lấy thông tin Check-in lúc giao xe để đối chiếu ODO và xăng
+    let startOdo = 15200;
+    let startFuel = 100;
+    try {
+      const inspRes = await RentalAPI.getRentalInspections(rentalId);
+      if (inspRes && inspRes.data && Array.isArray(inspRes.data)) {
+        const checkInRecord = inspRes.data.find(i => i.inspectionType === 'CHECK_IN' || i.inspection_type === 'CHECK_IN');
+        if (checkInRecord) {
+          startOdo = checkInRecord.odoMeter || checkInRecord.odo_meter || startOdo;
+          startFuel = checkInRecord.fuelLevel ?? checkInRecord.fuel_level ?? startFuel;
+        }
+      }
+    } catch (_) {}
+
+    // Tính toán hóa đơn nghiệm thu: 70% tiền thuê còn lại + phụ phí
+    const totalRent = Number(b.rental_amount || b.rentalAmount || (c.price_per_day * (b.total_days || 1)) || 1500000);
+    const depositPaid = Number(b.deposit_amount || b.depositAmount || Math.round(totalRent * 0.3));
+    const remaining70 = totalRent - depositPaid;
+    const initialTraveled = 185;
+    const initialEndOdo = startOdo + initialTraveled;
+
+    const formatMoney = (v) => typeof StorageService !== 'undefined' ? StorageService.formatCurrency(v) : (v?.toLocaleString('vi-VN') + ' đ');
+
+    const html = `
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <!-- Header tóm tắt đơn và thông số ban đầu -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <div style="font-size: 0.8rem; color: #64748b; font-weight: 600;">NGHIỆM THU ĐƠN THUÊ #${rentalId}</div>
+              <strong style="font-size: 1.05rem; color: #0f172a;">${carName}</strong>
+              <span class="vn-license-plate" style="margin-left: 6px;">${plate}</span>
+            </div>
+            <div style="text-align: right;">
+              <span class="badge badge-info" style="font-size: 0.75rem; font-weight: 700;">Đang trong chuyến</span>
+              <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">Khách: <strong style="color: #0f172a;">${renterName}</strong></div>
+            </div>
+          </div>
+          <!-- Baseline Check-in -->
+          <div style="display: flex; gap: 12px; font-size: 0.8rem; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; color: #334155;">
+            <div>🏁 ODO lúc giao: <strong style="color: #0284c7;">${startOdo.toLocaleString('vi-VN')} km</strong></div>
+            <div>•</div>
+            <div>⛽ Mức xăng lúc giao: <strong style="color: #059669;">${startFuel}%</strong></div>
+          </div>
+        </div>
+
+        <!-- Form Check-out -->
+        <form id="formCheckOut" onsubmit="event.preventDefault(); OwnerService.submitCheckOut(${rentalId});" style="display: flex; flex-direction: column; gap: 14px;">
+          
+          <!-- 1. Số ODO lúc trả & Tự động tính quãng đường đã đi -->
+          <div class="form-group" style="margin: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label class="form-label" style="font-weight: 700; color: #1e293b; margin: 0;">
+                1. Số ODO lúc nhận lại xe (km) <span style="color:#ef4444;">*</span>
+              </label>
+              <div id="distanceTraveledBadge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 700; font-size: 0.82rem; padding: 2px 10px; border-radius: 999px;">
+                Quãng đường đã đi: <span id="lblDistanceVal">${initialTraveled}</span> km
+              </div>
+            </div>
+            <input type="number" id="checkOutOdo" class="form-control" min="${startOdo}" value="${initialEndOdo}" placeholder="Nhập ODO..." required style="font-size: 0.95rem; font-weight: 700; color: #0f172a;" oninput="OwnerService.updateDistanceCalculated(${startOdo})" />
+          </div>
+
+          <!-- 2. Mức xăng / Pin lúc nhận lại -->
+          <div class="form-group" style="margin: 0; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label class="form-label" style="font-weight: 700; color: #0369a1; margin: 0;">
+                2. Mức xăng / Pin lúc nhận lại xe <span style="color:#ef4444;">*</span>
+              </label>
+              <span id="lblCheckOutFuel" style="font-size: 1.15rem; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 10px; border-radius: 999px;">90%</span>
+            </div>
+            <input type="range" id="checkOutFuel" min="0" max="100" value="90" step="5" style="width: 100%; accent-color: #0284c7; cursor: pointer;" oninput="document.getElementById('lblCheckOutFuel').textContent = this.value + '%'" />
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #0369a1; margin-top: 4px; font-weight: 600;">
+              <span>0% (Hết)</span>
+              <span>50%</span>
+              <span>100% (Đầy bình)</span>
+            </div>
+          </div>
+
+          <!-- 3. Phụ phí phát sinh (nếu có) -->
+          <div style="background: #fffbeb; border: 1.5px solid #fef08a; border-radius: 8px; padding: 12px 14px;">
+            <label class="form-label" style="font-weight: 700; color: #92400e; margin-bottom: 6px; display: flex; justify-content: space-between;">
+              <span>3. Phụ phí phát sinh (nếu có)</span>
+              <small style="color: #b45309; font-weight: 600;">Rửa xe, thiếu xăng, vượt km...</small>
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; margin-bottom: 8px;">
+              <input type="number" id="checkOutExtraFee" class="form-control" min="0" step="10000" value="0" placeholder="Số tiền phụ phí (đ)" oninput="OwnerService.updateCheckOutSummary(${remaining70})" style="font-weight: 700; color: #b45309;" />
+              <input type="text" id="checkOutExtraFeeReason" class="form-control" placeholder="Lý do phụ phí (VD: Rửa xe bùn đất...)" />
+            </div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline btn-xs" style="color:#b45309; border-color:#fde68a; background:#ffffff;" onclick="OwnerService.setExtraFee(50000, 'Rửa xe bẩn', ${remaining70})">+50k Rửa xe</button>
+              <button type="button" class="btn btn-outline btn-xs" style="color:#b45309; border-color:#fde68a; background:#ffffff;" onclick="OwnerService.setExtraFee(100000, 'Bù hao hụt 10% nhiên liệu', ${remaining70})">+100k Bù nhiên liệu</button>
+              <button type="button" class="btn btn-outline btn-xs" style="color:#b45309; border-color:#fde68a; background:#ffffff;" onclick="OwnerService.setExtraFee(150000, 'Chạy quá giới hạn 30km', ${remaining70})">+150k Quá km</button>
+              <button type="button" class="btn btn-outline btn-xs" style="color:#64748b; border-color:#cbd5e1; background:#ffffff;" onclick="OwnerService.setExtraFee(0, '', ${remaining70})">0đ Miễn phí</button>
+            </div>
+          </div>
+
+          <!-- 4. Ảnh đối chiếu khi trả xe -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label class="form-label" style="font-weight: 700; color: #1e293b; margin: 0;">
+                4. Ảnh hiện trạng khi nhận lại xe
+              </label>
+              <button type="button" class="btn btn-outline btn-xs" style="color: #2563eb; border-color: #2563eb; font-weight: 700;" onclick="OwnerService.setCheckOutSamplePhotos()">
+                ⚡ Điền nhanh ảnh nghiệm thu
+              </button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center;">
+                <div style="font-size: 0.72rem; font-weight: 700; color: #475569; margin-bottom: 3px;">Đầu xe</div>
+                <input type="text" id="checkOutImg1" class="form-control" placeholder="URL..." style="font-size: 0.72rem; padding: 3px 6px; margin-bottom: 4px;" onchange="OwnerService.previewThumb(this, 'prevOut1')" />
+                <img id="prevOut1" src="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 65px; object-fit: cover; border-radius: 4px;" />
+              </div>
+              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center;">
+                <div style="font-size: 0.72rem; font-weight: 700; color: #475569; margin-bottom: 3px;">Đuôi xe</div>
+                <input type="text" id="checkOutImg2" class="form-control" placeholder="URL..." style="font-size: 0.72rem; padding: 3px 6px; margin-bottom: 4px;" onchange="OwnerService.previewThumb(this, 'prevOut2')" />
+                <img id="prevOut2" src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 65px; object-fit: cover; border-radius: 4px;" />
+              </div>
+              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center;">
+                <div style="font-size: 0.72rem; font-weight: 700; color: #475569; margin-bottom: 3px;">Sườn xe</div>
+                <input type="text" id="checkOutImg3" class="form-control" placeholder="URL..." style="font-size: 0.72rem; padding: 3px 6px; margin-bottom: 4px;" onchange="OwnerService.previewThumb(this, 'prevOut3')" />
+                <img id="prevOut3" src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 65px; object-fit: cover; border-radius: 4px;" />
+              </div>
+              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center;">
+                <div style="font-size: 0.72rem; font-weight: 700; color: #475569; margin-bottom: 3px;">Taplo ODO</div>
+                <input type="text" id="checkOutImg4" class="form-control" placeholder="URL..." style="font-size: 0.72rem; padding: 3px 6px; margin-bottom: 4px;" onchange="OwnerService.previewThumb(this, 'prevOut4')" />
+                <img id="prevOut4" src="https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 65px; object-fit: cover; border-radius: 4px;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. Ghi chú nghiệm thu -->
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" style="font-weight: 700; color: #1e293b;">5. Ghi chú nghiệm thu hoàn trả</label>
+            <textarea id="checkOutNotes" class="form-control" rows="2" placeholder="Ghi nhận tình trạng xe khi hoàn trả..." style="font-size: 0.85rem;"></textarea>
+          </div>
+
+          <!-- 6. BẢNG HÓA ĐƠN TỔNG KẾT NGHIỆM THU (70% TIỀN THUÊ + PHỤ PHÍ) -->
+          <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 0.88rem;">
+            <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px;">
+              BẢNG HÓA ĐƠN THANH TOÁN TỔNG KẾT
+            </div>
+            <div style="display: flex; justify-content: space-between; color: #475569;">
+              <span>Tiền thuê xe còn lại (70%):</span>
+              <strong style="color: #0f172a;">${formatMoney(remaining70)}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; color: #475569;">
+              <span>Phụ phí phát sinh:</span>
+              <strong id="summaryExtraFee" style="color: #b45309;">0 đ</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 1rem; font-weight: 800; border-top: 1.5px solid #cbd5e1; padding-top: 6px; margin-top: 2px;">
+              <span style="color: #166534;">Tổng tiền Chủ xe thực nhận:</span>
+              <span id="summaryTotalReceived" style="color: #166534; font-size: 1.15rem;">${formatMoney(remaining70)}</span>
+            </div>
+          </div>
+
+          <!-- Nút hành động -->
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+            <button type="button" class="btn btn-outline btn-md" onclick="OwnerService.closeModal()">Hủy bỏ</button>
+            <button type="submit" id="btnSubmitCheckOut" class="btn btn-primary btn-md" style="background: #2563eb; border-color: #2563eb; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              Xác nhận hoàn tất chuyến đi
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    this.showModal(`Biên Bản Nghiệm Thu Trả Xe (Check-out) — Đơn #${rentalId}`, html, '660px');
+    this.setCheckOutSamplePhotos();
+  },
+
+  setCheckOutSamplePhotos() {
+    const urls = [
+      'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=600&q=80'
+    ];
+    for (let i = 1; i <= 4; i++) {
+      const inp = document.getElementById(`checkOutImg${i}`);
+      const prev = document.getElementById(`prevOut${i}`);
+      if (inp) inp.value = urls[i - 1];
+      if (prev) prev.src = urls[i - 1];
+    }
+  },
+
+  updateDistanceCalculated(startOdo) {
+    const endOdo = parseInt(document.getElementById('checkOutOdo')?.value || '0', 10);
+    const dist = Math.max(0, endOdo - startOdo);
+    const lbl = document.getElementById('lblDistanceVal');
+    if (lbl) lbl.textContent = dist.toLocaleString('vi-VN');
+  },
+
+  setExtraFee(fee, reason, remaining70) {
+    const feeInput = document.getElementById('checkOutExtraFee');
+    const reasonInput = document.getElementById('checkOutExtraFeeReason');
+    if (feeInput) feeInput.value = fee;
+    if (reasonInput) reasonInput.value = reason;
+    this.updateCheckOutSummary(remaining70);
+  },
+
+  updateCheckOutSummary(remaining70) {
+    const extra = parseInt(document.getElementById('checkOutExtraFee')?.value || '0', 10) || 0;
+    const formatMoney = (v) => typeof StorageService !== 'undefined' ? StorageService.formatCurrency(v) : (v?.toLocaleString('vi-VN') + ' đ');
+    
+    const feeEl = document.getElementById('summaryExtraFee');
+    const totalEl = document.getElementById('summaryTotalReceived');
+    if (feeEl) feeEl.textContent = formatMoney(extra);
+    if (totalEl) totalEl.textContent = formatMoney(remaining70 + extra);
+  },
+
+  async submitCheckOut(rentalId) {
+    const btn = document.getElementById('btnSubmitCheckOut');
+    const odo = parseInt(document.getElementById('checkOutOdo')?.value || '0', 10);
+    const fuel = parseInt(document.getElementById('checkOutFuel')?.value || '100', 10);
+    const extraFee = parseInt(document.getElementById('checkOutExtraFee')?.value || '0', 10) || 0;
+    const extraFeeReason = document.getElementById('checkOutExtraFeeReason')?.value.trim() || '';
+    const notes = document.getElementById('checkOutNotes')?.value.trim() || '';
+
+    const imgs = [];
+    for (let i = 1; i <= 4; i++) {
+      const val = document.getElementById(`checkOutImg${i}`)?.value.trim();
+      if (val) imgs.push(val);
+    }
+    const imagesStr = imgs.join(',');
+
+    if (isNaN(odo) || odo < 0) {
+      alert('Vui lòng nhập số ODO trả xe hợp lệ!');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang nghiệm thu...';
+    }
+
+    const payload = {
+      odoMeter: odo,
+      fuelLevel: fuel,
+      extraFee: extraFee,
+      extraFeeReason: extraFeeReason,
+      images: imagesStr,
+      notes: notes || 'Nghiệm thu xe hoàn trả thành công, không phát sinh khiếu nại'
+    };
+
+    try {
+      const res = await RentalAPI.checkOutRental(rentalId, payload);
+      if (res && (res.success || res.code === 200)) {
+        this.showToast(`Nghiệm thu và hoàn tất chuyến đi #${rentalId} thành công! Trạng thái: COMPLETED.`, 'success');
+        if (typeof NotificationAPI !== 'undefined' && NotificationAPI.addNotification) {
+          NotificationAPI.addNotification('Chuyến đi đã hoàn tất', `Chủ xe đã hoàn tất nghiệm thu trả xe đơn #${rentalId}. Mời quý khách để lại đánh giá chuyến đi!`, 'RENTAL_COMPLETED', rentalId);
+        }
+        this.closeModal();
+        await this.renderOwnerPortal();
+        this.switchOwnerTab('REQUESTS');
+      } else {
+        alert(res.message || 'Không thể lập biên bản nghiệm thu. Vui lòng thử lại!');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Xác nhận hoàn tất chuyến đi';
+        }
+      }
+    } catch (err) {
+      console.error('Lỗi khi submit Check-out:', err);
+      this.showToast('Lỗi kết nối khi gửi nghiệm thu trả xe!', 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Xác nhận hoàn tất chuyến đi';
+      }
+    }
+  },
+
+  // Xem toàn bộ lịch sử biên bản giao nhận xe của đơn thuê
+  async viewInspections(rentalId) {
+    const formatMoney = (v) => typeof StorageService !== 'undefined' ? StorageService.formatCurrency(v) : (v?.toLocaleString('vi-VN') + ' đ');
+    let inspections = [];
+    try {
+      const res = await RentalAPI.getRentalInspections(rentalId);
+      if (res && res.data && Array.isArray(res.data)) {
+        inspections = res.data;
+      }
+    } catch (_) {}
+
+    if (inspections.length === 0) {
+      this.showToast(`Chưa có biên bản giao nhận nào cho đơn #${rentalId}`, 'info');
+      return;
+    }
+
+    const renderCard = (i) => {
+      const isCheckIn = (i.inspectionType === 'CHECK_IN' || i.inspection_type === 'CHECK_IN');
+      const imgList = (i.images ? i.images.split(',') : []).filter(Boolean);
+      return `
+        <div style="background: ${isCheckIn ? '#f0fdf4' : '#eff6ff'}; border: 1.5px solid ${isCheckIn ? '#86efac' : '#93c5fd'}; border-radius: 10px; padding: 14px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong style="color: ${isCheckIn ? '#166534' : '#1d4ed8'}; font-size: 0.95rem;">
+              ${isCheckIn ? '✓ BIÊN BẢN BÀN GIAO (CHECK-IN)' : '✓ BIÊN BẢN NGHIỆM THU (CHECK-OUT)'}
+            </strong>
+            <span style="font-size: 0.75rem; color: #64748b;">${i.createdAt ? new Date(i.createdAt).toLocaleString('vi-VN') : 'Đã ghi nhận'}</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; font-size: 0.85rem; margin-bottom: 8px;">
+            <div>Số ODO: <strong>${(i.odoMeter || i.odo_meter || 0).toLocaleString('vi-VN')} km</strong></div>
+            <div>Mức xăng: <strong>${i.fuelLevel ?? i.fuel_level ?? 100}%</strong></div>
+            ${!isCheckIn && (i.extraFee || i.extra_fee) ? `
+              <div style="color: #b45309;">Phụ phí: <strong>${formatMoney(i.extraFee || i.extra_fee)}</strong> (${i.extraFeeReason || i.extra_fee_reason || 'Phát sinh'})</div>
+            ` : ''}
+          </div>
+          ${i.notes ? `<div style="font-size: 0.82rem; color: #475569; margin-bottom: 8px; font-style: italic;">" ${i.notes} "</div>` : ''}
+          ${imgList.length > 0 ? `
+            <div style="display: flex; gap: 8px; overflow-x: auto; padding-top: 4px;">
+              ${imgList.map(url => `
+                <img src="${url}" style="width: 80px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #cbd5e1;" onclick="OwnerService.zoomImage('${url}', 'Ảnh biên bản')" title="Bấm để phóng to" />
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    };
+
+    const html = `
+      <div>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 12px;">
+          Toàn bộ biên bản bàn giao và nghiệm thu xe của đơn thuê <strong>#${rentalId}</strong>:
+        </p>
+        ${inspections.map(renderCard).join('')}
+        <div style="text-align: right; margin-top: 14px;">
+          <button class="btn btn-outline btn-sm" onclick="OwnerService.closeModal()">Đóng</button>
+        </div>
+      </div>
+    `;
+
+    this.showModal(`Biên Bản Giao Nhận Xe — Đơn #${rentalId}`, html, '650px');
   },
 
   // CRP_31-37: Quản lý Dropdown menu thao tác mở rộng của bảng xe

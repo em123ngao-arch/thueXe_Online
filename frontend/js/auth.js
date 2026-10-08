@@ -520,6 +520,10 @@ const AuthService = {
         `;
       }
     });
+
+    if (typeof NotificationCenter !== 'undefined' && NotificationCenter.init) {
+      NotificationCenter.init();
+    }
   },
 
   async syncCurrentUserProfile() {
