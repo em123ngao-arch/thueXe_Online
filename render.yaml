@@ -48,7 +48,6 @@ services:
   - type: web
     name: driveshare-frontend
     runtime: static
-    plan: free
     staticPublishPath: frontend
     headers:
       - path: /*
