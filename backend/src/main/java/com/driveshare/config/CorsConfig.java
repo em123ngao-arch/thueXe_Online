@@ -12,33 +12,33 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Bean
-    public CorsFilter corsFilter() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowCredentials(true);
-        config.setAllowedOriginPatterns(List.of(
-                "http://localhost:*",
-                "http://127.0.0.1:*"
-        ));
-        config.setAllowedHeaders(Arrays.asList(
-                "Origin",
-                "Content-Type",
-                "Accept",
-                "Authorization",
-                "X-Requested-With",
-                "Access-Control-Request-Method",
-                "Access-Control-Request-Headers"
-        ));
-        config.setExposedHeaders(Arrays.asList(
-                "Authorization",
-                "Content-Disposition"
-        ));
-        config.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
-        ));
+        @Bean
+        public CorsFilter corsFilter() {
+                CorsConfiguration config = new CorsConfiguration();
+                config.setAllowCredentials(true);
+                config.setAllowedOriginPatterns(List.of(
+                                "http://localhost:*",
+                                "http://127.0.0.1:*",
+                                "http://localhost:*",
+                                "http://127.0.0.1:*",
+                                "https://*.onrender.com" // <-- Cho phép frontend trên Render gọi API
+                ));
+                config.setAllowedHeaders(Arrays.asList(
+                                "Origin",
+                                "Content-Type",
+                                "Accept",
+                                "Authorization",
+                                "X-Requested-With",
+                                "Access-Control-Request-Method",
+                                "Access-Control-Request-Headers"));
+                config.setExposedHeaders(Arrays.asList(
+                                "Authorization",
+                                "Content-Disposition"));
+                config.setAllowedMethods(Arrays.asList(
+                                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return new CorsFilter(source);
-    }
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", config);
+                return new CorsFilter(source);
+        }
 }

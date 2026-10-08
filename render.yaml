@@ -1,0 +1,60 @@
+databases:
+  # Dịch vụ 1: Database PostgreSQL miễn phí trên Render
+  - name: driveshare-db
+    databaseName: driveshare_db
+    user: postgres
+    plan: free
+    region: singapore
+
+services:
+  # Dịch vụ 2: Backend Spring Boot chạy trong Docker
+  - type: web
+    name: driveshare-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    region: singapore
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: PORT
+        value: 8080
+      - key: DB_HOST
+        fromDatabase:
+          name: driveshare-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: driveshare-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: driveshare-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: driveshare-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: driveshare-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+
+  # Dịch vụ 3: Frontend Web tĩnh (HTML/CSS/JS)
+  - type: web
+    name: driveshare-frontend
+    runtime: static
+    plan: free
+    staticPublishPath: frontend
+    headers:
+      - path: /*
+        name: Access-Control-Allow-Origin
+        value: "*"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -12,7 +12,9 @@
 // ─────────────────────────────────────────────────────────────
 
 const API_CONFIG = {
-  BASE_URL: 'http://localhost:8080/api/v1',
+  BASE_URL: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:8080/api/v1'
+    : 'https://driveshare-backend.onrender.com/api/v1',
   TIMEOUT_MS: 10000
 };
 
@@ -369,7 +371,7 @@ const ApiService = {
       const res = await this.fetchWithTimeout(url);
       if (res.status === 404) {
         let errJson = null;
-        try { errJson = await res.json(); } catch(e) {}
+        try { errJson = await res.json(); } catch (e) { }
         return {
           success: false,
           status: 404,
@@ -426,7 +428,7 @@ const ApiService = {
       }
       if (res.status === 400) {
         let errJson = null;
-        try { errJson = await res.json(); } catch(e) {}
+        try { errJson = await res.json(); } catch (e) { }
         return { success: false, status: 400, errorCode: errJson?.errorCode || 'VALIDATION_FAILED', message: errJson?.message || 'Dữ liệu không hợp lệ' };
       }
       if (res.ok) {
@@ -750,7 +752,7 @@ const ApiService = {
 
       if (res.status === 400) {
         let errJson = null;
-        try { errJson = await res.json(); } catch (e) {}
+        try { errJson = await res.json(); } catch (e) { }
         return {
           success: false,
           status: 400,
@@ -805,7 +807,8 @@ const ApiService = {
       console.warn('DriveShare: Lỗi lấy danh sách đơn thuê:', e.message);
       return { success: false, source: 'ERROR', data: [] };
     }
-}
+  }
+
 };
 
 // ─────────────────────────────────────────────────────────────

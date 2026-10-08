@@ -1,0 +1,72 @@
+## 👤 Người phụ trách: Lộc Khiêm (@khiemtan1712-oss) — DevOps & Cloud Engineer
+- **Nhánh Git đề xuất:** `feature/ci-cd-render-deploy`
+- **Phạm vi file:** `backend/Dockerfile`, `render.yaml`, `.github/workflows/`
+- **Mục tiêu:** Đưa toàn bộ dự án DriveShare lên Internet chạy thật hoàn toàn miễn phí.
+
+---
+
+### 🎯 Nhiệm vụ cụ thể
+1. **Dockerfile Multi-Stage tối ưu JVM <512MB:**
+   - Viết `backend/Dockerfile` multi-stage: Base `eclipse-temurin:17-jre-alpine`.
+   - Cấu hình biến môi trường JVM tối ưu bộ nhớ cho gói Render Free (RAM 512MB):
+     `ENV JAVA_OPTS="-XX:+UseSerialGC -Xss512k -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8"`
+   - Đảm bảo ứng dụng chạy mượt mà ở mức 280MB - 350MB RAM, không bao giờ bị Out Of Memory (OOM).
+2. **File Render Blueprint (`render.yaml`):**
+   - Cấu hình tự động triển khai 3 dịch vụ liên thông:
+     - `driveshare-db`: PostgreSQL Managed Database (Free).
+     - `driveshare-backend`: Web Service Docker Container (Free).
+     - `driveshare-frontend`: Static Site phục vụ toàn bộ UI (Free).
+3. **Cấu hình CI/CD GitHub Actions:**
+   - Tối ưu file `.github/workflows/backend-ci.yml` tự động build và chạy unit test mỗi khi có Pull Request vào `develop`.
+4. **Hướng dẫn nhóm & Kiểm thử Live:**
+   - Đảm bảo website online kết nối trơn tru với Backend và Database trên Cloud, cung cấp đường link public cho cả nhóm và giảng viên nghiệm thu.
+
+---
+
+### 🚀 Hướng dẫn Git từng bước cho Khiêm:
+```bash
+# 1. Kéo code mới nhất từ develop về máy
+git checkout develop
+git pull origin develop
+
+# 2. Tạo nhánh làm việc mới từ develop
+git checkout -b feature/ci-cd-render-deploy
+
+# 3. Viết Dockerfile và render.yaml, chạy thử docker build local
+docker build -t driveshare-backend backend/
+
+# 4. Commit và đẩy nhánh lên GitHub
+git add .
+git commit -m "feat(devops): multi-stage Dockerfile and render.yaml blueprint"
+git push -u origin feature/ci-cd-render-deploy
+```
+> Khi mở Pull Request vào `develop`, thêm dòng: `Closes #29` (hoặc số issue tương ứng).
+
+----------------------------------------------------------------------------------
+### 💡 [HƯỚNG DẪN DOCKER & RENDER BLUEPRINT TỪ TECH LEAD BẢO DÀNH CHO KHIÊM]
+
+Chào Khiêm! Dưới đây là cấu hình cốt lõi để ứng dụng chạy mượt mà trên Render gói Free (<512MB RAM):
+
+#### 1. `backend/Dockerfile` multi-stage tối ưu bộ nhớ:
+```dockerfile
+FROM maven:3.9.6-eclipse-temurin-17-alpine AS build
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+ENV JAVA_OPTS="-XX:+UseSerialGC -Xss512k -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8"
+EXPOSE 8080
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+```
+
+#### 2. Cấu hình Render Blueprint (`render.yaml`):
+Bao gồm 3 service:
+- Database: `type: postgres`, name: `driveshare-db`, plan: `free`
+- Backend: `type: web`, name: `driveshare-backend`, runtime: `docker`, plan: `free`
+- Frontend: `type: web`, name: `driveshare-frontend`, runtime: `static`, plan: `free`
+
+> Khiêm có thể lấy code bản Sprint 2 trên develop để build và chạy thử nghiệm deploy ngay từ bây giờ nhé!
