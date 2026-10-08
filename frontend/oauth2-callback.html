@@ -211,7 +211,8 @@
       async function fetchUserInfoAndFinish(accessToken) {
         const claims = parseJwt(accessToken);
         try {
-          const res = await fetch("http://localhost:8080/api/v1/users/me", {
+          const apiBaseUrl = (typeof API_BASE !== 'undefined') ? API_BASE : 'http://localhost:8080/api/v1';
+          const res = await fetch(`${apiBaseUrl}/users/me`, {
             headers: {
               Authorization: `Bearer ${accessToken}`
             }
@@ -267,7 +268,8 @@
         console.log("[OAuth2] tempGoogleToken claims:", googleClaims);
 
         try {
-          const res = await fetch("http://localhost:8080/api/v1/oauth2/complete-registration", {
+          const apiBaseUrl = (typeof API_BASE !== 'undefined') ? API_BASE : 'http://localhost:8080/api/v1';
+          const res = await fetch(`${apiBaseUrl}/oauth2/complete-registration`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
