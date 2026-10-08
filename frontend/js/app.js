@@ -418,11 +418,20 @@ const App = {
       }
       const startEl = document.getElementById('searchStartDate');
       const endEl = document.getElementById('searchEndDate');
-      if (startEl && startEl.value) {
-        this.currentFilters.startDate = startEl.value;
-      }
-      if (endEl && endEl.value) {
-        this.currentFilters.endDate = endEl.value;
+      if (typeof MiotoTimePicker !== 'undefined') {
+        if (MiotoTimePicker.state?.startDate) {
+          this.currentFilters.startDate = MiotoTimePicker.state.startDate;
+        }
+        if (MiotoTimePicker.state?.endDate) {
+          this.currentFilters.endDate = MiotoTimePicker.state.endDate;
+        }
+      } else {
+        if (startEl && startEl.value) {
+          this.currentFilters.startDate = startEl.value;
+        }
+        if (endEl && endEl.value) {
+          this.currentFilters.endDate = endEl.value;
+        }
       }
       this.applyFilters();
       document.getElementById('catalogSection')?.scrollIntoView({ behavior: 'smooth' });

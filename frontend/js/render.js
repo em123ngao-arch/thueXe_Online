@@ -50,12 +50,29 @@ const RenderService = {
         const rating = Number(car.rating || 5.0).toFixed(1);
         const tripCount = car.trip_count || car.tripCount || 0;
 
+        const unavailableDates = car.unavailable_dates || car.unavailableDates || [];
+        let busyBadgeHtml = '';
+        if (Array.isArray(unavailableDates) && unavailableDates.length > 0) {
+          const sorted = [...unavailableDates].sort();
+          const todayStr = new Date().toISOString().slice(0, 10);
+          const upcoming = sorted.filter(d => d >= todayStr);
+          if (upcoming.length > 0) {
+            const first = upcoming[0].slice(5).replace('-', '/');
+            const last = upcoming[upcoming.length - 1].slice(5).replace('-', '/');
+            const rangeText = first === last ? `Bận ${first}` : `Bận ${first} - ${last}`;
+            busyBadgeHtml = `<span class="car-tag-busy" title="Xe có lịch bận từ ${first} đến ${last}"><i class="fa-solid fa-calendar-xmark" style="font-size:0.7rem;margin-right:2px;"></i>${rangeText}</span>`;
+          }
+        }
+
         return `
         <div class="car-card animate-fade-in" data-id="${carId}">
           <div class="car-card-img-wrapper">
             <img class="car-card-img" src="${imageUrl}" alt="${car.brand} ${car.model}" loading="lazy" />
             <div class="car-top-badges">
-              <span class="car-tag-instant">Giao tận nơi</span>
+              <div style="display: flex; gap: 0.35rem; align-items: center;">
+                <span class="car-tag-instant">Giao tận nơi</span>
+                ${busyBadgeHtml}
+              </div>
               <span class="car-tag-fuel">${fuelText}</span>
             </div>
           </div>

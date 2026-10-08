@@ -624,6 +624,98 @@ Khi ứng dụng chạy (môi trường Dev / H2 / Postgres), `DataInitializer` 
    - **Đơn 1:** ID=`1`, Xe: `VinFast VF8`, Khách: `renter_demo`, Trạng thái: **`PENDING`**.
    - **Mục đích:** Giúp **Khiêm** có ngay đơn để test API Duyệt/Từ chối (`CRP-47`, `CRP-48`) và giúp **Quân** test lọc ngày bận (`CRP-38`) mà **KHÔNG CẦN CHỜ VĨ CODE XONG API TẠO ĐƠN**!
 
+---
+
+## 🚀 SPRINT 3: HỢP ĐỒNG CƠ SỞ DỮ LIỆU & BẢNG TRA CỨU ENTITY DÙNG CHUNG
+
+> ⚠️ **QUY TẮC SỐNG CÒN CỦA SPRINT 3 DÀNH CHO CẢ 6 THÀNH VIÊN:**  
+> 1. Toàn bộ CSDL Sprint 3 được quản lý **tập trung 100%** qua file Flyway [`V6__sprint3_full_features.sql`](file:///d:/MONHOCITC/K4/Spring_ThucTap_k4/backend/src/main/resources/db/migration/V6__sprint3_full_features.sql).
+> 2. **TUYỆT ĐỐI KHÔNG TỰ Ý** tạo thêm file migration mới, không tự ý sửa tên cột trong DB.
+> 3. Các Entity Java & Repository đã được sinh sẵn trên nhánh `develop`. Mỗi thành viên chỉ việc `@Autowired` Repository tương ứng vào Service của mình để viết logic nghiệp vụ!
+
+### 1. Bổ Sung Vào Bảng Hiện Có: `cars` và `rentals`
+
+* **Entity `Car` (`cars`):**
+  - `hasDriverService` (`has_driver_service` BOOLEAN DEFAULT FALSE): Bật/tắt dịch vụ kèm tài xế.
+  - `driverFeePerDay` (`driver_fee_per_day` NUMERIC(12,2) DEFAULT 0.00): Giá phụ phí tài xế/ngày.
+  - `rating` (`rating` NUMERIC(3,2) DEFAULT 5.00): Điểm trung bình đánh giá xe (1.00 - 5.00).
+  - `ratingCount` (`rating_count` INT DEFAULT 0): Tổng số lượt đánh giá.
+* **Entity `Rental` (`rentals`):**
+  - `withDriver` (`with_driver` BOOLEAN DEFAULT FALSE): Khách chọn kèm tài xế.
+  - `driverFee` (`driver_fee` NUMERIC(12,2) DEFAULT 0.00): Tổng tiền phụ phí tài xế.
+
+---
+
+### 2. Thực Thể Bảng `rental_inspections` (Biên Bản Bàn Giao & Nghiệm Thu Trả Xe)
+* **Java Entity:** `com.driveshare.modules.rental.entity.RentalInspection`
+* **Repository:** `RentalInspectionRepository`
+* **Người phụ trách:** **Lâm Chí Vĩ (`VL`)**
+
+| Cột DB | Thuộc tính Java | Kiểu | Mô tả nghiệp vụ |
+|---|---|---|---|
+| `inspection_id` | `inspectionId` | `Long` (PK) | Khóa chính tự tăng |
+| `rental_id` | `rentalId` | `Long` (FK) | Tham chiếu `rentals(rental_id)` |
+| `inspection_type` | `inspectionType` | `EInspectionType` | `CHECK_IN` (Bàn giao) hoặc `CHECK_OUT` (Nghiệm thu trả) |
+| `odo_meter` | `odoMeter` | `Integer` | Số công-tơ-mét (ODO) tại thời điểm kiểm tra |
+| `fuel_level` | `fuelLevel` | `Integer` | Mức xăng/pin (0 - 100%) |
+| `images` | `images` | `String` | URL các ảnh chụp ngoại quan xe (phân cách bằng dấu phẩy) |
+| `notes` | `notes` | `String` | Ghi chú tình trạng xe, trầy xước |
+| `extra_fee` | `extraFee` | `BigDecimal` | Phụ phí phát sinh khi trả xe (vượt km, rửa xe, thiếu xăng) |
+| `extra_fee_reason`| `extraFeeReason`| `String` | Lý do phụ phí |
+| `performed_by` | `performedBy` | `Long` (FK) | ID của chủ xe lập biên bản (`users(user_id)`) |
+| `created_at` | `createdAt` | `Instant` | Thời điểm lập biên bản |
+
+---
+
+### 3. Thực Thể Bảng `reviews` (Đánh Giá Sau Chuyến Đi)
+* **Java Entity:** `com.driveshare.modules.rental.entity.Review`
+* **Repository:** `ReviewRepository`
+* **Người phụ trách:** **Duy Quân (`QD`)**
+
+| Cột DB | Thuộc tính Java | Kiểu | Mô tả nghiệp vụ |
+|---|---|---|---|
+| `review_id` | `reviewId` | `Long` (PK) | Khóa chính tự tăng |
+| `rental_id` | `rentalId` | `Long` (FK, UNIQUE) | Tham chiếu `rentals(rental_id)`. Mỗi đơn chỉ đánh giá 1 lần |
+| `car_id` | `carId` | `Long` (FK) | Tham chiếu `cars(car_id)` |
+| `renter_id` | `renterId` | `Long` (FK) | Tham chiếu `users(user_id)` (Khách thuê) |
+| `rating` | `rating` | `Integer` | Điểm đánh giá (1 đến 5 sao) |
+| `comment` | `comment` | `String` | Nội dung nhận xét của khách |
+| `created_at` | `createdAt` | `Instant` | Thời điểm đánh giá |
+
+---
+
+### 4. Thực Thể Bảng `notifications` (Thông Báo In-App)
+* **Java Entity:** `com.driveshare.modules.notification.entity.Notification`
+* **Repository:** `NotificationRepository`
+* **Người phụ trách:** **Nguyễn Bảo (`NB`) / Phát (`PT`)**
+
+| Cột DB | Thuộc tính Java | Kiểu | Mô tả nghiệp vụ |
+|---|---|---|---|
+| `notification_id` | `notificationId` | `Long` (PK) | Khóa chính tự tăng |
+| `user_id` | `userId` | `Long` (FK) | Tham chiếu `users(user_id)` người nhận thông báo |
+| `title` | `title` | `String` | Tiêu đề thông báo |
+| `content` | `content` | `String` | Nội dung chi tiết |
+| `type` | `type` | `String` | Phân loại sự kiện (VD: `RENTAL_CONFIRMED`, `CHECK_IN_READY`) |
+| `reference_id` | `referenceId` | `Long` | ID thực thể liên quan (ví dụ `rental_id`) |
+| `is_read` | `isRead` | `Boolean` | Đã đọc hay chưa (mặc định `false`) |
+| `created_at` | `createdAt` | `Instant` | Thời điểm tạo thông báo |
+
+---
+
+### 5. Danh Mục Repository Dùng Chung Đã Dựng Sẵn Cho Sprint 3
+
+| Repository | Hàm có sẵn | Mô tả & Cách dùng |
+|---|---|---|
+| `RentalInspectionRepository` | `findByRentalIdOrderByCreatedAtAsc(rentalId)` | Lấy toàn bộ biên bản của 1 đơn thuê (Check-in và Check-out) |
+| `RentalInspectionRepository` | `findByRentalIdAndInspectionType(rentalId, type)` | Lấy biên bản nhận hoặc trả cụ thể |
+| `RentalInspectionRepository` | `existsByRentalIdAndInspectionType(rentalId, type)` | Kiểm tra đơn đã làm Check-in hay Check-out chưa |
+| `ReviewRepository` | `findByRentalId(rentalId)` | Kiểm tra hoặc lấy đánh giá của đơn thuê |
+| `ReviewRepository` | `findByCarIdOrderByCreatedAtDesc(carId, pageable)` | Lấy danh sách đánh giá công khai của xe có phân trang |
+| `ReviewRepository` | `calculateAverageRatingByCarId(carId)` | Tự động tính trung bình cộng số sao của xe từ tất cả review |
+| `NotificationRepository` | `findByUserIdOrderByCreatedAtDesc(userId, pageable)` | Lấy danh sách thông báo của user có phân trang |
+| `NotificationRepository` | `countByUserIdAndIsReadFalse(userId)` | Đếm số thông báo chưa đọc hiển thị lên Badge chuông |
+
+
 
 
 

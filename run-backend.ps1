@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # ============================================================
 # DriveShare — Script khởi chạy Backend với Cloudinary
 # ============================================================

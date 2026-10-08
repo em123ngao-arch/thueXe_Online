@@ -77,4 +77,15 @@ public class Rental extends BaseEntity {
 
     @Column(name = "note", length = 500)
     private String note;
+
+    // -----------------------------------------------------------------
+    // Sprint 3: Thuê xe có tài xế
+    // -----------------------------------------------------------------
+    @Column(name = "with_driver")
+    @Builder.Default
+    private Boolean withDriver = false;
+
+    @Column(name = "driver_fee", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal driverFee = BigDecimal.ZERO;
 }

@@ -57,6 +57,12 @@ public class RentalResponse {
     @JsonProperty("note")
     private String note;
 
+    @JsonProperty("with_driver")
+    private Boolean withDriver;
+
+    @JsonProperty("driver_fee")
+    private BigDecimal driverFee;
+
     @JsonProperty("created_at")
     private Instant createdAt;
 
@@ -78,6 +84,8 @@ public class RentalResponse {
                 .paymentExpiresAt(rental.getPaymentExpiresAt())
                 .rejectReason(rental.getRejectReason())
                 .note(rental.getNote())
+                .withDriver(rental.getWithDriver())
+                .driverFee(rental.getDriverFee())
                 .createdAt(rental.getCreatedAt())
                 .build();
     }

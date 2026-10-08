@@ -642,6 +642,20 @@
   gap: 0.3rem;
 }
 
+.car-tag-busy {
+  background-color: rgba(220, 38, 38, 0.92);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
 .car-card-body {
   padding: 1.15rem;
   display: flex;

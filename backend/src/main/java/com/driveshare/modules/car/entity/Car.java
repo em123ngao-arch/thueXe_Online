@@ -127,6 +127,25 @@ public class Car extends BaseEntity {
     private List<CarDocument> documents = new ArrayList<>();
 
     // -----------------------------------------------------------------
+    // Sprint 3: Dịch vụ có tài xế & Đánh giá (Rating)
+    // -----------------------------------------------------------------
+    @Column(name = "has_driver_service")
+    @Builder.Default
+    private Boolean hasDriverService = false;
+
+    @Column(name = "driver_fee_per_day", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal driverFeePerDay = BigDecimal.ZERO;
+
+    @Column(name = "rating", precision = 3, scale = 2)
+    @Builder.Default
+    private BigDecimal rating = new BigDecimal("5.00");
+
+    @Column(name = "rating_count")
+    @Builder.Default
+    private Integer ratingCount = 0;
+
+    // -----------------------------------------------------------------
     // Trạng thái & Soft-delete
     // -----------------------------------------------------------------
     @Enumerated(EnumType.STRING)

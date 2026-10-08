@@ -20,6 +20,11 @@ public interface CarCalendarBlockRepository extends JpaRepository<CarCalendarBlo
             LocalDate fromDate
     );
 
+    List<CarCalendarBlock> findByCarIdInAndEndDateGreaterThanEqualAndDeletedAtIsNullOrderByStartDateAsc(
+            List<Long> carIds,
+            LocalDate fromDate
+    );
+
     Optional<CarCalendarBlock> findByBlockIdAndDeletedAtIsNull(Long blockId);
 
     /**

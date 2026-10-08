@@ -96,6 +96,7 @@ const BookingService = {
     const isHourly = (typeof MiotoTimePicker !== 'undefined' && MiotoTimePicker.state?.rentalMode === 'HOUR');
 
     let startDateVal, startTimeVal, endDateVal, endTimeVal, hours, days, rentalAmount, depositAmount;
+    let isAutoAdjusted = false;
     const pricePerDay = car.price_per_day || 500000;
 
     if (isHourly) {
@@ -134,6 +135,25 @@ const BookingService = {
       days = Math.ceil(diffHours / 24);
       if (isNaN(days) || days < 1) days = 1;
 
+      // Tự động tìm ngày trống gần nhất nếu ngày ban đầu trùng lịch bận (Decision 2 Grill-Me)
+      const unavailableDates = Array.isArray(car.unavailable_dates) ? car.unavailable_dates : [];
+      if (unavailableDates.length > 0) {
+        const conflict = this.checkDateConflict(startDateVal, endDateVal, unavailableDates);
+        if (conflict) {
+          const desiredDays = Math.max(2, days || 2);
+          const earliest = this.findEarliestAvailableDates(unavailableDates, desiredDays);
+          startDateVal = earliest.startDate;
+          endDateVal = earliest.endDate;
+          isAutoAdjusted = true;
+
+          const newStartDateTime = new Date(`${startDateVal}T${startTimeVal}`);
+          const newEndDateTime = new Date(`${endDateVal}T${endTimeVal}`);
+          let newDiffHours = Math.ceil((newEndDateTime - newStartDateTime) / (1000 * 60 * 60));
+          days = Math.ceil(newDiffHours / 24);
+          if (isNaN(days) || days < 1) days = 1;
+        }
+      }
+
       rentalAmount = days * pricePerDay;
       depositAmount = Math.round(rentalAmount * 0.30); // 30% cọc giữ chỗ
       hours = 0;
@@ -152,8 +172,157 @@ const BookingService = {
       endTimeStr: `${endTimeVal} ${endDateVal}`,
       pricePerDay,
       rentalAmount,
-      depositAmount
+      depositAmount,
+      isAutoAdjusted
     };
+
+    this.renderBookingModal();
+  },
+
+  // Kiểm tra xung đột ngày với unavailable_dates
+  checkDateConflict(startDate, endDate, unavailableDates = []) {
+    if (!unavailableDates || unavailableDates.length === 0 || !startDate || !endDate) return null;
+    let cur = new Date(startDate);
+    const end = new Date(endDate);
+    const formatYMD = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    while (cur <= end) {
+      const curStr = formatYMD(cur);
+      if (unavailableDates.includes(curStr)) {
+        return curStr;
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    return null;
+  },
+
+  // Thuật toán tìm khoảng ngày trống khả dụng gần nhất (Decision 2 Grill-Me)
+  findEarliestAvailableDates(unavailableDates = [], desiredDays = 2) {
+    const today = new Date();
+    let start = new Date(today);
+    start.setDate(today.getDate() + 1);
+
+    const formatYMD = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    // Tìm kiếm trong 60 ngày tiếp theo
+    for (let offset = 0; offset < 60; offset++) {
+      let candidateStart = new Date(start);
+      candidateStart.setDate(start.getDate() + offset);
+
+      let isConflict = false;
+      for (let d = 0; d < desiredDays; d++) {
+        let checkDay = new Date(candidateStart);
+        checkDay.setDate(candidateStart.getDate() + d);
+        let checkStr = formatYMD(checkDay);
+        if (unavailableDates.includes(checkStr)) {
+          isConflict = true;
+          break;
+        }
+      }
+
+      if (!isConflict) {
+        let candidateEnd = new Date(candidateStart);
+        candidateEnd.setDate(candidateStart.getDate() + desiredDays);
+        return {
+          startDate: formatYMD(candidateStart),
+          endDate: formatYMD(candidateEnd)
+        };
+      }
+    }
+
+    let fallbackEnd = new Date(start);
+    fallbackEnd.setDate(start.getDate() + desiredDays);
+    return {
+      startDate: formatYMD(start),
+      endDate: formatYMD(fallbackEnd)
+    };
+  },
+
+  // Định dạng các khoảng ngày bận trực quan (VD: 02/10 - 05/10)
+  formatBusyRanges(dates = []) {
+    if (!dates || dates.length === 0) return 'Không có';
+    const sorted = [...dates].sort();
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const upcoming = sorted.filter(d => d >= todayStr);
+    if (upcoming.length === 0) return 'Không có lịch bận sắp tới';
+
+    const ranges = [];
+    let start = upcoming[0];
+    let prev = upcoming[0];
+
+    for (let i = 1; i < upcoming.length; i++) {
+      const cur = upcoming[i];
+      const prevDate = new Date(prev);
+      prevDate.setDate(prevDate.getDate() + 1);
+      const nextExpected = prevDate.toISOString().slice(0, 10);
+
+      if (cur === nextExpected) {
+        prev = cur;
+      } else {
+        ranges.push(start === prev ? start.slice(5) : `${start.slice(5)} - ${prev.slice(5)}`);
+        start = cur;
+        prev = cur;
+      }
+    }
+    ranges.push(start === prev ? start.slice(5) : `${start.slice(5)} - ${prev.slice(5)}`);
+    return ranges.map(r => r.replace(/-/g, '/')).join(', ');
+  },
+
+  // Mở bộ chọn lịch có làm mờ ngày bận (Decision 3 Grill-Me)
+  openSchedulePicker() {
+    if (typeof MiotoTimePicker === 'undefined') return;
+    if (typeof App !== 'undefined' && App.closeModal) {
+      App.closeModal();
+    }
+    MiotoTimePicker.open({
+      startDate: this.calcData?.startDate,
+      endDate: this.calcData?.endDate,
+      startTime: this.calcData?.startTime,
+      endTime: this.calcData?.endTime,
+      disabledDates: this.currentCar?.unavailable_dates || [],
+      onSelect: (selected) => {
+        this.updateSchedule(selected);
+      }
+    });
+  },
+
+  // Cập nhật lịch sau khi người dùng chọn ngày từ MiotoTimePicker
+  updateSchedule(selected) {
+    if (!selected || !this.calcData) return;
+    const pricePerDay = this.calcData.pricePerDay;
+    const startDateVal = selected.startDate;
+    const endDateVal = selected.endDate;
+    const startTimeVal = selected.startTime || this.calcData.startTime;
+    const endTimeVal = selected.endTime || this.calcData.endTime;
+
+    const startDateTime = new Date(`${startDateVal}T${startTimeVal}`);
+    const endDateTime = new Date(`${endDateVal}T${endTimeVal}`);
+    let diffHours = Math.ceil((endDateTime - startDateTime) / (1000 * 60 * 60));
+    let days = Math.ceil(diffHours / 24);
+    if (isNaN(days) || days < 1) days = 1;
+    const rentalAmount = days * pricePerDay;
+    const depositAmount = Math.round(rentalAmount * 0.30);
+
+    this.calcData.startDate = startDateVal;
+    this.calcData.endDate = endDateVal;
+    this.calcData.startTime = startTimeVal;
+    this.calcData.endTime = endTimeVal;
+    this.calcData.startTimeStr = `${startTimeVal} ${startDateVal}`;
+    this.calcData.endTimeStr = `${endTimeVal} ${endDateVal}`;
+    this.calcData.days = days;
+    this.calcData.rentalAmount = rentalAmount;
+    this.calcData.depositAmount = depositAmount;
+    this.calcData.isAutoAdjusted = false;
 
     this.renderBookingModal();
   },
@@ -167,6 +336,41 @@ const BookingService = {
     const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
     const renterName = user ? (user.fullName || user.full_name || user.username || 'Lê Hoàng Nam') : 'Lê Hoàng Nam';
     const renterPhone = user ? (user.phone || user.phoneNumber || '0988 776 655') : '0988 776 655';
+
+    const conflictDate = this.checkDateConflict(calc.startDate, calc.endDate, car.unavailable_dates);
+    const busyRangesStr = this.formatBusyRanges(car.unavailable_dates);
+
+    let conflictAlertHtml = '';
+    if (conflictDate) {
+      conflictAlertHtml = `
+        <div class="booking-conflict-alert" style="margin-top: 0.65rem; background: #fef2f2; border: 1.5px solid #f87171; border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.82rem; color: #991b1b; display: flex; align-items: flex-start; gap: 0.5rem; line-height: 1.4;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="flex-shrink: 0; margin-top: 1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          <div>
+            <strong>Khoảng ngày không khả dụng:</strong> Xe đã có lịch bận vào ngày <strong>${conflictDate}</strong> (đã có đơn cọc hoặc xe bảo dưỡng). Vui lòng bấm <strong><a href="javascript:void(0)" onclick="BookingService.openSchedulePicker()" style="color: #b91c1c; text-decoration: underline; font-weight: 700;">"Thay đổi"</a></strong> để chọn khoảng ngày trống khác.
+          </div>
+        </div>
+      `;
+    }
+
+    let autoAdjustHtml = '';
+    if (calc.isAutoAdjusted) {
+      autoAdjustHtml = `
+        <div class="booking-autoadjust-alert" style="margin-top: 0.5rem; background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.8rem; color: #065f46; display: flex; align-items: center; gap: 0.45rem;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" style="flex-shrink: 0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          <span>Đã tự động chọn khoảng ngày trống gần nhất cho bạn (<strong>${calc.startDate} → ${calc.endDate}</strong>) do xe đã có lịch bận trước đó.</span>
+        </div>
+      `;
+    }
+
+    let busySummaryHtml = '';
+    if (car.unavailable_dates && car.unavailable_dates.length > 0) {
+      busySummaryHtml = `
+        <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #64748b; display: flex; align-items: center; gap: 0.4rem;">
+          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; flex-shrink: 0;"></span>
+          <span>Lịch bận của xe: <strong style="color: #b91c1c;">${busyRangesStr}</strong></span>
+        </div>
+      `;
+    }
 
     const contentHtml = `
       <div style="display: flex; flex-direction: column; gap: 1.25rem;">
@@ -192,7 +396,7 @@ const BookingService = {
 
             <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
               <span>2. Lịch trình & Địa điểm giao nhận xe</span>
-              <a href="javascript:void(0)" onclick="App.closeModal(); if (typeof MiotoTimePicker !== 'undefined') MiotoTimePicker.open();" style="font-size: 0.8rem; color: #00a550; font-weight: 600; text-decoration: none;">Thay đổi</a>
+              <a href="javascript:void(0)" onclick="BookingService.openSchedulePicker()" style="font-size: 0.8rem; color: #00a550; font-weight: 600; text-decoration: none;">Thay đổi</a>
             </h4>
             <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 0.85rem; font-size: 0.85rem;">
               <div style="margin-bottom: 0.35rem;">
@@ -204,6 +408,9 @@ const BookingService = {
               <div>
                 <span style="color: var(--slate-500);">Địa điểm nhận xe:</span> <strong>${car.pickup_address || 'Địa chỉ do chủ xe cung cấp'}</strong>
               </div>
+              ${busySummaryHtml}
+              ${autoAdjustHtml}
+              ${conflictAlertHtml}
             </div>
 
             <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.4rem;">
@@ -244,9 +451,15 @@ const BookingService = {
               </div>
             </div>
 
-            <button id="btnSubmitBooking" class="btn btn-primary btn-lg" style="width: 100%; padding: 0.85rem; font-weight: 800; font-size: 1rem; background: #0f766e; border-color: #0f766e;" onclick="BookingService.submitBookingRequest()">
-              Gửi Yêu Cầu Thuê Xe Cho Chủ Xe Duyệt (Miễn phí)
-            </button>
+            ${conflictDate ? `
+              <button id="btnSubmitBooking" class="btn btn-primary btn-lg" style="width: 100%; padding: 0.85rem; font-weight: 800; font-size: 0.92rem; background: #94a3b8; border-color: #94a3b8; cursor: not-allowed;" disabled title="Xe đã có lịch bận trong khoảng thời gian này">
+                Xe Không Khả Dụng Trong Khoảng Này
+              </button>
+            ` : `
+              <button id="btnSubmitBooking" class="btn btn-primary btn-lg" style="width: 100%; padding: 0.85rem; font-weight: 800; font-size: 1rem; background: #0f766e; border-color: #0f766e;" onclick="BookingService.submitBookingRequest()">
+                Gửi Yêu Cầu Thuê Xe Cho Chủ Xe Duyệt (Miễn phí)
+              </button>
+            `}
             <div style="text-align: center; margin-top: 0.5rem;">
               <small style="color: var(--slate-500); font-size: 0.75rem;">
                 Chủ xe sẽ phản hồi trong tối đa 60 phút. Bạn có thể rút đơn bất cứ lúc nào.
@@ -316,26 +529,13 @@ const BookingService = {
     }
 
     // Kiểm tra xe có bị bận ngày (do đơn thuê khác hoặc chủ xe chặn bận)
-    if (this.currentCar && Array.isArray(this.currentCar.unavailable_dates) && this.currentCar.unavailable_dates.length > 0) {
-      let cur = new Date(this.calcData.startDate);
-      const end = new Date(this.calcData.endDate);
-      let conflictDate = null;
-      while (cur <= end) {
-        const curStr = formatYMD(cur);
-        if (this.currentCar.unavailable_dates.includes(curStr)) {
-          conflictDate = curStr;
-          break;
-        }
-        cur.setDate(cur.getDate() + 1);
+    const conflictDate = this.checkDateConflict(this.calcData.startDate, this.calcData.endDate, this.currentCar?.unavailable_dates);
+    if (conflictDate) {
+      if (typeof toast !== 'undefined') {
+        toast.error(`Xe đã có lịch bận vào ngày ${conflictDate}. Vui lòng bấm Thay đổi để chọn ngày khác!`);
       }
-      if (conflictDate) {
-        alert(`Xe đã có lịch bận vào ngày ${conflictDate} (đã có đơn thuê hoặc chủ xe bận bảo dưỡng). Vui lòng chọn khoảng thời gian khác!`);
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = 'Gửi Yêu Cầu Thuê Xe Cho Chủ Xe Duyệt (Miễn phí)';
-        }
-        return;
-      }
+      this.renderBookingModal();
+      return;
     }
 
     let finalNote = note || 'Mục đích di chuyển cá nhân';

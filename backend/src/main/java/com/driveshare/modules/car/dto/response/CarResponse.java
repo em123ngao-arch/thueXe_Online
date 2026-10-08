@@ -45,6 +45,16 @@ public class CarResponse {
     private ECarStatus status;
     private String rejectionReason;
 
+    // Lịch bận sắp tới (dùng cho Badge và bộ lọc Frontend)
+    @com.fasterxml.jackson.annotation.JsonProperty("unavailable_dates")
+    private java.util.List<java.time.LocalDate> unavailableDates;
+
+    // Sprint 3: Dịch vụ tài xế & Đánh giá
+    private Boolean hasDriverService;
+    private BigDecimal driverFeePerDay;
+    private BigDecimal rating;
+    private Integer ratingCount;
+
     // Audit
     private Instant createdAt;
     private Instant updatedAt;
@@ -71,6 +81,10 @@ public class CarResponse {
                 .description(car.getDescription())
                 .features(car.getFeatures())
                 .thumbnailUrl(car.getThumbnailUrl())
+                .hasDriverService(car.getHasDriverService())
+                .driverFeePerDay(car.getDriverFeePerDay())
+                .rating(car.getRating())
+                .ratingCount(car.getRatingCount())
                 .status(car.getStatus())
                 .rejectionReason(car.getRejectionReason())
                 .createdAt(car.getCreatedAt())

@@ -236,9 +236,16 @@ public class CarServiceImpl implements CarService {
     @Transactional(readOnly = true)
     public PageResponse<CarResponse> getPublicActiveCars(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<CarResponse> resultPage = carRepository
-                .findByStatusAndDeletedAtIsNull(ECarStatus.ACTIVE, pageable)
-                .map(CarResponse::fromEntity);
+        Page<Car> carPage = carRepository.findByStatusAndDeletedAtIsNull(ECarStatus.ACTIVE, pageable);
+
+        java.util.List<Long> carIds = carPage.getContent().stream().map(Car::getCarId).toList();
+        java.util.Map<Long, java.util.List<java.time.LocalDate>> datesMap = getUnavailableDatesMap(carIds);
+
+        Page<CarResponse> resultPage = carPage.map(car -> {
+            CarResponse resp = CarResponse.fromEntity(car);
+            resp.setUnavailableDates(datesMap.getOrDefault(car.getCarId(), java.util.Collections.emptyList()));
+            return resp;
+        });
 
         return PageResponse.from(resultPage);
     }
@@ -367,13 +374,69 @@ public class CarServiceImpl implements CarService {
         org.springframework.data.jpa.domain.Specification<Car> spec = 
                 com.driveshare.modules.car.repository.specification.CarSpecification.filterCars(request);
 
-        Page<CarResponse> resultPage = carRepository.findAll(spec, pageable)
-                .map(CarResponse::fromEntity);
+        Page<Car> carPage = carRepository.findAll(spec, pageable);
+
+        java.util.List<Long> carIds = carPage.getContent().stream().map(Car::getCarId).toList();
+        java.util.Map<Long, java.util.List<java.time.LocalDate>> datesMap = getUnavailableDatesMap(carIds);
+
+        Page<CarResponse> resultPage = carPage.map(car -> {
+            CarResponse resp = CarResponse.fromEntity(car);
+            resp.setUnavailableDates(datesMap.getOrDefault(car.getCarId(), java.util.Collections.emptyList()));
+            return resp;
+        });
 
         log.info("Tìm kiếm xe với query parameters: brand={}, province={}, minPrice={}, maxPrice={}, kết quả={}",
                 request.getBrand(), request.getProvince(), request.getMinPrice(), request.getMaxPrice(), resultPage.getTotalElements());
 
         return PageResponse.from(resultPage);
+    }
+
+    private java.util.Map<Long, java.util.List<java.time.LocalDate>> getUnavailableDatesMap(java.util.List<Long> carIds) {
+        if (carIds == null || carIds.isEmpty()) return java.util.Collections.emptyMap();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.util.List<com.driveshare.common.enums.ERentalStatus> activeStatuses = java.util.List.of(
+                com.driveshare.common.enums.ERentalStatus.APPROVED,
+                com.driveshare.common.enums.ERentalStatus.WAITING_PAYMENT,
+                com.driveshare.common.enums.ERentalStatus.CONFIRMED,
+                com.driveshare.common.enums.ERentalStatus.IN_PROGRESS
+        );
+
+        java.util.List<com.driveshare.modules.rental.entity.Rental> activeRentals =
+                rentalRepository.findActiveRentalsForCars(carIds, activeStatuses, today);
+
+        java.util.List<com.driveshare.modules.car.entity.CarCalendarBlock> blocks =
+                carCalendarBlockRepository.findByCarIdInAndEndDateGreaterThanEqualAndDeletedAtIsNullOrderByStartDateAsc(carIds, today);
+
+        java.util.Map<Long, java.util.Set<java.time.LocalDate>> datesMap = new java.util.HashMap<>();
+        for (Long carId : carIds) {
+            datesMap.put(carId, new java.util.TreeSet<>());
+        }
+
+        if (activeRentals != null) {
+            for (com.driveshare.modules.rental.entity.Rental r : activeRentals) {
+                java.time.LocalDate cur = r.getStartDate().isBefore(today) ? today : r.getStartDate();
+                java.util.Set<java.time.LocalDate> set = datesMap.computeIfAbsent(r.getCarId(), k -> new java.util.TreeSet<>());
+                while (!cur.isAfter(r.getEndDate())) {
+                    set.add(cur);
+                    cur = cur.plusDays(1);
+                }
+            }
+        }
+
+        if (blocks != null) {
+            for (com.driveshare.modules.car.entity.CarCalendarBlock b : blocks) {
+                java.time.LocalDate cur = b.getStartDate().isBefore(today) ? today : b.getStartDate();
+                java.util.Set<java.time.LocalDate> set = datesMap.computeIfAbsent(b.getCarId(), k -> new java.util.TreeSet<>());
+                while (!cur.isAfter(b.getEndDate())) {
+                    set.add(cur);
+                    cur = cur.plusDays(1);
+                }
+            }
+        }
+
+        java.util.Map<Long, java.util.List<java.time.LocalDate>> result = new java.util.HashMap<>();
+        datesMap.forEach((k, v) -> result.put(k, new java.util.ArrayList<>(v)));
+        return result;
     }
 
 

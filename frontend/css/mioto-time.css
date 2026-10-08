@@ -286,6 +286,32 @@
   pointer-events: none;
 }
 
+.mioto-day-cell.busy-booked {
+  position: relative;
+  background-color: #fef2f2 !important;
+  color: #ef4444 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+.mioto-day-cell.busy-booked span {
+  text-decoration: line-through;
+  text-decoration-color: #ef4444;
+  color: #dc2626 !important;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.mioto-day-cell.busy-booked::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  width: 5px;
+  height: 5px;
+  background-color: #ef4444;
+  border-radius: 50%;
+}
+
 .mioto-day-cell.today span {
   text-decoration: underline;
   text-underline-offset: 3px;

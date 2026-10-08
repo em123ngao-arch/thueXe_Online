@@ -17,6 +17,13 @@ import java.util.Optional;
 public interface CarRepository extends JpaRepository<Car, Long>, JpaSpecificationExecutor<Car> {
 
     /**
+     * Kiểm tra biển số đã tồn tại trong bảng car (kể cả đã xóa mềm).
+     */
+    boolean existsByPlateNumber(String plateNumber);
+
+    Optional<Car> findByPlateNumber(String plateNumber);
+
+    /**
      * Kiểm tra biển số đã tồn tại trong hệ thống chưa (bỏ qua xe đã xóa mềm).
      * Dùng khi tạo xe mới — CRP-23.
      */

@@ -114,6 +114,21 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
             @Param("from") LocalDate from
     );
 
+    /**
+     * Lấy các đơn thuê đang hoạt động/chốt cọc của nhiều xe cùng lúc (dùng cho danh sách xe công khai)
+     */
+    @Query("SELECT r FROM Rental r " +
+           "WHERE r.carId IN :carIds " +
+           "AND r.status IN :statuses " +
+           "AND r.endDate >= :from " +
+           "AND r.deletedAt IS NULL " +
+           "ORDER BY r.startDate ASC")
+    List<Rental> findActiveRentalsForCars(
+            @Param("carIds") List<Long> carIds,
+            @Param("statuses") List<ERentalStatus> statuses,
+            @Param("from") LocalDate from
+    );
+
     // CRP-NEW: Kiểm tra user đã có đơn PENDING/PENDING_APPROVAL trùng ngày cho cùng xe
     // Ngăn chặn 1 khách gửi 2 yêu cầu thuê cùng xe trong khoảng thời gian trùng lặp
     @Query("SELECT CASE WHEN COUNT(r) > 0 THEN TRUE ELSE FALSE END FROM Rental r " +

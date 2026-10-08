@@ -24,7 +24,11 @@ const MiotoTimePicker = {
     // Phân hệ Thuê giờ (tối thiểu 4h, tối đa 8h)
     hourlyStartDate: '', // 'YYYY-MM-DD'
     hourlyStartTime: '14:30', // 'HH:mm'
-    hourlyHours: 4 // 4, 5, 6, 7, 8
+    hourlyHours: 4, // 4, 5, 6, 7, 8
+
+    // Danh sách ngày bận của xe cụ thể (nếu mở từ modal đặt xe)
+    disabledDates: [],
+    onSelectCallback: null
   },
 
   // Khởi tạo component
@@ -172,10 +176,22 @@ const MiotoTimePicker = {
     }
   },
 
-  // Mở Modal
-  open() {
+  // Mở Modal (hỗ trợ options: disabledDates, onSelect, startDate, endDate...)
+  open(options = null) {
     const overlay = document.getElementById('miotoTimeOverlay');
     if (!overlay) return;
+
+    if (options && typeof options === 'object') {
+      this.state.disabledDates = Array.isArray(options.disabledDates) ? options.disabledDates : [];
+      this.state.onSelectCallback = typeof options.onSelect === 'function' ? options.onSelect : null;
+      if (options.startDate) this.state.startDate = options.startDate;
+      if (options.endDate) this.state.endDate = options.endDate;
+      if (options.startTime) this.state.startTime = options.startTime;
+      if (options.endTime) this.state.endTime = options.endTime;
+    } else {
+      this.state.disabledDates = [];
+      this.state.onSelectCallback = null;
+    }
 
     if (this.state.rentalMode === 'HOUR') {
       this.switchTab('HOUR');
@@ -298,7 +314,9 @@ const MiotoTimePicker = {
       const dayDate = new Date(year, month, day);
       const dayYMD = this.formatDateYMD(dayDate);
 
-      const isDisabled = dayYMD < minStartYMD;
+      const isPast = dayYMD < minStartYMD;
+      const isBusy = Array.isArray(this.state.disabledDates) && this.state.disabledDates.includes(dayYMD);
+      const isDisabled = isPast || isBusy;
       const isToday = dayYMD === todayYMD;
 
       const isStart = startDate && dayYMD === startDate;
@@ -310,17 +328,19 @@ const MiotoTimePicker = {
       }
 
       let classNames = ['mioto-day-cell'];
-      if (isDisabled) classNames.push('disabled');
+      if (isPast) classNames.push('disabled');
+      if (isBusy) classNames.push('disabled', 'busy-booked');
       if (isToday) classNames.push('today');
       if (isStart) classNames.push('selected', 'range-start');
       if (isEnd) classNames.push('selected', 'range-end');
       if (isInRange) classNames.push('in-range');
 
+      const titleAttr = isBusy ? 'title="Xe đã có lịch bận (đã cọc hoặc bảo dưỡng)"' : '';
       const clickAttr = !isDisabled ? `onclick="MiotoTimePicker.onDateClick('${dayYMD}')"` : '';
       const hoverAttr = !isDisabled ? `onmouseenter="MiotoTimePicker.onDateHover('${dayYMD}')"` : '';
 
       cellsHtml += `
-        <div class="${classNames.join(' ')}" ${clickAttr} ${hoverAttr} data-date="${dayYMD}">
+        <div class="${classNames.join(' ')}" ${titleAttr} ${clickAttr} ${hoverAttr} data-date="${dayYMD}">
           <span>${day}</span>
         </div>
       `;
@@ -349,10 +369,33 @@ const MiotoTimePicker = {
       this.state.selectingState = 'END';
     } else if (this.state.startDate && !this.state.endDate) {
       if (ymd >= this.state.startDate) {
-        // 2. Click lần 2: Chọn ngày trả hợp lệ
-        this.state.endDate = ymd;
-        this.state.hoverDate = null;
-        this.state.selectingState = 'DONE';
+        // Kiểm tra xem khoảng giữa [startDate, ymd] có chứa ngày bận không
+        let hasConflict = false;
+        if (Array.isArray(this.state.disabledDates) && this.state.disabledDates.length > 0) {
+          let cur = new Date(this.state.startDate);
+          const end = new Date(ymd);
+          while (cur <= end) {
+            const curYMD = this.formatDateYMD(cur);
+            if (this.state.disabledDates.includes(curYMD)) {
+              hasConflict = true;
+              break;
+            }
+            cur.setDate(cur.getDate() + 1);
+          }
+        }
+
+        if (hasConflict) {
+          // Bắt đầu khoảng mới từ ymd nếu ymd không bận
+          this.state.startDate = ymd;
+          this.state.endDate = null;
+          this.state.hoverDate = null;
+          this.state.selectingState = 'END';
+        } else {
+          // 2. Click lần 2: Chọn ngày trả hợp lệ
+          this.state.endDate = ymd;
+          this.state.hoverDate = null;
+          this.state.selectingState = 'DONE';
+        }
       } else {
         // Nếu click ngày trước ngày nhận -> Đổi thành ngày nhận mới
         this.state.startDate = ymd;
@@ -772,6 +815,17 @@ const MiotoTimePicker = {
 
     this._updateSearchDisplay();
     this.close();
+
+    if (typeof this.state.onSelectCallback === 'function') {
+      this.state.onSelectCallback({
+        startDate: this.state.startDate,
+        endDate: this.state.endDate,
+        startTime: this.state.startTime,
+        endTime: this.state.endTime,
+        isHourly: false
+      });
+      return;
+    }
 
     if (typeof App !== 'undefined' && App.currentFilters) {
       App.currentFilters.startDate = this.state.startDate;
