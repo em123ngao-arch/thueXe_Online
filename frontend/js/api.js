@@ -15,7 +15,7 @@ const API_CONFIG = {
   BASE_URL: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:8080/api/v1'
     : 'https://driveshare-backend-9ppk.onrender.com/api/v1',
-  TIMEOUT_MS: 10000
+  TIMEOUT_MS: 60000
 };
 
 // ─────────────────────────────────────────────────────────────
