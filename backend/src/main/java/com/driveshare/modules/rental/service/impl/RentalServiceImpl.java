@@ -68,8 +68,11 @@ public class RentalServiceImpl implements RentalService {
             throw new AppException(ErrorCode.INVALID_RENTAL_DATES, "Ngày kết thúc thuê phải sau hoặc bằng ngày bắt đầu thuê");
         }
 
-        // 3. Giai đoạn 1: Điều kiện tiên quyết kiểm tra hồ sơ khách thuê (eKYC / GPLX)
-        if (renterProfileRepository != null) {
+        boolean isWithDriver = Boolean.TRUE.equals(request.getWithDriver());
+
+        // 3. Giai đoạn 1 & Sprint 3: Điều kiện tiên quyết kiểm tra hồ sơ khách thuê (eKYC / GPLX)
+        // Nếu chọn kèm tài xế (withDriver = true) -> Miễn kiểm tra GPLX
+        if (!isWithDriver && renterProfileRepository != null) {
             renterProfileRepository.findById(renterId).ifPresent(profile -> {
                 if (profile.getLicenseVerificationStatus() == com.driveshare.common.enums.EVerificationStatus.REJECTED
                         || profile.getVerificationStatus() == com.driveshare.common.enums.EVerificationStatus.REJECTED) {
@@ -89,6 +92,12 @@ public class RentalServiceImpl implements RentalService {
 
         if (car.getOwnerId().equals(renterId)) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Bạn không thể tự thuê xe của chính mình");
+        }
+
+        // Sprint 3: Nếu yêu cầu kèm tài xế, xe phải có dịch vụ tài xế
+        if (isWithDriver && !Boolean.TRUE.equals(car.getHasDriverService())) {
+            log.warn("Xe carId={} không cung cấp dịch vụ có tài xế", car.getCarId());
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Xe này hiện không hỗ trợ dịch vụ kèm tài xế");
         }
 
         // 5. Giai đoạn 1 & CRP-38: Kiểm tra xe có bị trùng lịch với đơn đang WAITING_PAYMENT, APPROVED, CONFIRMED, IN_PROGRESS không
@@ -121,12 +130,12 @@ public class RentalServiceImpl implements RentalService {
             throw new AppException(ErrorCode.DUPLICATE_RENTAL_REQUEST);
         }
 
-        // 6. Tính toán số ngày và tiền thuê (hỗ trợ cả thuê ngày và thuê theo giờ 4h - 8h)
+        // 6. Tính toán số ngày và tiền thuê (hỗ trợ cả thuê ngày và thuê theo giờ 4h - 8h, và phụ phí tài xế)
         long daysBetween = ChronoUnit.DAYS.between(startDate, endDate);
         int totalDays = (int) Math.max(1, daysBetween);
 
         BigDecimal pricePerDay = car.getPricePerDay();
-        BigDecimal totalPrice;
+        BigDecimal carRentalPrice;
 
         // Nếu có ghi chú thuê theo giờ (4h - 8h)
         String noteStr = request.getNote() != null ? request.getNote() : "";
@@ -138,10 +147,18 @@ public class RentalServiceImpl implements RentalService {
             }
             hours = Math.max(4, Math.min(8, hours)); // Ràng buộc tối thiểu 4h - tối đa 8h
             BigDecimal hourlyRate = pricePerDay.divide(BigDecimal.valueOf(10), 2, java.math.RoundingMode.HALF_UP);
-            totalPrice = hourlyRate.multiply(BigDecimal.valueOf(hours));
+            carRentalPrice = hourlyRate.multiply(BigDecimal.valueOf(hours));
         } else {
-            totalPrice = pricePerDay.multiply(BigDecimal.valueOf(totalDays));
+            carRentalPrice = pricePerDay.multiply(BigDecimal.valueOf(totalDays));
         }
+
+        BigDecimal driverFee = BigDecimal.ZERO;
+        if (isWithDriver) {
+            BigDecimal driverFeePerDay = car.getDriverFeePerDay() != null ? car.getDriverFeePerDay() : BigDecimal.ZERO;
+            driverFee = driverFeePerDay.multiply(BigDecimal.valueOf(totalDays));
+        }
+
+        BigDecimal totalPrice = carRentalPrice.add(driverFee);
         BigDecimal depositAmount = totalPrice.multiply(DEPOSIT_PERCENTAGE);
 
         // 7. Tạo mới đơn thuê ở trạng thái PENDING_APPROVAL theo đúng Đặc tả v2.0.0
@@ -156,11 +173,13 @@ public class RentalServiceImpl implements RentalService {
                 .depositAmount(depositAmount)
                 .status(ERentalStatus.PENDING_APPROVAL)
                 .note(request.getNote())
+                .withDriver(isWithDriver)
+                .driverFee(driverFee)
                 .build();
 
         Rental savedRental = rentalRepository.save(rental);
-        log.info("Tạo yêu cầu thuê xe thành công: rentalId={}, carId={}, renterId={}, totalDays={}, totalPrice={}, status={}",
-                savedRental.getRentalId(), car.getCarId(), renterId, totalDays, totalPrice, savedRental.getStatus());
+        log.info("Tạo yêu cầu thuê xe thành công: rentalId={}, carId={}, renterId={}, totalDays={}, totalPrice={}, withDriver={}, driverFee={}, status={}",
+                savedRental.getRentalId(), car.getCarId(), renterId, totalDays, totalPrice, isWithDriver, driverFee, savedRental.getStatus());
 
         return RentalResponse.from(savedRental);
     }
