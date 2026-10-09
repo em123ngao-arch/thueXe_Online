@@ -371,7 +371,7 @@ const ApiService = {
       const res = await this.fetchWithTimeout(url);
       if (res.status === 404) {
         let errJson = null;
-        try { errJson = await res.json(); } catch (e) { }
+        try { errJson = await res.json(); } catch(e) {}
         return {
           success: false,
           status: 404,
@@ -428,7 +428,7 @@ const ApiService = {
       }
       if (res.status === 400) {
         let errJson = null;
-        try { errJson = await res.json(); } catch (e) { }
+        try { errJson = await res.json(); } catch(e) {}
         return { success: false, status: 400, errorCode: errJson?.errorCode || 'VALIDATION_FAILED', message: errJson?.message || 'Dữ liệu không hợp lệ' };
       }
       if (res.ok) {
@@ -752,7 +752,7 @@ const ApiService = {
 
       if (res.status === 400) {
         let errJson = null;
-        try { errJson = await res.json(); } catch (e) { }
+        try { errJson = await res.json(); } catch (e) {}
         return {
           success: false,
           status: 400,
@@ -807,7 +807,7 @@ const ApiService = {
       console.warn('DriveShare: Lỗi lấy danh sách đơn thuê:', e.message);
       return { success: false, source: 'ERROR', data: [] };
     }
-  }
+}
 
 };
 
@@ -1185,7 +1185,615 @@ const RentalAPI = {
       console.warn('[RentalAPI] completeRental error:', err);
       return { success: false, message: 'Lỗi kết nối máy chủ khi hoàn tất chuyến đi' };
     }
+  },
+
+  /**
+   * Sprint 3: Bàn giao xe (Check-in cho chủ xe)
+   * POST /api/v1/owner/rentals/{id}/check-in
+   * DTO: { odoMeter, fuelLevel, images, notes }
+   */
+  async checkInRental(rentalId, checkInData) {
+    if (!rentalId || rentalId === 'undefined') {
+      return { success: false, message: 'Mã đơn thuê không hợp lệ' };
+    }
+    const url = `${API_CONFIG.BASE_URL}/owner/rentals/${rentalId}/check-in`;
+    const payload = {
+      odoMeter: Number(checkInData.odoMeter || 0),
+      fuelLevel: Number(checkInData.fuelLevel ?? 100),
+      images: checkInData.images || '',
+      notes: checkInData.notes || ''
+    };
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể lập biên bản bàn giao xe' };
+      }
+      // Lưu lại cache local inspection
+      this.saveLocalInspection(rentalId, 'CHECK_IN', payload);
+      return { success: true, data: json.data || json };
+    } catch (err) {
+      console.warn('[RentalAPI] checkInRental offline/fallback:', err);
+      // Fallback local data
+      this.saveLocalInspection(rentalId, 'CHECK_IN', payload);
+      if (typeof StorageService !== 'undefined' && StorageService.updateBookingStatus) {
+        StorageService.updateBookingStatus(rentalId, 'IN_PROGRESS');
+      }
+      return { success: true, data: payload, isMock: true };
+    }
+  },
+
+  /**
+   * Sprint 3: Nghiệm thu trả xe (Check-out cho chủ xe)
+   * POST /api/v1/owner/rentals/{id}/check-out
+   * DTO: { odoMeter, fuelLevel, extraFee, extraFeeReason, images, notes }
+   */
+  async checkOutRental(rentalId, checkOutData) {
+    if (!rentalId || rentalId === 'undefined') {
+      return { success: false, message: 'Mã đơn thuê không hợp lệ' };
+    }
+    const url = `${API_CONFIG.BASE_URL}/owner/rentals/${rentalId}/check-out`;
+    const payload = {
+      odoMeter: Number(checkOutData.odoMeter || 0),
+      fuelLevel: Number(checkOutData.fuelLevel ?? 100),
+      extraFee: Number(checkOutData.extraFee || 0),
+      extraFeeReason: checkOutData.extraFeeReason || '',
+      images: checkOutData.images || '',
+      notes: checkOutData.notes || ''
+    };
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể lập biên bản nghiệm thu trả xe' };
+      }
+      this.saveLocalInspection(rentalId, 'CHECK_OUT', payload);
+      return { success: true, data: json.data || json };
+    } catch (err) {
+      console.warn('[RentalAPI] checkOutRental offline/fallback:', err);
+      this.saveLocalInspection(rentalId, 'CHECK_OUT', payload);
+      if (typeof StorageService !== 'undefined' && StorageService.updateBookingStatus) {
+        StorageService.updateBookingStatus(rentalId, 'COMPLETED');
+      }
+      return { success: true, data: payload, isMock: true };
+    }
+  },
+
+  /**
+   * Sprint 3: Xem danh sách biên bản giao nhận xe (Check-in & Check-out)
+   * GET /api/v1/rentals/{id}/inspections hoặc /api/v1/owner/rentals/{id}/inspections
+   */
+  async getRentalInspections(rentalId) {
+    if (!rentalId) return { success: false, data: [] };
+    const url = `${API_CONFIG.BASE_URL}/rentals/${rentalId}/inspections`;
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (res.ok && json.data) {
+        return { success: true, data: json.data };
+      }
+    } catch (err) {
+      console.warn('[RentalAPI] getRentalInspections offline fallback:', err);
+    }
+    const local = this.getLocalInspections(rentalId);
+    return { success: true, data: local, isMock: true };
+  },
+
+  saveLocalInspection(rentalId, type, data) {
+    try {
+      const key = `ds_inspections_${rentalId}`;
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      const item = {
+        inspectionType: type,
+        odoMeter: data.odoMeter,
+        fuelLevel: data.fuelLevel,
+        extraFee: data.extraFee || 0,
+        extraFeeReason: data.extraFeeReason || '',
+        images: data.images || '',
+        notes: data.notes || '',
+        createdAt: new Date().toISOString()
+      };
+      const filtered = existing.filter(i => i.inspectionType !== type);
+      filtered.push(item);
+      localStorage.setItem(key, JSON.stringify(filtered));
+    } catch (_) {}
+  },
+
+  getLocalInspections(rentalId) {
+    try {
+      const key = `ds_inspections_${rentalId}`;
+      return JSON.parse(localStorage.getItem(key) || '[]');
+    } catch (_) {
+      return [];
+    }
   }
 };
+
+// ─────────────────────────────────────────────────────────────
+// SPRINT 3: REVIEW & RATINGS API (Khách thuê đánh giá 5 sao)
+// ─────────────────────────────────────────────────────────────
+
+const ReviewAPI = {
+  getAuthHeaders() {
+    const token = TokenService.getToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+  },
+
+  /**
+   * POST /api/v1/rentals/{rentalId}/reviews
+   * DTO: { rating (1-5), comment }
+   */
+  async createReview(rentalId, reviewData) {
+    if (!rentalId) {
+      return { success: false, message: 'Mã đơn thuê không hợp lệ' };
+    }
+    const url = `${API_CONFIG.BASE_URL}/rentals/${rentalId}/reviews`;
+    const payload = {
+      rating: Math.max(1, Math.min(5, Number(reviewData.rating || 5))),
+      comment: reviewData.comment ? reviewData.comment.trim() : ''
+    };
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        return { success: false, status: res.status, message: json.message || 'Không thể gửi đánh giá chuyến đi' };
+      }
+      this.saveLocalReview(rentalId, payload);
+      return { success: true, data: json.data || json };
+    } catch (err) {
+      console.warn('[ReviewAPI] createReview fallback to local:', err);
+      this.saveLocalReview(rentalId, payload);
+      return { success: true, data: payload, isMock: true };
+    }
+  },
+
+  /**
+   * GET /api/v1/rentals/{rentalId}/reviews
+   */
+  async getRentalReview(rentalId) {
+    if (!rentalId) return { success: false, data: null };
+    const url = `${API_CONFIG.BASE_URL}/rentals/${rentalId}/reviews`;
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (res.ok && json.data) {
+        return { success: true, data: json.data };
+      }
+    } catch (_) {}
+    const local = this.getLocalReview(rentalId);
+    return { success: !!local, data: local };
+  },
+
+  /**
+   * GET /api/v1/public/cars/{carId}/reviews?page=0&size=10
+   */
+  async getCarReviews(carId, page = 0, size = 10) {
+    if (!carId) return { success: true, data: { content: [], totalElements: 0 } };
+    const url = `${API_CONFIG.BASE_URL}/public/cars/${carId}/reviews?page=${page}&size=${size}`;
+    try {
+      const res = await fetch(url, { method: 'GET' });
+      const json = await res.json();
+      if (res.ok && json.data) {
+        return { success: true, data: json.data };
+      }
+    } catch (_) {}
+    return { success: true, data: { content: [], totalElements: 0 } };
+  },
+
+  saveLocalReview(rentalId, data) {
+    try {
+      const key = `ds_review_${rentalId}`;
+      const reviewObj = {
+        rentalId,
+        rating: data.rating,
+        comment: data.comment,
+        createdAt: new Date().toISOString()
+      };
+      localStorage.setItem(key, JSON.stringify(reviewObj));
+    } catch (_) {}
+  },
+
+  getLocalReview(rentalId) {
+    try {
+      const key = `ds_review_${rentalId}`;
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// SPRINT 3: NOTIFICATION API & NOTIFICATION CENTER
+// ─────────────────────────────────────────────────────────────
+
+const NotificationAPI = {
+  getAuthHeaders() {
+    const token = TokenService.getToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+  },
+
+  /**
+   * GET /api/v1/notifications/my-notifications
+   */
+  async getMyNotifications() {
+    const url = `${API_CONFIG.BASE_URL}/notifications/my-notifications`;
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (res.ok && json.data) {
+        return { success: true, data: json.data };
+      }
+    } catch (_) {}
+    return { success: true, data: this.getLocalNotifications(), isMock: true };
+  },
+
+  /**
+   * PUT /api/v1/notifications/{id}/read
+   */
+  async markAsRead(notificationId) {
+    const url = `${API_CONFIG.BASE_URL}/notifications/${notificationId}/read`;
+    try {
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: this.getAuthHeaders()
+      });
+      const json = await res.json();
+      if (res.ok) {
+        this.setLocalNotificationRead(notificationId);
+        return { success: true, data: json.data };
+      }
+    } catch (_) {}
+    this.setLocalNotificationRead(notificationId);
+    return { success: true };
+  },
+
+  getLocalNotifications() {
+    try {
+      const raw = localStorage.getItem('ds_notifications');
+      if (raw) return JSON.parse(raw);
+    } catch (_) {}
+    // Khởi tạo các thông báo mẫu trực quan sinh động
+    const defaultNotifs = [
+      {
+        id: 1,
+        title: "Đơn thuê #101 đã xác nhận",
+        content: "Khách thuê đã thanh toán cọc 30% qua VietQR. Đơn đã sẵn sàng bàn giao.",
+        type: "RENTAL_CONFIRMED",
+        referenceId: 101,
+        isRead: false,
+        createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString()
+      },
+      {
+        id: 2,
+        title: "Bàn giao xe thành công",
+        content: "Biên bản check-in đơn #102 đã được duyệt. Chuyến đi bắt đầu an toàn.",
+        type: "INSPECTION_CHECK_IN",
+        referenceId: 102,
+        isRead: false,
+        createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString()
+      },
+      {
+        id: 3,
+        title: "Đánh giá 5 sao mới ⭐",
+        content: "Khách vừa gửi đánh giá 5 sao cho chiếc Mazda CX-5 của bạn: 'Xe rất sạch sẽ, chủ xe tuyệt vời!'",
+        type: "REVIEW_RECEIVED",
+        referenceId: 103,
+        isRead: true,
+        createdAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+      }
+    ];
+    try {
+      localStorage.setItem('ds_notifications', JSON.stringify(defaultNotifs));
+    } catch (_) {}
+    return defaultNotifs;
+  },
+
+  setLocalNotificationRead(id) {
+    try {
+      const notifs = this.getLocalNotifications();
+      const updated = notifs.map(n => n.id == id ? { ...n, isRead: true } : n);
+      localStorage.setItem('ds_notifications', JSON.stringify(updated));
+    } catch (_) {}
+  },
+
+  markAllLocalAsRead() {
+    try {
+      const notifs = this.getLocalNotifications();
+      const updated = notifs.map(n => ({ ...n, isRead: true }));
+      localStorage.setItem('ds_notifications', JSON.stringify(updated));
+    } catch (_) {}
+  },
+
+  addNotification(title, content, type = 'GENERAL', referenceId = null) {
+    try {
+      const notifs = this.getLocalNotifications();
+      const newNotif = {
+        id: Date.now(),
+        title,
+        content,
+        type,
+        referenceId,
+        isRead: false,
+        createdAt: new Date().toISOString()
+      };
+      notifs.unshift(newNotif);
+      localStorage.setItem('ds_notifications', JSON.stringify(notifs.slice(0, 30)));
+      if (typeof NotificationCenter !== 'undefined' && NotificationCenter.refresh) {
+        NotificationCenter.refresh();
+      }
+    } catch (_) {}
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// NOTIFICATION CENTER UI (Sprint 3 Dropdown Chuông thông báo)
+// ─────────────────────────────────────────────────────────────
+
+const NotificationCenter = {
+  notifications: [],
+  isOpen: false,
+  _interval: null,
+
+  async init() {
+    this.mountBell();
+    await this.refresh();
+
+    if (!this._interval) {
+      this._interval = setInterval(() => this.refresh(), 20000);
+    }
+
+    if (!this._hasClickOutsideListener) {
+      document.addEventListener('click', (e) => {
+        const wrapper = document.getElementById('notificationBellWrapper');
+        if (wrapper && !wrapper.contains(e.target) && this.isOpen) {
+          this.close();
+        }
+      });
+      this._hasClickOutsideListener = true;
+    }
+  },
+
+  mountBell() {
+    if (document.getElementById('notificationBellWrapper')) return;
+
+    let container = document.getElementById('notificationBellContainer');
+    if (!container) {
+      const navActions = document.querySelector('.nav-actions');
+      if (navActions) {
+        container = document.createElement('div');
+        container.id = 'notificationBellContainer';
+        container.className = 'notification-bell-container';
+
+        const navAuth = document.getElementById('navAuthContainer');
+        if (navAuth && navAuth.parentNode === navActions) {
+          navActions.insertBefore(container, navAuth);
+        } else {
+          navActions.prepend(container);
+        }
+      }
+    }
+
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="notification-bell-wrapper" id="notificationBellWrapper">
+        <button id="btnNotificationBell" class="notification-bell-btn" title="Thông báo hệ thống" aria-label="Thông báo" onclick="NotificationCenter.toggle()">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+        </button>
+        <div class="notification-dropdown" id="notificationDropdown" style="display: none;">
+          <div class="notification-header">
+            <div class="notification-title-group">
+              <h4>Thông báo</h4>
+              <span class="notif-unread-count-pill" id="notifUnreadPill" style="display: none;">0 mới</span>
+            </div>
+            <button class="btn-mark-all-read" onclick="NotificationCenter.markAllAsRead()" title="Đánh dấu tất cả đã đọc">
+              Đánh dấu đã đọc
+            </button>
+          </div>
+          <div class="notification-list" id="notificationList">
+            <!-- Items rendered dynamically -->
+          </div>
+          <div class="notification-footer">
+            <span>Thông báo tức thời theo thời gian thực · DriveShare</span>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  async refresh() {
+    try {
+      const res = await NotificationAPI.getMyNotifications();
+      if (res && res.data && Array.isArray(res.data)) {
+        this.notifications = res.data;
+      } else {
+        this.notifications = NotificationAPI.getLocalNotifications();
+      }
+    } catch (_) {
+      this.notifications = NotificationAPI.getLocalNotifications();
+    }
+    this.render();
+  },
+
+  render() {
+    const unreadCount = this.notifications.filter(n => !n.isRead).length;
+    const badge = document.getElementById('notificationBadge');
+    const pill = document.getElementById('notifUnreadPill');
+    const bellBtn = document.getElementById('btnNotificationBell');
+
+    if (badge) {
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        badge.style.display = 'flex';
+        if (bellBtn) bellBtn.classList.add('has-unread');
+      } else {
+        badge.style.display = 'none';
+        if (bellBtn) bellBtn.classList.remove('has-unread');
+      }
+    }
+
+    if (pill) {
+      if (unreadCount > 0) {
+        pill.textContent = `${unreadCount} mới`;
+        pill.style.display = 'inline-block';
+      } else {
+        pill.style.display = 'none';
+      }
+    }
+
+    const listEl = document.getElementById('notificationList');
+    if (!listEl) return;
+
+    if (this.notifications.length === 0) {
+      listEl.innerHTML = `
+        <div class="notification-empty">
+          <div style="font-size: 28px; margin-bottom: 6px;">🔔</div>
+          <div style="font-size: 13px; font-weight: 600; color: #475569;">Bạn chưa có thông báo nào</div>
+          <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Các cập nhật đặt xe & chuyến đi sẽ xuất hiện tại đây</div>
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = this.notifications.map(n => {
+      const isUnread = !n.isRead;
+      const typeIcons = {
+        'RENTAL_CONFIRMED': { icon: '🚗', bg: '#dcfce7', color: '#166534' },
+        'INSPECTION_CHECK_IN': { icon: '🔑', bg: '#e0e7ff', color: '#3730a3' },
+        'INSPECTION_CHECK_OUT': { icon: '📋', bg: '#fef3c7', color: '#92400e' },
+        'REVIEW_RECEIVED': { icon: '⭐', bg: '#fef9c3', color: '#854d0e' },
+        'GENERAL': { icon: '🔔', bg: '#f1f5f9', color: '#475569' }
+      };
+      const iconMeta = typeIcons[n.type] || typeIcons['GENERAL'];
+      const timeAgo = this._formatTimeAgo(n.createdAt);
+
+      return `
+        <div class="notification-item ${isUnread ? 'unread' : ''}" onclick="NotificationCenter.handleItemClick(${n.id})">
+          <div class="notif-icon-circle" style="background: ${iconMeta.bg}; color: ${iconMeta.color};">
+            ${iconMeta.icon}
+          </div>
+          <div class="notif-body">
+            <div class="notif-item-title">
+              <span>${this._escapeHtml(n.title)}</span>
+              ${isUnread ? '<span class="notif-unread-dot"></span>' : ''}
+            </div>
+            <div class="notif-item-content">${this._escapeHtml(n.content)}</div>
+            <div class="notif-item-time">${timeAgo}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  toggle() {
+    this.isOpen = !this.isOpen;
+    const dropdown = document.getElementById('notificationDropdown');
+    if (dropdown) {
+      dropdown.style.display = this.isOpen ? 'flex' : 'none';
+      if (this.isOpen) {
+        this.render();
+      }
+    }
+  },
+
+  close() {
+    this.isOpen = false;
+    const dropdown = document.getElementById('notificationDropdown');
+    if (dropdown) {
+      dropdown.style.display = 'none';
+    }
+  },
+
+  async handleItemClick(notifId) {
+    const item = this.notifications.find(n => n.id == notifId);
+    if (!item) return;
+
+    if (!item.isRead) {
+      item.isRead = true;
+      await NotificationAPI.markAsRead(notifId);
+      this.render();
+    }
+
+    if (item.type === 'REVIEW_RECEIVED' && item.referenceId) {
+      if (typeof App !== 'undefined' && App.showReviewPrompt) {
+        App.showReviewPrompt(item.referenceId);
+        this.close();
+      }
+    } else if (item.type === 'RENTAL_CONFIRMED' || item.type === 'INSPECTION_CHECK_IN') {
+      if (typeof App !== 'undefined' && App.showMyBookingsView) {
+        App.showMyBookingsView();
+        this.close();
+      }
+    }
+  },
+
+  async markAllAsRead() {
+    this.notifications.forEach(n => n.isRead = true);
+    await NotificationAPI.markAllLocalAsRead();
+    this.render();
+  },
+
+  _formatTimeAgo(dateStr) {
+    if (!dateStr) return 'Vừa xong';
+    const past = new Date(dateStr).getTime();
+    const now = Date.now();
+    const diffSec = Math.floor((now - past) / 1000);
+    if (isNaN(diffSec) || diffSec < 60) return 'Vừa xong';
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)} phút trước`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} giờ trước`;
+    return `${Math.floor(diffSec / 86400)} ngày trước`;
+  },
+
+  _escapeHtml(text) {
+    if (!text) return '';
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+};
+
+// Khởi chạy NotificationCenter khi DOM sẵn sàng
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => NotificationCenter.init());
+  } else {
+    NotificationCenter.init();
+  }
+}
+
 
 
