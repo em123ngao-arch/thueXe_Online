@@ -493,7 +493,8 @@ const ProfileController = {
 
       showToast("Đang tải ảnh đại diện lên máy chủ...", "info", 1500);
       try {
-        const res = await fetch("http://localhost:8080/api/v1/users/me/avatar", {
+        const uploadBase = (typeof API_BASE !== 'undefined') ? API_BASE : ((typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) ? API_CONFIG.BASE_URL : 'http://localhost:8080/api/v1');
+        const res = await fetch(`${uploadBase}/users/me/avatar`, {
           method: "POST",
           headers: getAuthHeaders(true),
           body: formData,
@@ -700,7 +701,8 @@ const ProfileController = {
     formData.append("backImage", backFile);
 
     try {
-      const res = await fetch("http://localhost:8080/api/v1/users/me/cccd", {
+      const uploadBase = (typeof API_BASE !== 'undefined') ? API_BASE : ((typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) ? API_CONFIG.BASE_URL : 'http://localhost:8080/api/v1');
+      const res = await fetch(`${uploadBase}/users/me/cccd`, {
         method: "POST",
         headers: getAuthHeaders(true),
         body: formData,
@@ -768,7 +770,8 @@ const ProfileController = {
     formData.append("licenseImage", file);
 
     try {
-      const res = await fetch("http://localhost:8080/api/v1/users/me/gplx", {
+      const uploadBase = (typeof API_BASE !== 'undefined') ? API_BASE : ((typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) ? API_CONFIG.BASE_URL : 'http://localhost:8080/api/v1');
+      const res = await fetch(`${uploadBase}/users/me/gplx`, {
         method: "POST",
         headers: getAuthHeaders(true),
         body: formData,
