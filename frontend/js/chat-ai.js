@@ -398,7 +398,6 @@ const AiChatWidget = (() => {
           const matchingCars = getMatchingCars(text);
           appendMessage("assistant", fallbackReply, matchingCars.length > 0 ? matchingCars : FEATURED_CARS.slice(0, 2));
         }
-        }
       });
     }
   }
