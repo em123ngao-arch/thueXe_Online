@@ -18,6 +18,10 @@ cloudinary:
   api-key: ${CLOUDINARY_API_KEY:}
   api-secret: ${CLOUDINARY_API_SECRET:}
 
+driveshare:
+  upload:
+    dir: uploads
+
 
 server:
   port: 8080

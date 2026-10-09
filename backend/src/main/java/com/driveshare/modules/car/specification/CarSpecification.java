@@ -81,7 +81,12 @@ public class CarSpecification {
 
                 List<Predicate> conflictPredicates = new ArrayList<>();
                 conflictPredicates.add(cb.equal(rentalRoot.get("carId"), root.get("carId")));
-                conflictPredicates.add(rentalRoot.get("status").in(ERentalStatus.APPROVED, ERentalStatus.CONFIRMED));
+                conflictPredicates.add(rentalRoot.get("status").in(
+                        ERentalStatus.APPROVED,
+                        ERentalStatus.WAITING_PAYMENT,
+                        ERentalStatus.CONFIRMED,
+                        ERentalStatus.IN_PROGRESS
+                ));
                 conflictPredicates.add(cb.isNull(rentalRoot.get("deletedAt")));
 
                 // Điều kiện giao nhau: rental.startDate <= filter.endDate AND rental.endDate >= filter.startDate

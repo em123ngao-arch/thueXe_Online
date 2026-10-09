@@ -48,11 +48,20 @@ public class RentalResponse {
     @JsonProperty("status")
     private ERentalStatus status;
 
+    @JsonProperty("payment_expires_at")
+    private Instant paymentExpiresAt;
+
     @JsonProperty("reject_reason")
     private String rejectReason;
 
     @JsonProperty("note")
     private String note;
+
+    @JsonProperty("with_driver")
+    private Boolean withDriver;
+
+    @JsonProperty("driver_fee")
+    private BigDecimal driverFee;
 
     @JsonProperty("created_at")
     private Instant createdAt;
@@ -72,8 +81,11 @@ public class RentalResponse {
                 .totalPrice(rental.getTotalPrice())
                 .depositAmount(rental.getDepositAmount())
                 .status(rental.getStatus())
+                .paymentExpiresAt(rental.getPaymentExpiresAt())
                 .rejectReason(rental.getRejectReason())
                 .note(rental.getNote())
+                .withDriver(rental.getWithDriver())
+                .driverFee(rental.getDriverFee())
                 .createdAt(rental.getCreatedAt())
                 .build();
     }

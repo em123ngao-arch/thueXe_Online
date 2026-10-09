@@ -70,22 +70,67 @@ Spring_ThucTap_k4/
 
 ---
 
-## 🚀 Hướng Dẫn Bắt Đầu (Quick Start)
+## 🚀 Hướng Dẫn Khởi Chạy Dự Án (Quick Start)
 
-### 1. Khởi tạo Cơ sở Dữ liệu
-```bash
-# Đăng nhập vào MySQL Server
-mysql -u root -p
+> 📖 **Xem tài liệu chi tiết đầy đủ tại**: [HUONG_DAN_CHAY_DU_AN.md](./HUONG_DAN_CHAY_DU_AN.md)
 
-# Chạy file script schema
-source docs/database/database_schema.sql;
+### Bước 1: Khởi động Cơ sở Dữ liệu & Adminer (Docker)
+Mở terminal tại thư mục gốc của dự án:
+```powershell
+docker-compose up -d
 ```
+- **PostgreSQL 16**: Cổng `5432` (`driveshare_db` / user: `postgres` / pass: `postgrespassword`).
+- **Adminer (Web DB GUI)**: Truy cập tại **[http://localhost:8088](http://localhost:8088)**
+  - Hệ thống: `PostgreSQL` | Máy chủ: `postgres` | Tài khoản: `postgres` | Mật khẩu: `postgrespassword` | CSDL: `driveshare_db`.
 
-### 2. Thiết lập Git & Làm Việc Nhóm
-- Nhánh chính bảo vệ: `main`
-- Nhánh phát triển chung: `develop`
-- Nhánh tính năng cá nhân: `feature/<tên-tính-năng>`
+---
+
+### Bước 2: Khởi chạy Backend (Spring Boot 3)
+Mở một cửa sổ terminal mới:
+```powershell
+.\run-backend.ps1
+# hoặc:
+cd backend
+.\mvnw.cmd spring-boot:run
+```
+- **Cổng Backend API**: [http://localhost:8080](http://localhost:8080)
+- **Kiểm tra sức khỏe**: [http://localhost:8080/api/v1/health](http://localhost:8080/api/v1/health) (Trả về `UP`).
+- **Tài liệu Swagger / OpenAPI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html).
+
+---
+
+### Bước 3: Khởi chạy Frontend (Giao diện Web)
+Mở thêm một cửa sổ terminal khác:
+```powershell
+cd frontend
+python -m http.server 3000
+```
+- **Giao diện Web**: Truy cập ngay tại **[http://localhost:3000](http://localhost:3000)**.
+
+---
+
+## 🔑 Tài Khoản Dùng Thử (Demo Accounts)
+
+| Vai trò (Role) | Email đăng nhập | Mật khẩu mặc định | Ghi chú |
+| :--- | :--- | :--- | :--- |
+| **Khách thuê xe (Renter)** | `renter@driveshare.com` | `Password123@` | Có nút bấm nhanh "Demo Renter" tại trang Login |
+| **Chủ xe (Car Owner)** | `owner@driveshare.com` | `Password123@` | Có nút bấm nhanh "Demo Owner" tại trang Login |
+| **Quản trị viên (Admin)** | `admin@driveshare.com` | `Password123@` | Quản trị toàn hệ thống tại `/admin.html` |
+
+---
+
+## 🌐 Danh Mục Cổng & Dịch Vụ Hệ Thống
+
+| Dịch vụ | Cổng (Port) | Địa chỉ URL | Mô tả |
+| :--- | :---: | :--- | :--- |
+| **Frontend Web** | `3000` | [http://localhost:3000](http://localhost:3000) | Giao diện người dùng DriveShare |
+| **Backend API** | `8080` | [http://localhost:8080](http://localhost:8080) | Dịch vụ API RESTful Spring Boot 3 |
+| **Swagger UI** | `8080` | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) | Đặc tả & tương tác thử nghiệm API |
+| **Adminer** | `8088` | [http://localhost:8088](http://localhost:8088) | Giao diện đồ họa quản lý CSDL PostgreSQL |
+| **PostgreSQL** | `5432` | `localhost:5432` | Hệ quản trị cơ sở dữ liệu chính |
 
 ---
 
 *© 2026 DriveShare Team - K4 Internship Project.*
+
+

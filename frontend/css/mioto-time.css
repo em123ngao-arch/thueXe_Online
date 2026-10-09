@@ -1,0 +1,674 @@
+/* ==========================================================================
+   DRIVESHARE — Mioto-Style Time & Date Range Picker
+   Thiết kế chuẩn mực theo giao diện Mioto Việt Nam:
+   - Modal chọn ngày theo dải (Range Picker) 2 tháng trực quan
+   - Chọn giờ nhận xe & giờ trả xe rõ ràng
+   - Ràng buộc: Ngày nhận không trong quá khứ, tối thiểu cách 1 ngày
+   - Ràng buộc giờ: Ngày trả >= Ngày nhận, giờ trả hợp lệ
+   ========================================================================== */
+
+/* 1. Trigger trên thanh tìm kiếm (Hero Search Bar) */
+.mioto-date-trigger {
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  user-select: none;
+}
+
+.mioto-date-trigger:hover {
+  background-color: rgba(15, 118, 110, 0.04);
+  border-radius: var(--radius-md);
+}
+
+.mioto-display-date {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--slate-800);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.mioto-display-date-sub {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--slate-500);
+}
+
+/* 2. Modal Overlay & Container */
+.mioto-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.mioto-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mioto-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 680px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(16px) scale(0.98);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 92vh;
+}
+
+.mioto-modal-overlay.active .mioto-modal {
+  transform: translateY(0) scale(1);
+}
+
+/* Header */
+.mioto-modal-header {
+  padding: 1.1rem 1.25rem 0.5rem 1.25rem;
+  position: relative;
+  text-align: center;
+}
+
+.mioto-modal-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--slate-900);
+  margin: 0;
+}
+
+.mioto-modal-close {
+  position: absolute;
+  right: 1.25rem;
+  top: 1rem;
+  background: var(--slate-100);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--slate-600);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.mioto-modal-close:hover {
+  background: var(--slate-200);
+  color: var(--slate-900);
+}
+
+/* Tabs */
+.mioto-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--slate-200);
+  margin: 0.5rem 1.25rem 0 1.25rem;
+}
+
+.mioto-tab {
+  flex: 1;
+  text-align: center;
+  padding: 0.65rem 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--slate-500);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.mioto-tab.active {
+  color: #00a550;
+}
+
+.mioto-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background-color: #00a550;
+  border-radius: 2px 2px 0 0;
+}
+
+/* Modal Body */
+.mioto-modal-body {
+  padding: 1.25rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Phân hệ 1: Thuê ngày */
+.mioto-daily-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+/* Calendar Container */
+.mioto-calendar-card {
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  padding: 1rem;
+  background: #ffffff;
+  position: relative;
+  width: 100% !important;
+  box-sizing: border-box;
+}
+
+.mioto-calendar-nav {
+  position: absolute;
+  top: 0.9rem;
+  width: calc(100% - 2rem);
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.mioto-calendar-nav button {
+  pointer-events: auto;
+  background: #ffffff;
+  border: 1px solid var(--slate-200);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--slate-700);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.mioto-calendar-nav button:hover:not(:disabled) {
+  background: var(--slate-50);
+  border-color: var(--slate-300);
+  color: #00a550;
+}
+
+.mioto-calendar-nav button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.mioto-months-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 580px) {
+  .mioto-months-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .mioto-month-box:nth-child(2) {
+    display: none; /* Mobile hiển thị 1 tháng với nút chuyển tháng */
+  }
+}
+
+.mioto-month-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.mioto-month-title {
+  text-align: center;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--slate-800);
+  margin-bottom: 0.85rem;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mioto-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--slate-400);
+  margin-bottom: 0.4rem;
+}
+
+.mioto-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  row-gap: 4px;
+}
+
+.mioto-day-cell {
+  position: relative;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--slate-700);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.mioto-day-cell.empty {
+  cursor: default;
+}
+
+.mioto-day-cell.disabled {
+  color: var(--slate-300);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.mioto-day-cell.busy-booked {
+  position: relative;
+  background-color: #fef2f2 !important;
+  color: #ef4444 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+.mioto-day-cell.busy-booked span {
+  text-decoration: line-through;
+  text-decoration-color: #ef4444;
+  color: #dc2626 !important;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.mioto-day-cell.busy-booked::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  width: 5px;
+  height: 5px;
+  background-color: #ef4444;
+  border-radius: 50%;
+}
+
+.mioto-day-cell.today span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: #00a550;
+  font-weight: 700;
+}
+
+/* Dải highlight khoảng thời gian đã chọn */
+.mioto-day-cell.in-range {
+  background-color: #e6f7ef;
+  color: var(--slate-800);
+}
+
+.mioto-day-cell.range-start {
+  background: linear-gradient(to right, transparent 50%, #e6f7ef 50%);
+}
+
+.mioto-day-cell.range-end {
+  background: linear-gradient(to left, transparent 50%, #e6f7ef 50%);
+}
+
+.mioto-day-cell.range-start.range-end {
+  background: transparent;
+}
+
+.mioto-day-cell span {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  position: relative;
+  z-index: 1;
+  pointer-events: none !important;
+}
+
+.mioto-day-cell:not(.disabled):not(.empty):hover span {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.mioto-day-cell.selected span,
+.mioto-day-cell.hover-end span,
+.mioto-day-cell.range-end span {
+  background-color: #00a550 !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 165, 80, 0.35);
+}
+
+/* 3. Khung chọn giờ nhận và trả xe (Luôn nằm DƯỚI lịch calendar) */
+.mioto-time-selectors {
+  display: grid !important;
+  grid-template-columns: 1fr auto 1fr !important;
+  align-items: center !important;
+  gap: 1rem !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin-top: 0.25rem !important;
+}
+
+.mioto-time-box {
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  padding: 0.55rem 1rem;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.mioto-time-box:focus-within {
+  border-color: #00a550;
+  box-shadow: 0 0 0 3px rgba(0, 165, 80, 0.12);
+}
+
+.mioto-time-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--slate-400);
+  margin-bottom: 0.15rem;
+}
+
+.mioto-time-select {
+  border: none;
+  outline: none;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--slate-800);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  width: 100%;
+}
+
+.mioto-time-arrow {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--slate-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slate-500);
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+
+/* 4. Footer Bar */
+.mioto-modal-footer {
+  border-top: 1px solid var(--slate-200);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: #ffffff;
+}
+
+.mioto-footer-summary {
+  display: flex;
+  flex-direction: column;
+}
+
+.mioto-summary-datetime {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--slate-900);
+  line-height: 1.3;
+}
+
+.mioto-summary-duration {
+  font-size: 0.82rem;
+  color: var(--slate-500);
+  margin-top: 0.15rem;
+}
+
+.mioto-summary-duration strong {
+  color: #00a550;
+  font-weight: 700;
+}
+
+.mioto-btn-apply {
+  background-color: #00a550;
+  color: #ffffff;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 10px;
+  font-size: 0.98rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+
+.mioto-btn-apply:hover {
+  background-color: #008f45;
+}
+
+.mioto-btn-apply:active {
+  transform: scale(0.98);
+}
+
+.mioto-btn-apply:disabled {
+  background-color: var(--slate-200);
+  color: var(--slate-400);
+  cursor: not-allowed;
+}
+
+/* 5. Phân hệ thuê theo giờ (Hourly Mode) */
+.mioto-hourly-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mioto-hourly-inputs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.mioto-hourly-card {
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mioto-hourly-card:focus-within {
+  border-color: #00a550;
+  box-shadow: 0 0 0 3px rgba(0, 165, 80, 0.12);
+}
+
+.mioto-hourly-card-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--slate-500);
+  margin-bottom: 0.25rem;
+}
+
+.mioto-hourly-select-wrap {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.mioto-hourly-select {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--slate-800);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 1.5rem;
+}
+
+.mioto-hourly-chevron {
+  width: 18px;
+  height: 18px;
+  color: var(--slate-600);
+  position: absolute;
+  right: 0;
+  pointer-events: none;
+}
+
+/* Thẻ thời gian thuê */
+.mioto-hourly-duration-card {
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.mioto-hourly-duration-header {
+  padding: 0.75rem 1rem 0.5rem 1rem;
+  border-bottom: 1px solid var(--slate-100);
+}
+
+.mioto-hourly-selected-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1.02rem;
+  color: var(--slate-800);
+  margin-top: 0.15rem;
+}
+
+.mioto-hourly-summary-text strong {
+  font-weight: 700;
+  color: var(--slate-900);
+}
+
+.mioto-hourly-end-sub {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--slate-500);
+  margin-left: 0.35rem;
+}
+
+.mioto-hourly-options-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.mioto-hourly-radio-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  user-select: none;
+  border-bottom: 1px solid var(--slate-100);
+}
+
+.mioto-hourly-radio-item:last-child {
+  border-bottom: none;
+}
+
+.mioto-hourly-radio-item:hover {
+  background-color: rgba(0, 165, 80, 0.04);
+}
+
+.mioto-hourly-radio-item.selected {
+  background-color: rgba(0, 165, 80, 0.06);
+}
+
+.mioto-radio-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--slate-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.mioto-radio-circle.checked {
+  border-color: #00a550;
+  background-color: #ffffff;
+}
+
+.mioto-radio-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: transparent;
+  transition: background-color 0.15s ease;
+}
+
+.mioto-radio-circle.checked .mioto-radio-dot {
+  background-color: #00a550;
+}
+
+.mioto-hourly-radio-text {
+  display: flex;
+  align-items: center;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  gap: 0.35rem;
+}
+
+.mioto-hourly-hour-bold {
+  font-weight: 700;
+  color: var(--slate-900);
+}
+
+.mioto-hourly-end-hint {
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: var(--slate-500);
+}
+
+.mioto-info-tooltip {
+  cursor: help;
+  color: var(--slate-400);
+  font-size: 0.9rem;
+  display: inline-block;
+  margin-left: 2px;
+}
+

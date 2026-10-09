@@ -26,6 +26,11 @@ spring:
               - profile
               - email
 
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:demo}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
+
 driveshare:
   jwt:
     # 256-bit Base64 encoded secret key

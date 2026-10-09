@@ -8,6 +8,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Getter
@@ -68,9 +69,23 @@ public class Rental extends BaseEntity {
     @Builder.Default
     private ERentalStatus status = ERentalStatus.PENDING;
 
+    @Column(name = "payment_expires_at")
+    private Instant paymentExpiresAt;
+
     @Column(name = "reject_reason", length = 500)
     private String rejectReason;
 
     @Column(name = "note", length = 500)
     private String note;
+
+    // -----------------------------------------------------------------
+    // Sprint 3: Thuê xe có tài xế
+    // -----------------------------------------------------------------
+    @Column(name = "with_driver")
+    @Builder.Default
+    private Boolean withDriver = false;
+
+    @Column(name = "driver_fee", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal driverFee = BigDecimal.ZERO;
 }

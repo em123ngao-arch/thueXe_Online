@@ -128,7 +128,7 @@ class RentalQueryServiceTest {
         RentalSummaryResponse response = rentalQueryService.cancelMyRental(10L);
 
         assertNotNull(response);
-        assertEquals(ERentalStatus.CANCELLED, response.getStatus());
+        assertEquals(ERentalStatus.WITHDRAWN_BY_GUEST, response.getStatus());
         verify(rentalRepository).save(sampleRental);
     }
 

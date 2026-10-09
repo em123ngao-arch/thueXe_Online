@@ -74,6 +74,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/change-email/confirm"
                         ).permitAll()
                         .requestMatchers("/api/v1/public/**").permitAll()
+                        .requestMatchers("/api/v1/chat/**").permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/api/v1/oauth2/**").permitAll()
                         .requestMatchers("/api/v1/health/**").permitAll()
                         .requestMatchers(
