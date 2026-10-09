@@ -3,6 +3,10 @@
  * Quản trị & Vận hành: Duyệt xe mới đăng, Duyệt Giấy phép lái xe (GPLX), Giám sát đơn toàn sàn
  */
 
+const getAdminApiBase = () => (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL)
+  ? API_CONFIG.BASE_URL
+  : (typeof API_BASE !== 'undefined' ? API_BASE : 'http://localhost:8080/api/v1');
+
 const AdminService = {
   renderAdminPortal(containerId = 'adminPortalContainer') {
     const container = document.getElementById(containerId);
@@ -715,7 +719,7 @@ const AdminService = {
       await ApiService.approveCar(carId, 'APPROVED');
     } else {
       try {
-        await fetch(`http://localhost:8080/api/v1/admin/cars/${carId}/approve`, {
+        await fetch(`${getAdminApiBase()}/admin/cars/${carId}/approve`, {
           method: 'PUT',
           headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'APPROVED' })
@@ -783,7 +787,7 @@ const AdminService = {
       await ApiService.approveCar(carId, 'REJECTED', reason);
     } else {
       try {
-        await fetch(`http://localhost:8080/api/v1/admin/cars/${carId}/approve`, {
+        await fetch(`${getAdminApiBase()}/admin/cars/${carId}/approve`, {
           method: 'PUT',
           headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'REJECTED', reason })
@@ -828,7 +832,7 @@ const AdminService = {
           pendingList = res.data;
         }
       } else {
-        const res = await fetch('http://localhost:8080/api/v1/admin/users/pending-cccd', {
+        const res = await fetch(`${getAdminApiBase()}/admin/users/pending-cccd`, {
           headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {}
         });
         const data = await res.json().catch(() => null);
@@ -908,7 +912,7 @@ const AdminService = {
       await ApiService.verifyCccd(userId, 'APPROVED');
     } else {
       try {
-        await fetch(`http://localhost:8080/api/v1/admin/users/${userId}/verify-cccd`, {
+        await fetch(`${getAdminApiBase()}/admin/users/${userId}/verify-cccd`, {
           method: 'PUT',
           headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'APPROVED' })
@@ -969,7 +973,7 @@ const AdminService = {
       await ApiService.verifyCccd(userId, 'REJECTED', reason);
     } else {
       try {
-        await fetch(`http://localhost:8080/api/v1/admin/users/${userId}/verify-cccd`, {
+        await fetch(`${getAdminApiBase()}/admin/users/${userId}/verify-cccd`, {
           method: 'PUT',
           headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'REJECTED', reason })

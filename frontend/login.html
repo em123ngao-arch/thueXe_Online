@@ -431,7 +431,7 @@
 
             <!-- Nút Google Login (BR-03-1) -->
             <a
-              href="http://localhost:8080/oauth2/authorization/google"
+              href="javascript:void(0)"
               class="btn-google"
               id="btnGoogleAuth"
               onclick="handleGoogleClick(event)"
@@ -614,7 +614,10 @@
         } catch (err) {
           console.warn('Lỗi khi xóa session cũ:', err);
         }
-        window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+        const backendOrigin = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+          ? 'http://localhost:8080'
+          : 'https://driveshare-backend-9ppk.onrender.com';
+        window.location.href = backendOrigin + '/oauth2/authorization/google';
       }
 
       // Xử lý 3 nút chuyển nhanh tài khoản Demo (Renter, Owner, Admin)

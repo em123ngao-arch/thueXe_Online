@@ -9,7 +9,10 @@ const KEY_REFRESH_TOKEN = "refresh_token";
 const KEY_USER = "user_info";
 const AUTH_STORAGE_KEY = "driveshare_current_auth_user";
 
-const API_BASE = "http://localhost:8080/api/v1";
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? "http://localhost:8080/api/v1"
+  : "https://driveshare-backend-9ppk.onrender.com/api/v1";
+
 
 // ─────────────────────────────────────────────────────────────
 // AUTH HELPERS TOÀN CỤC
@@ -486,13 +489,12 @@ const AuthService = {
               <a href="profile.html" class="btn btn-ghost btn-sm" title="Hồ sơ cá nhân" style="padding: 4px; color: #64748b; border-radius: 6px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
               </a>
-              ${
-                roleName === "ADMIN"
-                  ? `<a href="admin.html" class="btn btn-sm" title="Kênh Quản trị" style="padding: 4px 10px; font-size: 0.75rem; background: #ef4444; color: white; border-radius: 6px; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">Admin Portal</a>`
-                  : roleName === "OWNER"
-                  ? `<a href="owner-cars.html" class="btn btn-sm" title="Kênh Quản lý xe" style="padding: 4px 10px; font-size: 0.75rem; background: #f59e0b; color: white; border-radius: 6px; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>Kênh Chủ Xe</a>`
-                  : ""
-              }
+              ${roleName === "ADMIN"
+            ? `<a href="admin.html" class="btn btn-sm" title="Kênh Quản trị" style="padding: 4px 10px; font-size: 0.75rem; background: #ef4444; color: white; border-radius: 6px; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">Admin Portal</a>`
+            : roleName === "OWNER"
+              ? `<a href="owner-cars.html" class="btn btn-sm" title="Kênh Quản lý xe" style="padding: 4px 10px; font-size: 0.75rem; background: #f59e0b; color: white; border-radius: 6px; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>Kênh Chủ Xe</a>`
+              : ""
+          }
               <button class="btn btn-ghost btn-sm" onclick="AuthService.logout()" title="Đăng xuất" style="padding: 4px; color: #94a3b8; border: none; background: transparent; cursor: pointer; border-radius: 6px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
