@@ -1,4 +1,4 @@
-name: DriveShare Backend CI
+name: DriveShare CI Quality Gate
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [ develop, main ]
 
 jobs:
-  test:
-    name: Build & Run Unit Tests
+  quality-gate:
+    name: Build, Test & Syntax Verification
     runs-on: ubuntu-latest
 
     steps:
@@ -25,6 +25,21 @@ jobs:
       - name: Make Maven Wrapper Executable
         run: chmod +x backend/mvnw
 
-      - name: Run Spring Boot Unit Tests
+      - name: Run Spring Boot Unit Tests (150 tests)
         working-directory: backend
         run: ./mvnw clean test --no-transfer-progress
+
+      - name: Set up Node.js for Frontend Verification
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate Frontend JavaScript Syntax
+        run: |
+          echo "Validating Frontend JS files syntax..."
+          for file in frontend/js/*.js; do
+            if [ -f "$file" ]; then
+              node -c "$file"
+              echo "✔ Syntax OK: $file"
+            fi
+          done

@@ -1,0 +1,7 @@
+# ==============================================================================
+# DriveShare - CODEOWNERS Configuration
+# ==============================================================================
+# Mọi Pull Request tạo vào repository đều tự động yêu cầu sự kiểm duyệt và
+# phê duyệt bắt buộc từ Tech Lead & QA Architect Nguyễn Duy Bảo trước khi merge.
+
+* @em123ngao-arch

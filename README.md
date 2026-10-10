@@ -131,6 +131,46 @@ python -m http.server 3000
 
 ---
 
+## 🌿 Quy Trình Làm Việc Trên GitHub (Git Workflow Chuẩn Doanh Nghiệp)
+
+Dự án áp dụng mô hình phân nhánh và kiểm duyệt nghiêm ngặt nhằm đảm bảo **an toàn mã nguồn, không mất code và lịch sử Git sạch đẹp**:
+
+### 1. Cấu Trúc Nhánh & Trách Nhiệm
+- **`develop` (Default Branch)**: Nhánh tích hợp chính của nhóm. Mọi nhánh tính năng (`feature/*`) và sửa lỗi (`fix/*`) bắt buộc phải fork từ `develop` và tạo Pull Request vào `develop`.
+- **`main` (Production Branch)**: Nhánh chạy thực tế kết nối với Render Cloud. Chỉ nhận code từ `develop` thông qua Release PR do Tech Lead khởi tạo.
+- **`CODEOWNERS`**: Mọi Pull Request đều được tự động gán Tech Lead **Nguyễn Duy Bảo** (`@em123ngao-arch`) làm người thẩm định và phê duyệt (Required Approval).
+
+### 2. Chiến Lược Merge (Hợp Nhất Code)
+- **Feature/Fix PR $\rightarrow$ `develop`**: Sử dụng **Squash and Merge** (Gộp toàn bộ commit vụn vặt thành 1 commit duy nhất theo chuẩn Conventional Commits).
+- **`develop` $\rightarrow$ `main`**: Sử dụng **Create a Merge Commit** (Lưu giữ rõ ràng mốc phát hành phiên bản release).
+
+### 3. Cheatsheet 5 Bước Làm Việc Của Thành Viên (Chống Ghi Đè Code)
+```powershell
+# Bước 1: Kéo code mới nhất từ develop trước khi bắt đầu
+git checkout develop
+git pull origin develop
+
+# Bước 2: Tạo nhánh riêng theo mã task
+git checkout -b feature/US-XX-ten-tinh-nang
+
+# Bước 3: Code, commit và kiểm thử local (Bắt buộc pass 150/150 tests)
+git add .
+git commit -m "feat(module): mo ta ngan gon noi dung [US-XX]"
+cd backend; .\mvnw.cmd test
+
+# Bước 4: Đồng bộ trước khi tạo PR (Tránh conflict và ghi đè code)
+git fetch origin
+git merge origin/develop
+# (Nếu có conflict: Tự resolve cẩn thận, tuyệt đối không xóa code của bạn khác)
+
+# Bước 5: Đẩy lên GitHub và tạo Pull Request
+git push origin feature/US-XX-ten-tinh-nang
+# Vào GitHub tạo PR vào nhánh 'develop', tick đầy đủ checklist và gắn ảnh demo
+```
+
+---
+
 *© 2026 DriveShare Team - K4 Internship Project.*
+
 
 
