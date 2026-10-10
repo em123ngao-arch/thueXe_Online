@@ -797,7 +797,10 @@ const App = {
         let reviews = [];
         let total = 0;
         if (res && res.data) {
-          if (Array.isArray(res.data.content)) {
+          if (Array.isArray(res.data.items)) {
+            reviews = res.data.items;
+            total = (res.data.pagination && res.data.pagination.total_items) || reviews.length;
+          } else if (Array.isArray(res.data.content)) {
             reviews = res.data.content;
             total = res.data.totalElements || reviews.length;
           } else if (Array.isArray(res.data)) {
@@ -815,8 +818,8 @@ const App = {
           listContainer.innerHTML = reviews.map(r => {
             const ratingVal = r.rating || 5;
             const stars = '★'.repeat(ratingVal) + '☆'.repeat(5 - ratingVal);
-            const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleDateString('vi-VN') : 'Gần đây';
-            const renterName = r.renterName || (r.renter && r.renter.fullName) || 'Khách thuê đã trải nghiệm';
+            const dateStr = (r.created_at || r.createdAt) ? new Date(r.created_at || r.createdAt).toLocaleDateString('vi-VN') : 'Gần đây';
+            const renterName = r.renter_name || r.renterName || (r.renter && r.renter.fullName) || 'Khách thuê đã trải nghiệm';
             return `
               <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -828,6 +831,7 @@ const App = {
               </div>
             `;
           }).join('');
+
           return;
         }
       }

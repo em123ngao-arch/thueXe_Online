@@ -345,6 +345,10 @@ public class CarServiceImpl implements CarService {
                 .images(images)
                 .owner(ownerInfo)
                 .unavailableDates(new java.util.ArrayList<>(unavailableDatesSet))
+                .hasDriverService(car.getHasDriverService())
+                .driverFeePerDay(car.getDriverFeePerDay())
+                .rating(car.getRating())
+                .ratingCount(car.getRatingCount())
                 .build();
     }
 
