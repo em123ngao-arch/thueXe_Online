@@ -680,8 +680,25 @@ const OwnerService = {
                     </div>
                   </div>
 
+                  <!-- ROW DỊCH VỤ TÀI XẾ (Sprint 3 Chauffeur Configuration) -->
+                  <div style="background: #f0fdfa; border: 1.5px solid #99f6e4; border-radius: 8px; padding: 10px 12px; margin-bottom: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <label style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer; font-size: 0.82rem; font-weight: 700; color: #0f766e;">
+                        <input type="checkbox" id="newCarHasDriverService" style="width: 17px; height: 17px; accent-color: #0f766e;" onchange="document.getElementById('newCarDriverFeeWrapper').style.display = this.checked ? 'block' : 'none';" />
+                        Cung cấp dịch vụ kèm tài xế riêng (Chauffeur)
+                      </label>
+                      <span class="badge" style="background: #ccfbf1; color: #0f766e; font-size: 0.72rem; font-weight: 700;">Sprint 3</span>
+                    </div>
+                    <div id="newCarDriverFeeWrapper" style="display: none; margin-top: 8px;">
+                      <label class="form-label" style="font-size: 0.78rem; margin-bottom: 3px; color: #134e4a;">Phụ phí tài xế riêng (đ/ngày):</label>
+                      <input type="number" class="form-control" id="newCarDriverFee" placeholder="300000" step="50000" min="0" max="2000000" value="300000" style="padding: 0.4rem 0.6rem; font-size: 0.82rem; font-weight: 700; color: #0f766e;" />
+                      <div style="font-size: 0.72rem; color: #0f766e; margin-top: 3px;">Khách chọn gói này sẽ được tự động miễn nộp GPLX và miễn thế chấp 15 triệu.</div>
+                    </div>
+                  </div>
+
                   <!-- ROW 4: Tiện ích -->
                   <div class="form-group" style="margin-bottom: 0.85rem;">
+
                     <label class="form-label" style="font-size: 0.82rem; margin-bottom: 6px;">Tiện ích & Trang bị sẵn</label>
                     <div class="checkbox-group-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
                       <label class="checkbox-label" style="font-size: 0.78rem;"><input type="checkbox" name="amenity" value="Bản đồ dẫn đường" checked> Bản đồ dẫn đường</label>
@@ -964,6 +981,8 @@ const OwnerService = {
       }
 
       const amenities = Array.from(document.querySelectorAll('input[name="amenity"]:checked')).map(cb => cb.value);
+      const hasDriver = document.getElementById('newCarHasDriverService')?.checked || false;
+      const driverFee = parseFloat(document.getElementById('newCarDriverFee')?.value || '0') || 0;
 
       const payload = {
         plateNumber: plate,
@@ -983,8 +1002,13 @@ const OwnerService = {
         features: amenities.join(','),
         description: desc || 'Xe chất lượng cao của chủ xe DriveShare.',
         thumbnailUrl: imageUrl,
-        thumbnail_url: imageUrl
+        thumbnail_url: imageUrl,
+        hasDriverService: hasDriver,
+        has_driver_service: hasDriver,
+        driverFeePerDay: driverFee,
+        driver_fee_per_day: driverFee
       };
+
 
       // 1. Gửi lên Backend REST API (POST /api/v1/cars)
       let createdCarId = null;

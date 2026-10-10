@@ -783,6 +783,67 @@ const App = {
     if (modalBody) modalBody.innerHTML = RenderService.renderCarDetail(car);
 
     document.getElementById('carDetailModalOverlay')?.classList.add('open');
+    this.loadCarReviewsForModal(carId);
+  },
+
+  async loadCarReviewsForModal(carId) {
+    const listContainer = document.getElementById('carDetailReviewsList');
+    const summaryBadge = document.getElementById('carDetailReviewSummary');
+    if (!listContainer) return;
+
+    try {
+      if (typeof ReviewAPI !== 'undefined' && ReviewAPI.getCarReviews) {
+        const res = await ReviewAPI.getCarReviews(carId, 0, 10);
+        let reviews = [];
+        let total = 0;
+        if (res && res.data) {
+          if (Array.isArray(res.data.content)) {
+            reviews = res.data.content;
+            total = res.data.totalElements || reviews.length;
+          } else if (Array.isArray(res.data)) {
+            reviews = res.data;
+            total = reviews.length;
+          }
+        }
+
+        if (reviews.length > 0) {
+          if (summaryBadge) {
+            const avg = reviews.reduce((sum, r) => sum + (r.rating || 5), 0) / reviews.length;
+            summaryBadge.textContent = `⭐ ${avg.toFixed(1)} (${total} nhận xét)`;
+          }
+
+          listContainer.innerHTML = reviews.map(r => {
+            const ratingVal = r.rating || 5;
+            const stars = '★'.repeat(ratingVal) + '☆'.repeat(5 - ratingVal);
+            const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleDateString('vi-VN') : 'Gần đây';
+            const renterName = r.renterName || (r.renter && r.renter.fullName) || 'Khách thuê đã trải nghiệm';
+            return `
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <span style="font-weight: 700; font-size: 0.85rem; color: #0f172a;">${renterName}</span>
+                  <span style="font-size: 0.75rem; color: #64748b;">${dateStr}</span>
+                </div>
+                <div style="color: #f59e0b; font-size: 0.92rem; margin-bottom: 4px; letter-spacing: 2px;">${stars}</div>
+                <div style="font-size: 0.82rem; color: #334155; line-height: 1.4;">${r.comment || 'Không có nhận xét thêm.'}</div>
+              </div>
+            `;
+          }).join('');
+          return;
+        }
+      }
+      listContainer.innerHTML = `
+        <div style="font-size: 0.82rem; color: var(--slate-500); text-align: center; padding: 0.8rem; background: var(--slate-50); border-radius: var(--radius-md);">
+          Chưa có đánh giá nào cho xe này. Hãy là người đầu tiên trải nghiệm và để lại nhận xét!
+        </div>
+      `;
+    } catch (e) {
+      console.warn('Lỗi khi tải đánh giá xe:', e);
+      listContainer.innerHTML = `
+        <div style="font-size: 0.82rem; color: var(--slate-500); text-align: center; padding: 0.8rem;">
+          Chưa có đánh giá từ khách hàng.
+        </div>
+      `;
+    }
   },
 
   closeCarDetailModal() {
@@ -798,6 +859,7 @@ const App = {
 
     document.getElementById('generalModalOverlay')?.classList.add('open');
   },
+
 
   closeModal() {
     document.getElementById('generalModalOverlay')?.classList.remove('open');
