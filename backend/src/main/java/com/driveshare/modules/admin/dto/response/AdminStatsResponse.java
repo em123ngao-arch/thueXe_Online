@@ -14,4 +14,8 @@ public class AdminStatsResponse {
     private long activeCarsCount;
     private long totalBookingsCount;
     private long totalUsersCount;
+    private long todayBookingsCount;
+    private java.math.BigDecimal totalGmv;
+    private java.math.BigDecimal totalDepositsCollected;
+    private java.math.BigDecimal platformCommissionRevenue;
 }

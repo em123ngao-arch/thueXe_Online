@@ -489,6 +489,33 @@ public class AdminUserServiceImpl implements AdminUserService {
                             || u.getRenterProfile().getLicenseVerificationStatus() == null))
                 .count();
 
+        List<com.driveshare.modules.rental.entity.Rental> allRentals = rentalRepository.findAll();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.Instant startOfDay = today.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+
+        long todayRentals = allRentals.stream()
+                .filter(r -> r.getCreatedAt() != null && !r.getCreatedAt().isBefore(startOfDay))
+                .count();
+
+        // GMV: Tổng giá trị giao dịch của các đơn đã được duyệt hoặc thành công
+        java.math.BigDecimal totalGmv = allRentals.stream()
+                .filter(r -> r.getStatus() == com.driveshare.common.enums.ERentalStatus.CONFIRMED 
+                          || r.getStatus() == com.driveshare.common.enums.ERentalStatus.IN_PROGRESS 
+                          || r.getStatus() == com.driveshare.common.enums.ERentalStatus.COMPLETED)
+                .map(r -> r.getTotalPrice() != null ? r.getTotalPrice() : java.math.BigDecimal.ZERO)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        // Tổng cọc VietQR 30% đã thu
+        java.math.BigDecimal totalDeposits = allRentals.stream()
+                .filter(r -> r.getStatus() == com.driveshare.common.enums.ERentalStatus.CONFIRMED 
+                          || r.getStatus() == com.driveshare.common.enums.ERentalStatus.IN_PROGRESS 
+                          || r.getStatus() == com.driveshare.common.enums.ERentalStatus.COMPLETED)
+                .map(r -> r.getDepositAmount() != null ? r.getDepositAmount() : java.math.BigDecimal.ZERO)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        // Hoa hồng sàn (10% GMV)
+        java.math.BigDecimal platformCommission = totalGmv.multiply(java.math.BigDecimal.valueOf(0.10));
+
         return AdminStatsResponse.builder()
                 .pendingCarsCount(pendingCars)
                 .pendingCccdCount(pendingCccd)
@@ -496,6 +523,10 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .activeCarsCount(activeCars)
                 .totalBookingsCount(totalRentals)
                 .totalUsersCount(totalUsers)
+                .todayBookingsCount(todayRentals)
+                .totalGmv(totalGmv)
+                .totalDepositsCollected(totalDeposits)
+                .platformCommissionRevenue(platformCommission)
                 .build();
     }
 }

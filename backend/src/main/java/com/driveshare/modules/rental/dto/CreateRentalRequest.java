@@ -33,4 +33,8 @@ public class CreateRentalRequest {
 
     @JsonProperty("note")
     private String note;
+
+    @JsonProperty("with_driver")
+    @JsonAlias("withDriver")
+    private Boolean withDriver;
 }

@@ -371,6 +371,45 @@ const RenderService = {
               </li>
             </ul>
           </div>
+
+          <!-- Dịch vụ xe có tài xế (Sprint 3 Chauffeur Feature) -->
+          <div style="background: ${(car.has_driver_service || car.hasDriverService) ? '#f0fdfa' : '#f8fafc'}; border: 1.5px solid ${(car.has_driver_service || car.hasDriverService) ? '#99f6e4' : '#e2e8f0'}; border-radius: var(--radius-md); padding: 0.95rem; margin-top: 1.15rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong style="color: ${(car.has_driver_service || car.hasDriverService) ? '#0f766e' : '#64748b'}; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v7c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+                Dịch vụ xe có tài xế riêng:
+              </strong>
+              ${(car.has_driver_service || car.hasDriverService) ? `
+                <span class="badge" style="background: #ccfbf1; color: #0f766e; font-weight: 700; font-size: 0.78rem;">
+                  Có hỗ trợ (+${StorageService.formatCurrency(Number(car.driver_fee_per_day || car.driverFeePerDay || 300000))}/ngày)
+                </span>
+              ` : `
+                <span class="badge" style="background: #f1f5f9; color: #64748b; font-size: 0.78rem;">Chỉ cho thuê tự lái</span>
+              `}
+            </div>
+            ${(car.has_driver_service || car.hasDriverService) ? `
+              <p style="margin: 0.4rem 0 0 0; font-size: 0.8rem; color: #0f766e; line-height: 1.4;">
+                ✓ Khi chọn thuê kèm tài xế: <strong>Tự động miễn nộp bằng lái GPLX</strong> và <strong>miễn ký quỹ thế chấp 15 triệu/xe máy</strong>.
+              </p>
+            ` : ''}
+          </div>
+
+          <!-- Đánh giá từ khách hàng (Sprint 3 Reviews & Ratings) -->
+          <div style="margin-top: 1.35rem; border-top: 1px solid var(--slate-200); padding-top: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+              <h4 class="detail-section-title" style="margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                <span style="color: #f59e0b; font-size: 1.15rem;">★</span> Đánh giá từ khách hàng
+              </h4>
+              <span id="carDetailReviewSummary" class="badge" style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 0.8rem;">
+                ⭐ ${(Number(car.rating || 5.0)).toFixed(1)} (${car.ratingCount || car.rating_count || 0} nhận xét)
+              </span>
+            </div>
+            <div id="carDetailReviewsList" style="display: flex; flex-direction: column; gap: 0.65rem;">
+              <div style="font-size: 0.82rem; color: var(--slate-500); text-align: center; padding: 0.85rem; background: var(--slate-50); border-radius: var(--radius-md);">
+                Đang tải các đánh giá mới nhất từ khách thuê...
+              </div>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -394,6 +433,12 @@ const RenderService = {
               <span>Đơn giá ngày:</span>
               <span style="font-weight: 700;">${StorageService.formatCurrency(pricePerDay)}</span>
             </div>
+            ${(car.has_driver_service || car.hasDriverService) ? `
+            <div class="calc-row" style="color: #0f766e; font-weight: 600; background: #f0fdfa; padding: 4px 6px; border-radius: 4px;">
+              <span>Tùy chọn kèm tài xế:</span>
+              <span>+${StorageService.formatCurrency(Number(car.driver_fee_per_day || car.driverFeePerDay || 300000))} / ngày</span>
+            </div>
+            ` : ''}
             <div class="calc-row">
               <span>Bảo hiểm chuyến đi MIC:</span>
               <span>100.000 đ / ngày</span>
@@ -416,6 +461,7 @@ const RenderService = {
       </div>
     `;
   },
+
 
   // 3. Render Danh sách đơn thuê của tôi (Khách thuê - Giai đoạn 1 v2.0.0)
   renderMyBookings(bookings, containerId = "myBookingsListContainer", activeTab = "ALL", searchQuery = "") {

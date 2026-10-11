@@ -109,6 +109,49 @@ const AdminService = {
           </div>
         </div>
 
+        <!-- Row 2: Chỉ số Tài chính & Dòng tiền Sàn (Macro Statistics) -->
+        <div class="stats-grid" style="margin-top: 1rem; margin-bottom: 2rem;">
+          <div class="stat-card" style="border-left: 4px solid #0f766e;">
+            <div class="stat-icon" style="background: #ccfbf1; color: #0f766e;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value" id="statTotalGmv" style="color: #0f766e; font-size: 1.4rem;">...</div>
+              <div class="stat-label">Tổng dòng tiền giao dịch (GMV)</div>
+            </div>
+          </div>
+
+          <div class="stat-card" style="border-left: 4px solid #059669;">
+            <div class="stat-icon" style="background: #dcfce7; color: #059669;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value" id="statPlatformCommission" style="color: #059669; font-size: 1.4rem;">...</div>
+              <div class="stat-label">Hoa hồng sàn bỏ túi (10%)</div>
+            </div>
+          </div>
+
+          <div class="stat-card" style="border-left: 4px solid #2563eb;">
+            <div class="stat-icon" style="background: #dbeafe; color: #2563eb;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value" id="statTodayBookings" style="color: #2563eb; font-size: 1.4rem;">...</div>
+              <div class="stat-label">Đơn thuê phát sinh hôm nay</div>
+            </div>
+          </div>
+
+          <div class="stat-card" style="border-left: 4px solid #7c3aed;">
+            <div class="stat-icon" style="background: #ede9fe; color: #7c3aed;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value" id="statTotalDeposits" style="color: #7c3aed; font-size: 1.4rem;">...</div>
+              <div class="stat-label">Tổng cọc VietQR 30% đã thu</div>
+            </div>
+          </div>
+        </div>
+
         <!-- Tab Content 1: Duyệt xe mới đăng -->
         <div id="adminTabCarsContent">
           <div class="admin-table-card">
@@ -493,6 +536,10 @@ const AdminService = {
           stats.totalBookings = d.total_bookings_count ?? d.total_bookings ?? d.totalBookingsCount ?? 0;
           stats.pendingCccd = d.pending_cccd_count ?? d.pending_cccd ?? d.pendingCccdCount ?? 0;
           stats.totalUsers = d.total_users_count ?? d.total_users ?? d.totalUsersCount ?? 0;
+          stats.todayBookings = d.today_bookings_count ?? d.todayBookingsCount ?? 0;
+          stats.totalGmv = d.total_gmv ?? d.totalGmv ?? 0;
+          stats.totalDeposits = d.total_deposits_collected ?? d.totalDepositsCollected ?? 0;
+          stats.platformCommission = d.platform_commission_revenue ?? d.platformCommissionRevenue ?? 0;
         }
       } else if (typeof StorageService !== 'undefined') {
         const allCars = StorageService.getCars();
@@ -505,12 +552,18 @@ const AdminService = {
         const allUsersList = Array.isArray(allUsersObj) ? allUsersObj : (allUsersObj?.items || []);
         stats.pendingCccd = allUsersList.filter(u => u.verification_status === 'PENDING' || u.status === 'PENDING').length;
         stats.totalUsers = allUsersList.length;
+        stats.todayBookings = Math.min(2, stats.totalBookings);
+        stats.totalGmv = 2400000;
+        stats.totalDeposits = 720000;
+        stats.platformCommission = 240000;
       }
     } catch (e) {
       console.warn('Lỗi khi tải thống kê Admin:', e);
     }
 
-    // 4 Thẻ KPI chính
+    const fmtMoney = (v) => typeof StorageService !== 'undefined' ? StorageService.formatCurrency(v) : (v?.toLocaleString('vi-VN') + ' đ');
+
+    // 4 Thẻ KPI vận hành
     const elPendingCars = document.getElementById('statPendingCars');
     if (elPendingCars) elPendingCars.innerText = stats.pendingCars;
     const elPendingLicenses = document.getElementById('statPendingLicenses');
@@ -519,6 +572,16 @@ const AdminService = {
     if (elActiveCars) elActiveCars.innerText = stats.activeCars;
     const elTotalBookings = document.getElementById('statTotalBookings');
     if (elTotalBookings) elTotalBookings.innerText = stats.totalBookings;
+
+    // 4 Thẻ KPI tài chính & vĩ mô
+    const elGmv = document.getElementById('statTotalGmv');
+    if (elGmv) elGmv.innerText = fmtMoney(stats.totalGmv);
+    const elComm = document.getElementById('statPlatformCommission');
+    if (elComm) elComm.innerText = fmtMoney(stats.platformCommission);
+    const elToday = document.getElementById('statTodayBookings');
+    if (elToday) elToday.innerText = stats.todayBookings + ' đơn';
+    const elDeposits = document.getElementById('statTotalDeposits');
+    if (elDeposits) elDeposits.innerText = fmtMoney(stats.totalDeposits);
 
     // Badges trên các Tab
     const badgePendingCars = document.getElementById('badgePendingCars');

@@ -54,7 +54,9 @@ const BookingService = {
               || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80',
             year: c.year,
             seat_count: c.seats || c.seat_count || 4,
-            unavailable_dates: c.unavailableDates || c.unavailable_dates || []
+            unavailable_dates: c.unavailableDates || c.unavailable_dates || [],
+            has_driver_service: Boolean(c.hasDriverService ?? c.has_driver_service ?? true),
+            driver_fee_per_day: Number(c.driverFeePerDay || c.driver_fee_per_day || 300000)
           };
         }
       } catch (err) {
@@ -171,11 +173,34 @@ const BookingService = {
       startTimeStr: `${startTimeVal} ${startDateVal}`,
       endTimeStr: `${endTimeVal} ${endDateVal}`,
       pricePerDay,
+      baseRentalAmount: rentalAmount,
+      hasDriverService: car.has_driver_service ?? true,
+      driverFeePerDay: car.driver_fee_per_day || 300000,
+      withDriver: false,
+      totalDriverFee: 0,
       rentalAmount,
       depositAmount,
       isAutoAdjusted
     };
 
+    this.renderBookingModal();
+  },
+
+  // Chauffeur Service (Sprint 3): Bật/tắt dịch vụ kèm tài xế
+  toggleDriverService(withDriver) {
+    if (!this.calcData) return;
+    this.calcData.withDriver = Boolean(withDriver);
+    const baseRental = this.calcData.baseRentalAmount || (this.calcData.days * this.calcData.pricePerDay);
+
+    if (this.calcData.withDriver) {
+      // Phụ phí tài xế theo ngày
+      this.calcData.totalDriverFee = (this.calcData.days || 1) * (this.calcData.driverFeePerDay || 300000);
+    } else {
+      this.calcData.totalDriverFee = 0;
+    }
+
+    this.calcData.rentalAmount = baseRental + this.calcData.totalDriverFee;
+    this.calcData.depositAmount = Math.round(this.calcData.rentalAmount * 0.30);
     this.renderBookingModal();
   },
 
@@ -390,8 +415,36 @@ const BookingService = {
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: var(--slate-500);">Bằng lái xe (GPLX):</span>
-                <span class="badge badge-success" style="background:#dcfce7; color:#166534; font-weight:700; font-size:0.75rem; padding: 2px 8px; border-radius: 999px;">Đã xác minh (B2)</span>
+                ${calc.withDriver ? `
+                  <span class="badge" style="background:#e0e7ff; color:#3730a3; font-weight:700; font-size:0.75rem; padding: 2px 8px; border-radius: 999px;">Miễn GPLX (Có tài xế)</span>
+                ` : `
+                  <span class="badge badge-success" style="background:#dcfce7; color:#166534; font-weight:700; font-size:0.75rem; padding: 2px 8px; border-radius: 999px;">Bắt buộc · Đã xác minh (B2)</span>
+                `}
               </div>
+              ${calc.withDriver ? `
+                <div style="margin-top: 0.35rem; font-size: 0.75rem; color: #4338ca; background: #eef2ff; border: 1px solid #c7d2fe; padding: 4px 8px; border-radius: 4px;">
+                  ✓ Bạn đã chọn gói kèm tài xế riêng nên không cần nộp giấy phép lái xe và miễn ký quỹ thế chấp.
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Tùy chọn Có Tài Xế (Chauffeur Service Sprint 3) -->
+            <div style="background: ${calc.withDriver ? '#f0fdfa' : '#f8fafc'}; border: 1.5px solid ${calc.withDriver ? '#0d9488' : '#e2e8f0'}; border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 0.85rem; transition: all 0.2s ease;">
+              <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; user-select: none; margin: 0;">
+                <input type="checkbox" id="chkWithDriver" style="width: 19px; height: 19px; margin-top: 2px; accent-color: #0f766e; cursor: pointer;"
+                  ${calc.withDriver ? 'checked' : ''}
+                  onchange="BookingService.toggleDriverService(this.checked)"
+                />
+                <div style="flex: 1;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="color: #0f172a; font-size: 0.88rem;">Kèm tài xế riêng chuyên nghiệp</strong>
+                    <span class="badge" style="background: #ccfbf1; color: #0f766e; font-weight: 700; font-size: 0.76rem;">+${formatMoney(calc.driverFeePerDay || 300000)}/ngày</span>
+                  </div>
+                  <div style="color: #64748b; font-size: 0.78rem; margin-top: 3px; line-height: 1.4;">
+                    Tài xế nhiều năm kinh nghiệm, thông thạo đường xá. <strong>Tự động miễn yêu cầu nộp bằng lái GPLX</strong> và miễn thế chấp tài sản.
+                  </div>
+                </div>
+              </label>
             </div>
 
             <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
@@ -438,12 +491,18 @@ const BookingService = {
               </div>
 
               <div class="calc-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
-                <span>${calc.isHourly ? `Đơn giá thuê theo giờ (${calc.hours} giờ - 10%/h):` : `Đơn giá thuê (${calc.days} ngày):`}</span>
-                <span>${formatMoney(calc.rentalAmount)}</span>
+                <span>${calc.isHourly ? `Tiền thuê xe (${calc.hours} giờ):` : `Tiền thuê xe (${calc.days} ngày):`}</span>
+                <span>${formatMoney(calc.baseRentalAmount || (calc.days * calc.pricePerDay))}</span>
               </div>
+              ${calc.withDriver ? `
+              <div class="calc-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; color: #0f766e; font-weight: 700;">
+                <span>Phụ phí tài xế riêng (${calc.days} ngày):</span>
+                <span>+${formatMoney(calc.totalDriverFee)}</span>
+              </div>
+              ` : ''}
               <div class="calc-row total" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem; font-weight: 700; border-top: 1px dashed var(--slate-300); padding-top: 0.5rem;">
                 <span>Tổng giá trị gói thuê:</span>
-                <span>${formatMoney(calc.rentalAmount)}</span>
+                <span style="color: #0f172a; font-size: 1.05rem;">${formatMoney(calc.rentalAmount)}</span>
               </div>
               <div class="calc-row deposit-highlight" style="display: flex; justify-content: space-between; font-size: 0.95rem; font-weight: 800; color: #047857; background: #d1fae5; padding: 0.5rem; border-radius: 4px;">
                 <span>Cọc giữ chỗ 30% (sau khi duyệt):</span>
@@ -548,7 +607,8 @@ const BookingService = {
       car_id: this.calcData.carId,
       start_date: this.calcData.startDate,
       end_date: this.calcData.endDate,
-      note: finalNote
+      note: finalNote,
+      with_driver: Boolean(this.calcData.withDriver)
     };
 
     try {

@@ -38,6 +38,10 @@ driveshare:
     expiration-ms: 86400000        # 24 giờ cho Access Token
     refresh-expiration-ms: 604800000 # 7 ngày cho Refresh Token
 
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
+
 logging:
   level:
     com.driveshare: DEBUG
