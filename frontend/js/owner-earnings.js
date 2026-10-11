@@ -127,7 +127,17 @@ const OwnerEarningsUI = {
     const container = document.getElementById('ownerEarningsContainer');
     if (!this.data) return;
 
-    const { total_earnings, pending_earnings, completed_rentals, total_transactions, transactions } = this.data;
+    const { 
+      total_earnings, 
+      pending_earnings, 
+      completed_rentals, 
+      total_transactions, 
+      transactions,
+      monthly_earnings,
+      top_car_name,
+      top_car_trips,
+      idle_cars_count
+    } = this.data;
 
     // Lọc transactions
     let filteredTxs = transactions || [];
@@ -228,6 +238,37 @@ const OwnerEarningsUI = {
               ${total_transactions || (transactions ? transactions.length : 0)}
             </div>
             <div style="font-size: 0.78rem; color: var(--slate-500);">Bao gồm VietQR, Chuyển khoản</div>
+          </div>
+
+          <!-- Row 2: Hiệu suất Đội xe tháng này (Fleet Performance Metrics) -->
+          <div style="grid-column: 1 / -1; background: #f0fdfa; border: 1.5px solid #99f6e4; border-radius: var(--radius-lg); padding: 1.15rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 42px; height: 42px; border-radius: 10px; background: #ccfbf1; color: #0f766e; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                📊
+              </div>
+              <div>
+                <strong style="color: #0f766e; font-size: 0.95rem;">Hiệu Suất Khai Thác Đội Xe Tháng Này</strong>
+                <div style="color: #64748b; font-size: 0.8rem; margin-top: 2px;">
+                  Doanh thu tháng này: <strong style="color: #059669;">${this.formatMoney(monthly_earnings || total_earnings)}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap;">
+              <div style="background: #ffffff; border: 1px solid #ccfbf1; border-radius: 8px; padding: 6px 14px;">
+                <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">XE CHẠY NHIỀU NHẤT:</span>
+                <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">
+                  🏆 ${top_car_name || 'VinFast VF8'} <span style="color: #0f766e; font-size: 0.8rem;">(${top_car_trips || completed_rentals || 1} chuyến)</span>
+                </div>
+              </div>
+
+              <div style="background: #ffffff; border: 1px solid #ccfbf1; border-radius: 8px; padding: 6px 14px;">
+                <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">XE ĐANG NẰM BÃI:</span>
+                <div style="font-weight: 800; color: #b45309; font-size: 0.88rem;">
+                  🅿️ ${idle_cars_count || 0} xe chưa có chuyến
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

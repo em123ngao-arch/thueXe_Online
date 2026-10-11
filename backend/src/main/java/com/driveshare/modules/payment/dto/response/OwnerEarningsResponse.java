@@ -40,4 +40,19 @@ public class OwnerEarningsResponse {
     @JsonProperty("transactions")
     @Builder.Default
     private List<PaymentTransactionDto> transactions = new ArrayList<>();
+
+    @JsonProperty("monthly_earnings")
+    @Builder.Default
+    private BigDecimal monthlyEarnings = BigDecimal.ZERO;
+
+    @JsonProperty("top_car_name")
+    private String topCarName;
+
+    @JsonProperty("top_car_trips")
+    @Builder.Default
+    private Long topCarTrips = 0L;
+
+    @JsonProperty("idle_cars_count")
+    @Builder.Default
+    private Long idleCarsCount = 0L;
 }

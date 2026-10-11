@@ -344,6 +344,44 @@ public class PaymentServiceImpl implements PaymentService {
                         || r.getStatus() == ERentalStatus.IN_PROGRESS)
                 .count();
 
+        // 1. Doanh thu tháng này (trong tháng hiện tại)
+        java.time.YearMonth currentMonth = java.time.YearMonth.now();
+        Instant startOfMonth = currentMonth.atDay(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+        BigDecimal monthlyEarnings = payments.stream()
+                .filter(p -> p.getStatus() == EPaymentStatus.SUCCESS 
+                          && p.getPaidAt() != null 
+                          && !p.getPaidAt().isBefore(startOfMonth))
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 2. Xe chạy nhiều nhất (Top Car) & Xe nằm bãi (Idle Cars)
+        Map<Long, Long> carTripsCount = new HashMap<>();
+        for (Car c : cars) {
+            carTripsCount.put(c.getCarId(), 0L);
+        }
+        for (Rental r : rentals) {
+            if (r.getStatus() == ERentalStatus.CONFIRMED
+                    || r.getStatus() == ERentalStatus.COMPLETED
+                    || r.getStatus() == ERentalStatus.IN_PROGRESS) {
+                carTripsCount.put(r.getCarId(), carTripsCount.getOrDefault(r.getCarId(), 0L) + 1L);
+            }
+        }
+
+        String topCarName = "Chưa có";
+        long topCarTrips = 0L;
+        long idleCarsCount = 0L;
+
+        for (Map.Entry<Long, Long> entry : carTripsCount.entrySet()) {
+            Car c = carMap.get(entry.getKey());
+            if (entry.getValue() > topCarTrips && c != null) {
+                topCarTrips = entry.getValue();
+                topCarName = c.getBrand() + " " + c.getModel() + " (" + c.getPlateNumber() + ")";
+            }
+            if (entry.getValue() == 0L) {
+                idleCarsCount++;
+            }
+        }
+
         return OwnerEarningsResponse.builder()
                 .ownerId(ownerId)
                 .totalEarnings(totalEarnings)
@@ -351,6 +389,10 @@ public class PaymentServiceImpl implements PaymentService {
                 .totalTransactions((long) transactions.size())
                 .completedRentals(completedRentals)
                 .transactions(transactions)
+                .monthlyEarnings(monthlyEarnings)
+                .topCarName(topCarName)
+                .topCarTrips(topCarTrips)
+                .idleCarsCount(idleCarsCount)
                 .build();
     }
 
