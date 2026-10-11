@@ -59,6 +59,32 @@
     </div>
   </main>
 
+  <!-- Modal Yêu Cầu Rút Tiền Về Ngân Hàng -->
+  <div class="modal-overlay" id="withdrawalModalOverlay" style="display: none;">
+    <div class="modal-dialog" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Yêu Cầu Rút Doanh Thu Về Ngân Hàng</h3>
+        <button class="modal-close-btn" onclick="OwnerEarningsUI.closeWithdrawalModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="withdrawalModalBody">
+        <!-- Dynamic content -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Chi Tiết Biên Lai Quyết Toán Chuyến Đi -->
+  <div class="modal-overlay" id="invoiceModalOverlay" style="display: none;">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Phiếu Quyết Toán Thu Nhập Chuyến Đi</h3>
+        <button class="modal-close-btn" onclick="OwnerEarningsUI.closeInvoiceModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="invoiceModalBody">
+        <!-- Dynamic content -->
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="js/data.js"></script>
   <script src="js/storage.js"></script>
@@ -71,7 +97,16 @@
       if (typeof StorageService !== 'undefined') {
         StorageService.init();
       }
-      if (typeof checkAuth === 'function') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isPreview = urlParams.get('preview') === 'true';
+
+      if (isPreview) {
+        if (!localStorage.getItem('access_token')) {
+          localStorage.setItem('access_token', 'demo_owner_jwt');
+          localStorage.setItem('user_info', JSON.stringify({ userId: 2, role: 'ROLE_CAR_OWNER', roles: ['ROLE_CAR_OWNER', 'ROLE_OWNER'], fullName: 'Trần Văn Chủ Xe' }));
+        }
+        OwnerEarningsUI.init();
+      } else if (typeof checkAuth === 'function') {
         if (checkAuth("OWNER")) {
           OwnerEarningsUI.init();
         }

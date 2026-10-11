@@ -382,6 +382,19 @@ public class PaymentServiceImpl implements PaymentService {
             }
         }
 
+        User owner = userRepository.findById(ownerId).orElse(null);
+        String bankName = "MBBank (Ngân hàng Quân Đội)";
+        String bankAccountNumber = "998877665544";
+        String bankAccountHolder = (owner != null && owner.getFullName() != null) ? owner.getFullName() : "CHỦ XE";
+        if (owner != null && owner.getOwnerProfile() != null) {
+            if (owner.getOwnerProfile().getBankName() != null && !owner.getOwnerProfile().getBankName().isBlank()) {
+                bankName = owner.getOwnerProfile().getBankName();
+            }
+            if (owner.getOwnerProfile().getBankAccountNumber() != null && !owner.getOwnerProfile().getBankAccountNumber().isBlank()) {
+                bankAccountNumber = owner.getOwnerProfile().getBankAccountNumber();
+            }
+        }
+
         return OwnerEarningsResponse.builder()
                 .ownerId(ownerId)
                 .totalEarnings(totalEarnings)
@@ -393,6 +406,10 @@ public class PaymentServiceImpl implements PaymentService {
                 .topCarName(topCarName)
                 .topCarTrips(topCarTrips)
                 .idleCarsCount(idleCarsCount)
+                .bankName(bankName)
+                .bankAccountNumber(bankAccountNumber)
+                .bankAccountHolder(bankAccountHolder)
+                .availableBalance(totalEarnings)
                 .build();
     }
 

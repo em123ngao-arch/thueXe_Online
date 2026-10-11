@@ -30,4 +30,14 @@ public class AdminRentalResponse {
     private String rejectReason;
     private String note;
     private Instant createdAt;
+
+    // Financial & Settlement fields (CRP-54 & Macro Revenue)
+    private Long ownerId;
+    private String ownerName;
+    private String ownerPhone;
+    private String ownerBankName;
+    private String ownerBankAccount;
+    private BigDecimal platformFee;
+    private BigDecimal ownerPayoutAmount;
+    private String payoutStatus;
 }

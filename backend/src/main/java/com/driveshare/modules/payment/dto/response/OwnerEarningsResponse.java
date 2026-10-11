@@ -55,4 +55,17 @@ public class OwnerEarningsResponse {
     @JsonProperty("idle_cars_count")
     @Builder.Default
     private Long idleCarsCount = 0L;
+
+    @JsonProperty("bank_name")
+    private String bankName;
+
+    @JsonProperty("bank_account_number")
+    private String bankAccountNumber;
+
+    @JsonProperty("bank_account_holder")
+    private String bankAccountHolder;
+
+    @JsonProperty("available_balance")
+    @Builder.Default
+    private BigDecimal availableBalance = BigDecimal.ZERO;
 }
