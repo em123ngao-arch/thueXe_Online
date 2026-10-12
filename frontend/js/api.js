@@ -12,9 +12,24 @@
 // ─────────────────────────────────────────────────────────────
 
 const API_CONFIG = {
-  BASE_URL: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://localhost:8080/api/v1'
-    : 'https://driveshare-backend-9ppk.onrender.com/api/v1',
+  BASE_URL: (() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paramBackend = urlParams.get('backend');
+      if (paramBackend) {
+        const clean = paramBackend.replace(/\/+$/, '');
+        const target = clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`;
+        localStorage.setItem('custom_backend_url', target);
+        return target;
+      }
+      const saved = localStorage.getItem('custom_backend_url');
+      if (saved) return saved;
+    } catch (e) {}
+
+    return (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:8080/api/v1'
+      : 'https://driveshare-backend-9ppk.onrender.com/api/v1';
+  })(),
   TIMEOUT_MS: 60000
 };
 

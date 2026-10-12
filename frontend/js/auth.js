@@ -9,9 +9,24 @@ const KEY_REFRESH_TOKEN = "refresh_token";
 const KEY_USER = "user_info";
 const AUTH_STORAGE_KEY = "driveshare_current_auth_user";
 
-const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? "http://localhost:8080/api/v1"
-  : "https://driveshare-backend-9ppk.onrender.com/api/v1";
+const API_BASE = (() => {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramBackend = urlParams.get('backend');
+    if (paramBackend) {
+      const clean = paramBackend.replace(/\/+$/, '');
+      const target = clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`;
+      localStorage.setItem('custom_backend_url', target);
+      return target;
+    }
+    const saved = localStorage.getItem('custom_backend_url');
+    if (saved) return saved;
+  } catch (e) {}
+
+  return (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:8080/api/v1'
+    : 'https://driveshare-backend-9ppk.onrender.com/api/v1';
+})();
 
 
 // ─────────────────────────────────────────────────────────────
@@ -379,7 +394,7 @@ const AuthService = {
 
       return {
         success: true,
-        message: "Đăng ký thành công!",
+        message: "Đăng ký thành công (Chế độ lưu tạm trình duyệt do máy chủ Backend chưa phản hồi)!",
         data: newUser,
       };
     }

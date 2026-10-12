@@ -55,15 +55,38 @@ public class RentalQueryServiceImpl implements RentalQueryService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // Chỉ được rút/hủy khi đơn đang ở trạng thái PENDING hoặc PENDING_APPROVAL
-        if (rental.getStatus() != ERentalStatus.PENDING && rental.getStatus() != ERentalStatus.PENDING_APPROVAL) {
+        // Chỉ được rút/hủy khi đơn đang ở trạng thái PENDING, PENDING_APPROVAL hoặc WAITING_PAYMENT
+        if (rental.getStatus() != ERentalStatus.PENDING 
+                && rental.getStatus() != ERentalStatus.PENDING_APPROVAL
+                && rental.getStatus() != ERentalStatus.WAITING_PAYMENT) {
             log.warn("Đơn rentalId={} ở trạng thái {} không thể hủy hoặc rút yêu cầu", rentalId, rental.getStatus());
             throw new AppException(ErrorCode.RENTAL_CANNOT_BE_CANCELLED);
         }
 
+        boolean wasWaitingPayment = rental.getStatus() == ERentalStatus.WAITING_PAYMENT;
         rental.setStatus(ERentalStatus.WITHDRAWN_BY_GUEST);
         rental = rentalRepository.save(rental);
         log.info("Đã rút thành công yêu cầu thuê xe rentalId={} bởi khách hàng renterId={}", rentalId, currentUserId);
+
+        // Nếu đơn đang giữ Soft Lock 45 phút (WAITING_PAYMENT) mà khách hủy -> lập tức mở khóa các đơn ON_HOLD
+        if (wasWaitingPayment) {
+            List<Rental> onHoldRentals = rentalRepository.findCompetingRentals(
+                    rental.getCarId(),
+                    rental.getStartDate(),
+                    rental.getEndDate(),
+                    rental.getRentalId(),
+                    List.of(ERentalStatus.ON_HOLD)
+            );
+            for (Rental onHold : onHoldRentals) {
+                onHold.setStatus(ERentalStatus.PENDING_APPROVAL);
+                onHold.setRejectReason(null);
+            }
+            if (!onHoldRentals.isEmpty()) {
+                rentalRepository.saveAll(onHoldRentals);
+                log.info("Khách hủy đơn WAITING_PAYMENT rentalId={}, đã giải phóng {} đơn ON_HOLD sang PENDING_APPROVAL",
+                        rentalId, onHoldRentals.size());
+            }
+        }
 
         return RentalSummaryResponse.fromEntity(rental);
     }

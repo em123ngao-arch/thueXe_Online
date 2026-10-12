@@ -61,6 +61,33 @@ public class PaymentServiceImpl implements PaymentService {
             throw new AppException(ErrorCode.RENTAL_NOT_APPROVED);
         }
 
+        // Kiểm tra quá hạn 45 phút giữ chỗ (Soft Lock)
+        if (rental.getStatus() == ERentalStatus.WAITING_PAYMENT
+                && rental.getPaymentExpiresAt() != null
+                && rental.getPaymentExpiresAt().isBefore(Instant.now())) {
+            log.warn("Đơn thuê rentalId={} đã hết hạn giữ chỗ thanh toán 45 phút", rentalId);
+            rental.setStatus(ERentalStatus.EXPIRED);
+            rental.setRejectReason("Đã quá thời hạn 45 phút giữ chỗ nhưng khách hàng không hoàn tất đặt cọc");
+            rentalRepository.save(rental);
+
+            List<Rental> onHoldRentals = rentalRepository.findCompetingRentals(
+                    rental.getCarId(),
+                    rental.getStartDate(),
+                    rental.getEndDate(),
+                    rental.getRentalId(),
+                    List.of(ERentalStatus.ON_HOLD)
+            );
+            for (Rental onHold : onHoldRentals) {
+                onHold.setStatus(ERentalStatus.PENDING_APPROVAL);
+                onHold.setRejectReason(null);
+            }
+            if (!onHoldRentals.isEmpty()) {
+                rentalRepository.saveAll(onHoldRentals);
+            }
+
+            throw new AppException(ErrorCode.RENTAL_NOT_APPROVED, "Thời hạn giữ chỗ 45 phút của đơn thuê đã hết. Vui lòng đặt lại");
+        }
+
         // 3. Kiểm tra xem đã có giao dịch nào chưa
         Optional<Payment> existingOpt = paymentRepository.findByRentalId(rentalId);
         if (existingOpt.isPresent()) {
@@ -145,14 +172,51 @@ public class PaymentServiceImpl implements PaymentService {
             throw new AppException(ErrorCode.PAYMENT_ALREADY_COMPLETED);
         }
 
+        // Lấy đơn thuê và kiểm tra hợp lệ
+        Rental rental = rentalRepository.findById(payment.getRentalId())
+                .orElseThrow(() -> new AppException(ErrorCode.RENTAL_NOT_FOUND));
+
+        if (rental.getStatus() != ERentalStatus.APPROVED && rental.getStatus() != ERentalStatus.WAITING_PAYMENT) {
+            log.warn("Đơn thuê rentalId={} đang ở trạng thái {} không thể xác nhận cọc", rental.getRentalId(), rental.getStatus());
+            payment.setStatus(EPaymentStatus.FAILED);
+            paymentRepository.save(payment);
+            throw new AppException(ErrorCode.RENTAL_NOT_APPROVED, "Đơn thuê không ở trạng thái chờ thanh toán hoặc đã bị hủy/hết hạn");
+        }
+
+        if (rental.getStatus() == ERentalStatus.WAITING_PAYMENT
+                && rental.getPaymentExpiresAt() != null
+                && rental.getPaymentExpiresAt().isBefore(Instant.now())) {
+            log.warn("Đơn thuê rentalId={} đã quá hạn thanh toán khi xác nhận cọc", rental.getRentalId());
+            rental.setStatus(ERentalStatus.EXPIRED);
+            rental.setRejectReason("Đã quá thời hạn 45 phút giữ chỗ nhưng khách hàng không hoàn tất đặt cọc");
+            rentalRepository.save(rental);
+
+            payment.setStatus(EPaymentStatus.FAILED);
+            paymentRepository.save(payment);
+
+            List<Rental> onHoldRentals = rentalRepository.findCompetingRentals(
+                    rental.getCarId(),
+                    rental.getStartDate(),
+                    rental.getEndDate(),
+                    rental.getRentalId(),
+                    List.of(ERentalStatus.ON_HOLD)
+            );
+            for (Rental onHold : onHoldRentals) {
+                onHold.setStatus(ERentalStatus.PENDING_APPROVAL);
+                onHold.setRejectReason(null);
+            }
+            if (!onHoldRentals.isEmpty()) {
+                rentalRepository.saveAll(onHoldRentals);
+            }
+
+            throw new AppException(ErrorCode.RENTAL_NOT_APPROVED, "Thời hạn giữ chỗ 45 phút của đơn thuê đã hết hạn");
+        }
+
         payment.setStatus(EPaymentStatus.SUCCESS);
         payment.setPaidAt(Instant.now());
         payment = paymentRepository.save(payment);
 
         // CRP-53: Booking Status Lifecycle after Payment -> Đơn chuyển sang CONFIRMED
-        Rental rental = rentalRepository.findById(payment.getRentalId())
-                .orElseThrow(() -> new AppException(ErrorCode.RENTAL_NOT_FOUND));
-
         rental.setStatus(ERentalStatus.CONFIRMED);
         rental.setUpdatedAt(Instant.now());
         rentalRepository.save(rental);

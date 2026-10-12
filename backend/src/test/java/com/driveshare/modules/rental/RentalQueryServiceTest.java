@@ -165,6 +165,37 @@ class RentalQueryServiceTest {
     }
 
     @Test
+    @DisplayName("Giai đoạn 3: Khách hủy đơn khi đang WAITING_PAYMENT -> Rút đơn thành công và phục hồi các đơn ON_HOLD")
+    void cancelMyRental_WhenWaitingPayment_SuccessAndRevivesOnHoldRentals() {
+        sampleRental.setStatus(ERentalStatus.WAITING_PAYMENT);
+
+        Rental onHoldRental = Rental.builder()
+                .rentalId(12L)
+                .carId(1L)
+                .renterId(105L)
+                .startDate(sampleRental.getStartDate())
+                .endDate(sampleRental.getEndDate())
+                .status(ERentalStatus.ON_HOLD)
+                .rejectReason("Chờ thanh toán")
+                .build();
+
+        when(rentalRepository.findById(10L)).thenReturn(Optional.of(sampleRental));
+        when(rentalRepository.save(any(Rental.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(rentalRepository.findCompetingRentals(eq(1L), any(), any(), eq(10L), any()))
+                .thenReturn(List.of(onHoldRental));
+
+        RentalSummaryResponse response = rentalQueryService.cancelMyRental(10L);
+
+        assertNotNull(response);
+        assertEquals(ERentalStatus.WITHDRAWN_BY_GUEST, response.getStatus());
+        assertEquals(ERentalStatus.PENDING_APPROVAL, onHoldRental.getStatus());
+        assertNull(onHoldRental.getRejectReason());
+
+        verify(rentalRepository).save(sampleRental);
+        verify(rentalRepository).saveAll(List.of(onHoldRental));
+    }
+
+    @Test
     @DisplayName("CRP-46: Chủ xe không có xe trả về danh sách rỗng")
     void getOwnerIncomingRentals_NoCars_ReturnsEmptyList() {
         // Giả lập Owner đăng nhập
