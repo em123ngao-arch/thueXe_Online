@@ -402,6 +402,39 @@ const AuthService = {
     return res;
   },
 
+  // Đăng ký kèm Giấy tờ định danh CCCD & GPLX (Multipart Form-Data)
+  async registerWithDocs(formData) {
+    try {
+      const resp = await fetch(`${API_BASE}/auth/register-with-docs`, {
+        method: "POST",
+        body: formData, // Trình duyệt tự sinh header Content-Type kèm multipart boundary
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (resp.ok) {
+        return {
+          success: true,
+          data: data.data || data.result,
+          message: data.message || "Đăng ký thành công!",
+        };
+      } else {
+        return {
+          success: false,
+          status: resp.status,
+          errorCode: data.error_code || data.errorCode,
+          message: data.message || "Đăng ký thất bại",
+          errors: data.errors,
+        };
+      }
+    } catch (err) {
+      console.warn("Backend API offline khi gửi giấy tờ:", err.message);
+      return {
+        success: false,
+        errorCode: "NETWORK_ERROR",
+        message: "Không thể kết nối đến máy chủ Backend (http://localhost:8080)",
+      };
+    }
+  },
+
   // Đổi mật khẩu (BR-06, CRP-13)
   async changePassword(oldPassword, newPassword, confirmPassword) {
     const res = await this.request("/auth/change-password", {

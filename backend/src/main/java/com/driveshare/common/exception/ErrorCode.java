@@ -17,7 +17,7 @@ public enum ErrorCode {
     UNAUTHENTICATED("UNAUTHENTICATED", "Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn", HttpStatus.UNAUTHORIZED),
     UNAUTHORIZED("FORBIDDEN", "Bạn không có quyền thực hiện thao tác này", HttpStatus.FORBIDDEN),
     ACCOUNT_LOCKED("ACCOUNT_LOCKED", "Tài khoản của bạn đã bị khóa", HttpStatus.FORBIDDEN),
-    ACCOUNT_PENDING("ACCOUNT_PENDING", "Tài khoản của bạn đang chờ phê duyệt", HttpStatus.FORBIDDEN),
+    ACCOUNT_PENDING("ACCOUNT_PENDING", "Tài khoản của bạn đang chờ Admin phê duyệt hồ sơ giấy tờ (CCCD/GPLX). Vui lòng đợi xét duyệt trước khi đăng nhập", HttpStatus.FORBIDDEN),
     TOKEN_INVALID("TOKEN_INVALID", "Mã xác thực JWT không hợp lệ hoặc đã hết hạn", HttpStatus.UNAUTHORIZED),
     RATE_LIMITED("RATE_LIMITED", "Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau 15 phút", HttpStatus.TOO_MANY_REQUESTS),
     WEAK_PASSWORD("WEAK_PASSWORD", "Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường và chữ số", HttpStatus.BAD_REQUEST),
@@ -82,7 +82,8 @@ public enum ErrorCode {
     INSPECTION_ALREADY_EXISTS("INSPECTION_ALREADY_EXISTS", "Biên bản bàn giao/trả xe đã được lập trước đó", HttpStatus.CONFLICT),
     INSPECTION_NOT_FOUND("INSPECTION_NOT_FOUND", "Không tìm thấy biên bản kiểm tra bàn giao xe", HttpStatus.NOT_FOUND),
     REVIEW_ALREADY_EXISTS("REVIEW_ALREADY_EXISTS", "Đơn thuê xe này đã được đánh giá trước đó", HttpStatus.CONFLICT),
-    RENTAL_NOT_COMPLETED_FOR_REVIEW("RENTAL_NOT_COMPLETED_FOR_REVIEW", "Chuyến đi phải ở trạng thái hoàn tất (COMPLETED) mới có thể đánh giá", HttpStatus.BAD_REQUEST);
+    RENTAL_NOT_COMPLETED_FOR_REVIEW("RENTAL_NOT_COMPLETED_FOR_REVIEW", "Chuyến đi phải ở trạng thái hoàn tất (COMPLETED) mới có thể đánh giá", HttpStatus.BAD_REQUEST),
+    KYC_NOT_VERIFIED("KYC_NOT_VERIFIED", "Hồ sơ giấy tờ (CCCD hoặc GPLX) của bạn chưa được phê duyệt. Vui lòng kiểm tra hồ sơ cá nhân trước khi thuê xe", HttpStatus.FORBIDDEN);
 
     private final String code;
     private final String message;

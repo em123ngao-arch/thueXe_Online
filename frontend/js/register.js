@@ -8,9 +8,379 @@
  */
 
 const RegisterController = {
+  files: {
+    cccdFront: null,
+    cccdBack: null,
+    gplxFront: null,
+  },
+
   init() {
     this.bindEvents();
+    this.bindDocUploadEvents();
     this.checkInitialTab();
+  },
+
+  bindDocUploadEvents() {
+    // Bind file inputs
+    const fileCccdFront = document.getElementById("fileCccdFront");
+    const fileCccdBack = document.getElementById("fileCccdBack");
+    const fileGplxFront = document.getElementById("fileGplxFront");
+
+    if (fileCccdFront) {
+      fileCccdFront.addEventListener("change", (e) => {
+        if (e.target.files && e.target.files[0]) {
+          this.handleFileSelected("cccdFront", e.target.files[0]);
+        }
+      });
+    }
+
+    if (fileCccdBack) {
+      fileCccdBack.addEventListener("change", (e) => {
+        if (e.target.files && e.target.files[0]) {
+          this.handleFileSelected("cccdBack", e.target.files[0]);
+        }
+      });
+    }
+
+    if (fileGplxFront) {
+      fileGplxFront.addEventListener("change", (e) => {
+        if (e.target.files && e.target.files[0]) {
+          this.handleFileSelected("gplxFront", e.target.files[0]);
+        }
+      });
+    }
+
+    // Drag and Drop
+    this.setupDropzone("dropzoneCccdFront", "cccdFront");
+    this.setupDropzone("dropzoneCccdBack", "cccdBack");
+    this.setupDropzone("dropzoneGplx", "gplxFront");
+  },
+
+  setupDropzone(elementId, type) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      el.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        el.classList.add("dragover");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      el.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        el.classList.remove("dragover");
+      });
+    });
+
+    el.addEventListener("drop", (e) => {
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length > 0) {
+        this.handleFileSelected(type, dt.files[0]);
+      }
+    });
+  },
+
+  handleFileSelected(type, file) {
+    if (!file) return;
+
+    // Validate image format
+    if (!file.type.startsWith("image/")) {
+      if (typeof showToast === "function") {
+        showToast("Vui lòng chỉ chọn file ảnh định dạng JPG, PNG, WEBP!", "error", 2500);
+      }
+      return;
+    }
+
+    // Validate size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      if (typeof showToast === "function") {
+        showToast("Dung lượng file vượt quá giới hạn 10MB!", "error", 2500);
+      }
+      return;
+    }
+
+    this.files[type] = file;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (type === "cccdFront") {
+        const preview = document.getElementById("previewCccdFront");
+        const wrap = document.getElementById("previewCccdFrontWrap");
+        const content = document.getElementById("contentCccdFront");
+        if (preview && wrap && content) {
+          preview.src = e.target.result;
+          content.style.display = "none";
+          wrap.style.display = "block";
+        }
+      } else if (type === "cccdBack") {
+        const preview = document.getElementById("previewCccdBack");
+        const wrap = document.getElementById("previewCccdBackWrap");
+        const content = document.getElementById("contentCccdBack");
+        if (preview && wrap && content) {
+          preview.src = e.target.result;
+          content.style.display = "none";
+          wrap.style.display = "block";
+        }
+      } else if (type === "gplxFront") {
+        const preview = document.getElementById("previewGplx");
+        const wrap = document.getElementById("previewGplxWrap");
+        const content = document.getElementById("contentGplx");
+        if (preview && wrap && content) {
+          preview.src = e.target.result;
+          content.style.display = "none";
+          wrap.style.display = "block";
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  },
+
+  clearDocPreview(type) {
+    this.files[type] = null;
+    if (type === "cccdFront") {
+      const input = document.getElementById("fileCccdFront");
+      if (input) input.value = "";
+      document.getElementById("contentCccdFront")?.setAttribute("style", "display: block;");
+      document.getElementById("previewCccdFrontWrap")?.setAttribute("style", "display: none;");
+      const preview = document.getElementById("previewCccdFront");
+      if (preview) preview.src = "";
+    } else if (type === "cccdBack") {
+      const input = document.getElementById("fileCccdBack");
+      if (input) input.value = "";
+      document.getElementById("contentCccdBack")?.setAttribute("style", "display: block;");
+      document.getElementById("previewCccdBackWrap")?.setAttribute("style", "display: none;");
+      const preview = document.getElementById("previewCccdBack");
+      if (preview) preview.src = "";
+    } else if (type === "gplxFront") {
+      const input = document.getElementById("fileGplxFront");
+      if (input) input.value = "";
+      document.getElementById("contentGplx")?.setAttribute("style", "display: block;");
+      document.getElementById("previewGplxWrap")?.setAttribute("style", "display: none;");
+      const preview = document.getElementById("previewGplx");
+      if (preview) preview.src = "";
+    }
+  },
+
+  selectRole(role) {
+    const btnRenter = document.getElementById("roleOptionRenter");
+    const btnOwner = document.getElementById("roleOptionOwner");
+    const roleInput = document.getElementById("regRole");
+    const roleNotice = document.getElementById("regRoleNotice");
+    const sectionRenterDocs = document.getElementById("sectionRenterDocs");
+    const sectionOwnerBank = document.getElementById("sectionOwnerBank");
+
+    if (roleInput) roleInput.value = role;
+
+    if (role === "OWNER") {
+      btnOwner?.classList.add("active");
+      btnRenter?.classList.remove("active");
+      if (sectionRenterDocs) sectionRenterDocs.style.display = "none";
+      if (sectionOwnerBank) sectionOwnerBank.style.display = "block";
+      if (roleNotice) {
+        roleNotice.innerHTML = `
+          <div class="alert-box alert-warning">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>Tài khoản <strong>Chủ xe (Owner)</strong> cần tải lên CCCD 2 mặt & thông tin Ngân hàng. Ban quản trị sẽ <strong>xét duyệt hồ sơ (PENDING)</strong> trước khi bạn có thể đăng xe.</span>
+          </div>
+        `;
+        roleNotice.style.display = "block";
+      }
+    } else {
+      btnRenter?.classList.add("active");
+      btnOwner?.classList.remove("active");
+      if (sectionRenterDocs) sectionRenterDocs.style.display = "block";
+      if (sectionOwnerBank) sectionOwnerBank.style.display = "none";
+      if (roleNotice) {
+        roleNotice.innerHTML = `
+          <div class="alert-box alert-warning">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>Tài khoản <strong>Khách thuê (Renter)</strong> cần tải lên CCCD 2 mặt & Bằng lái xe (GPLX). Ban quản trị sẽ <strong>xét duyệt hồ sơ (PENDING)</strong> trước khi bạn có thể thuê xe.</span>
+          </div>
+        `;
+        roleNotice.style.display = "block";
+      }
+    }
+  },
+
+  // BR-01-6: Mật khẩu tối thiểu 8 ký tự, có chữ hoa, số, ký tự đặc biệt
+  isPasswordStrong(password) {
+    const minLength = password.length >= 8;
+    const hasUpper = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[@$!%*?&#^()_\-+=\[\]{}|\\;:'",.<>\/?~`]/.test(password);
+    return minLength && hasUpper && hasNumber && hasSpecial;
+  },
+
+  validatePasswordRealtime(password) {
+    const hint = document.getElementById("regPasswordHint");
+    if (!hint) return;
+
+    if (!password) {
+      hint.innerHTML = "";
+      return;
+    }
+
+    const minLength = password.length >= 8;
+    const hasUpper = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[@$!%*?&#^()_\-+=\[\]{}|\\;:'",.<>\/?~`]/.test(password);
+
+    const isStrong = minLength && hasUpper && hasNumber && hasSpecial;
+
+    hint.innerHTML = `
+      <div style="font-size: 0.78rem; margin-top: 6px; display: flex; flex-direction: column; gap: 2px;">
+        <span style="color: ${minLength ? '#10b981' : '#ef4444'}">${minLength ? '✔' : '✖'} Tối thiểu 8 ký tự</span>
+        <span style="color: ${hasUpper ? '#10b981' : '#ef4444'}">${hasUpper ? '✔' : '✖'} Có ít nhất 1 chữ hoa (A-Z)</span>
+        <span style="color: ${hasNumber ? '#10b981' : '#ef4444'}">${hasNumber ? '✔' : '✖'} Có ít nhất 1 chữ số (0-9)</span>
+        <span style="color: ${hasSpecial ? '#10b981' : '#ef4444'}">${hasSpecial ? '✔' : '✖'} Có ít nhất 1 ký tự đặc biệt (!@#$%...)</span>
+      </div>
+    `;
+    return isStrong;
+  },
+
+  async handleRegister(e) {
+    e.preventDefault();
+    const btnSubmit = document.getElementById("btnSubmitRegister");
+    const emailInput = document.getElementById("regEmail");
+    const emailError = document.getElementById("regEmailError");
+    const passwordInput = document.getElementById("regPassword");
+    const confirmInput = document.getElementById("regConfirmPassword");
+    const fullNameInput = document.getElementById("regFullName");
+    const phoneInput = document.getElementById("regPhone");
+    const roleInput = document.getElementById("regRole");
+    const idCardNumberInput = document.getElementById("regIdCardNumber");
+    const licenseNumberInput = document.getElementById("regLicenseNumber");
+    const bankNameInput = document.getElementById("regBankName");
+    const bankAccountInput = document.getElementById("regBankAccountNumber");
+
+    const email = emailInput ? emailInput.value.trim() : "";
+    const password = passwordInput ? passwordInput.value : "";
+    const confirmPassword = confirmInput ? confirmInput.value : "";
+    const fullName = fullNameInput ? fullNameInput.value.trim() : "";
+    const phone = phoneInput ? phoneInput.value.trim() : "";
+    const role = roleInput ? roleInput.value : "RENTER";
+    const idCardNumber = idCardNumberInput ? idCardNumberInput.value.trim() : "";
+    const licenseNumber = licenseNumberInput ? licenseNumberInput.value.trim() : "";
+    const bankName = bankNameInput ? bankNameInput.value.trim() : "";
+    const bankAccountNumber = bankAccountInput ? bankAccountInput.value.trim() : "";
+
+    // 1. Validate mật khẩu
+    if (!this.isPasswordStrong(password)) {
+      if (typeof showToast === "function") {
+        showToast("Mật khẩu chưa đủ mạnh. Vui lòng kiểm tra các tiêu chí bắt buộc!", "error", 2500);
+      }
+      passwordInput.focus();
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      if (typeof showToast === "function") {
+        showToast("Mật khẩu xác nhận không khớp!", "error", 2500);
+      }
+      confirmInput.focus();
+      return;
+    }
+
+    // 2. Validate CCCD
+    if (!idCardNumber) {
+      if (typeof showToast === "function") {
+        showToast("Vui lòng nhập Số CMND / CCCD!", "warning", 2500);
+      }
+      idCardNumberInput?.focus();
+      return;
+    }
+
+    if (!this.files.cccdFront || !this.files.cccdBack) {
+      if (typeof showToast === "function") {
+        showToast("Vui lòng tải lên đầy đủ cả mặt trước và mặt sau CMND / CCCD!", "warning", 3000);
+      }
+      return;
+    }
+
+    // 3. Validate theo Role
+    if (role === "RENTER") {
+      if (!this.files.gplxFront) {
+        if (typeof showToast === "function") {
+          showToast("Khách thuê bắt buộc phải tải lên ảnh chụp Bằng lái xe (GPLX)!", "warning", 3000);
+        }
+        return;
+      }
+    }
+
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = `<span class="spinner"></span> Đang tải hồ sơ &amp; đăng ký...`;
+    }
+
+    // 4. Tạo FormData gửi lên Server
+    const formData = new FormData();
+    formData.append("email", email);
+    formData.append("password", password);
+    formData.append("confirmPassword", confirmPassword);
+    formData.append("fullName", fullName);
+    formData.append("phone", phone);
+    formData.append("role", role);
+    formData.append("idCardNumber", idCardNumber);
+    formData.append("cccdFront", this.files.cccdFront);
+    formData.append("cccdBack", this.files.cccdBack);
+
+    if (role === "RENTER") {
+      formData.append("licenseNumber", licenseNumber || idCardNumber);
+      if (this.files.gplxFront) {
+        formData.append("gplxFront", this.files.gplxFront);
+      }
+    } else if (role === "OWNER") {
+      if (bankName) formData.append("bankName", bankName);
+      if (bankAccountNumber) formData.append("bankAccountNumber", bankAccountNumber);
+    }
+
+    const res = await AuthService.registerWithDocs(formData);
+
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = `Đăng ký &amp; Gửi hồ sơ xét duyệt`;
+    }
+
+    if (res.success) {
+      if (typeof showToast === "function") {
+        showToast("Đăng ký thành công! Hồ sơ giấy tờ (CCCD & GPLX) đang chờ Admin xét duyệt.", "success", 4000);
+      }
+
+      // Điền sẵn email vào form login
+      const loginIdentifier = document.getElementById("loginIdentifier");
+      if (loginIdentifier) loginIdentifier.value = email;
+
+      // Sau 2.5s tự động chuyển sang tab Đăng nhập
+      setTimeout(() => {
+        this.switchTab("login");
+        const loginPassword = document.getElementById("loginPassword");
+        if (loginPassword) loginPassword.focus();
+      }, 2500);
+    } else {
+      if (res.errorCode === "EMAIL_EXISTED" || res.message?.includes("EMAIL_EXISTED") || res.details?.includes("Email")) {
+        if (emailError) {
+          emailError.innerText = "Email này đã được sử dụng. Vui lòng chọn email khác!";
+          emailError.style.display = "block";
+        }
+        emailInput?.focus();
+      } else if (res.errorCode === "ID_CARD_EXISTED") {
+        if (typeof showToast === "function") {
+          showToast("Số CMND/CCCD này đã được đăng ký trong hệ thống!", "error", 3000);
+        }
+      } else if (res.errorCode === "MISSING_CCCD_SIDE") {
+        if (typeof showToast === "function") {
+          showToast("Vui lòng tải lên đủ cả 2 mặt CCCD!", "error", 3000);
+        }
+      } else {
+        if (typeof showToast === "function") {
+          showToast(res.message || "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin!", "error", 3000);
+        }
+      }
+    }
   },
 
   bindEvents() {
@@ -69,166 +439,6 @@ const RegisterController = {
       tabLoginBtn.classList.remove("active");
       panelRegister.style.display = "block";
       panelLogin.style.display = "none";
-    }
-  },
-
-  selectRole(role) {
-    const btnRenter = document.getElementById("roleOptionRenter");
-    const btnOwner = document.getElementById("roleOptionOwner");
-    const roleInput = document.getElementById("regRole");
-    const roleNotice = document.getElementById("regRoleNotice");
-
-    if (roleInput) roleInput.value = role;
-
-    if (role === "OWNER") {
-      btnOwner?.classList.add("active");
-      btnRenter?.classList.remove("active");
-      if (roleNotice) {
-        roleNotice.innerHTML = `
-          <div class="alert-box alert-warning">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-            <span>Tài khoản <strong>Chủ xe (Owner)</strong> sau khi đăng ký sẽ ở trạng thái <strong>Chờ Admin duyệt (PENDING)</strong> trước khi có thể đăng xe.</span>
-          </div>
-        `;
-        roleNotice.style.display = "block";
-      }
-    } else {
-      btnRenter?.classList.add("active");
-      btnOwner?.classList.remove("active");
-      if (roleNotice) {
-        roleNotice.innerHTML = `
-          <div class="alert-box alert-success">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-            <span>Tài khoản <strong>Khách thuê (Renter)</strong> sẽ được kích hoạt <strong>ACTIVE</strong> ngay sau khi đăng ký để bạn đặt xe lập tức!</span>
-          </div>
-        `;
-        roleNotice.style.display = "block";
-      }
-    }
-  },
-
-  // BR-01-6: Mật khẩu tối thiểu 8 ký tự, có chữ hoa, số, ký tự đặc biệt
-  isPasswordStrong(password) {
-    const minLength = password.length >= 8;
-    const hasUpper = /[A-Z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecial = /[@$!%*?&#^()_\-+=\[\]{}|\\;:'",.<>\/?~`]/.test(password);
-    return minLength && hasUpper && hasNumber && hasSpecial;
-  },
-
-  validatePasswordRealtime(password) {
-    const hint = document.getElementById("regPasswordHint");
-    if (!hint) return;
-
-    if (!password) {
-      hint.innerHTML = "";
-      return;
-    }
-
-    const minLength = password.length >= 8;
-    const hasUpper = /[A-Z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecial = /[@$!%*?&#^()_\-+=\[\]{}|\\;:'",.<>\/?~`]/.test(password);
-
-    const isStrong = minLength && hasUpper && hasNumber && hasSpecial;
-
-    hint.innerHTML = `
-      <div style="font-size: 0.78rem; margin-top: 6px; display: flex; flex-direction: column; gap: 2px;">
-        <span style="color: ${minLength ? '#10b981' : '#ef4444'}">${minLength ? '✔' : '✖'} Tối thiểu 8 ký tự</span>
-        <span style="color: ${hasUpper ? '#10b981' : '#ef4444'}">${hasUpper ? '✔' : '✖'} Có ít nhất 1 chữ hoa (A-Z)</span>
-        <span style="color: ${hasNumber ? '#10b981' : '#ef4444'}">${hasNumber ? '✔' : '✖'} Có ít nhất 1 chữ số (0-9)</span>
-        <span style="color: ${hasSpecial ? '#10b981' : '#ef4444'}">${hasSpecial ? '✔' : '✖'} Có ít nhất 1 ký tự đặc biệt (!@#$%...)</span>
-      </div>
-    `;
-    return isStrong;
-  },
-
-  async handleRegister(e) {
-    e.preventDefault();
-    const btnSubmit = document.getElementById("btnSubmitRegister");
-    const emailInput = document.getElementById("regEmail");
-    const emailError = document.getElementById("regEmailError");
-    const passwordInput = document.getElementById("regPassword");
-    const confirmInput = document.getElementById("regConfirmPassword");
-    const fullNameInput = document.getElementById("regFullName");
-    const phoneInput = document.getElementById("regPhone");
-    const roleInput = document.getElementById("regRole");
-
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-    const confirmPassword = confirmInput.value;
-    const fullName = fullNameInput.value.trim();
-    const phone = phoneInput ? phoneInput.value.trim() : "";
-    const role = roleInput ? roleInput.value : "RENTER";
-
-    // Validate FE trước khi gửi
-    if (!this.isPasswordStrong(password)) {
-      if (typeof showToast === "function") {
-        showToast("Mật khẩu chưa đủ mạnh. Vui lòng kiểm tra các tiêu chí bắt buộc!", "error", 2500);
-      }
-      passwordInput.focus();
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      if (typeof showToast === "function") {
-        showToast("Mật khẩu xác nhận không khớp!", "error", 2500);
-      }
-      confirmInput.focus();
-      return;
-    }
-
-    if (btnSubmit) {
-      btnSubmit.disabled = true;
-      btnSubmit.innerHTML = `<span class="spinner"></span> Đang đăng ký...`;
-    }
-
-    const payload = {
-      email,
-      password,
-      fullName,
-      full_name: fullName,
-      phoneNumber: phone,
-      phone_number: phone,
-      role,
-    };
-
-    const res = await AuthService.register(payload);
-
-    if (btnSubmit) {
-      btnSubmit.disabled = false;
-      btnSubmit.innerHTML = `Đăng ký tài khoản`;
-    }
-
-    if (res.success) {
-      // BR-01-2: Hiện toast 'Đăng ký thành công!' màu xanh trong 2s
-      if (typeof showToast === "function") {
-        showToast("Đăng ký thành công!", "success", 2000);
-      }
-
-      // Điền sẵn email vào form login
-      const loginIdentifier = document.getElementById("loginIdentifier");
-      if (loginIdentifier) loginIdentifier.value = email;
-
-      // BR-01-3: Sau 2 giây tự động chuyển sang tab Đăng nhập (không reload trang)
-      setTimeout(() => {
-        this.switchTab("login");
-        const loginPassword = document.getElementById("loginPassword");
-        if (loginPassword) loginPassword.focus();
-      }, 2000);
-    } else {
-      // BR-01-1: Email đã tồn tại -> 400 EMAIL_EXISTED, FE hiện lỗi đỏ dưới ô email
-      if (res.errorCode === "EMAIL_EXISTED" || res.message?.includes("EMAIL_EXISTED") || res.details?.includes("Email")) {
-        if (emailError) {
-          emailError.innerText = "Email này đã được sử dụng. Vui lòng chọn email khác!";
-          emailError.style.display = "block";
-        }
-        emailInput.focus();
-      }
-
-      if (typeof showToast === "function") {
-        showToast(res.message || "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin!", "error", 2500);
-      }
     }
   },
 

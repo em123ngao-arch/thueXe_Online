@@ -23,14 +23,14 @@ const BookingService = {
     // Kiểm tra đăng nhập
     const token = typeof TokenService !== 'undefined' ? TokenService.getToken() : localStorage.getItem('access_token');
     if (!token) {
-      if (typeof App !== 'undefined' && App.openModalAuth) {
-        App.openModalAuth();
-      }
       if (typeof toast !== 'undefined') {
         toast.warning('Vui lòng đăng nhập trước khi gửi yêu cầu thuê xe!');
       } else {
         alert('Vui lòng đăng nhập trước khi gửi yêu cầu thuê xe!');
       }
+      setTimeout(() => {
+        window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+      }, 700);
       return;
     }
 
@@ -644,10 +644,34 @@ const BookingService = {
         }
       } else {
         // Xử lý lỗi có mã cụ thể từ backend
-        const errCode = res && res.code;
+        const errCode = res && (res.code || res.errorCode);
         const errMsg = res && res.message;
 
-        if (errCode === 'DUPLICATE_RENTAL_REQUEST') {
+        if (errCode === 'KYC_NOT_VERIFIED') {
+          if (typeof App !== 'undefined' && App.closeModal) App.closeModal();
+          const kycHtml = `
+            <div style="text-align: center; padding: 1.5rem 0.5rem;">
+              <div style="width: 64px; height: 64px; background: #fee2e2; color: #dc2626; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1rem auto;">&#10006;</div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #991b1b; margin-bottom: 0.5rem;">Hồ sơ chưa được phê duyệt</h3>
+              <p style="color: var(--slate-600); font-size: 0.9rem; line-height: 1.6; max-width: 400px; margin: 0 auto 1.25rem auto;">
+                ${errMsg || 'Giấy tờ tùy thân (CCCD) hoặc Giấy phép lái xe (GPLX) của bạn chưa được duyệt hoặc bị từ chối. Vui lòng kiểm tra trạng thái tại trang cá nhân.'}
+              </p>
+              <div style="display: flex; gap: 0.75rem; justify-content: center;">
+                <button class="btn btn-primary btn-md" onclick="window.location.href='profile.html'">
+                  Đến trang Hồ sơ
+                </button>
+                <button class="btn btn-outline-secondary btn-md" onclick="App.closeModal();">
+                  Đóng
+                </button>
+              </div>
+            </div>
+          `;
+          if (typeof App !== 'undefined' && App.openModal) {
+            App.openModal('Yêu cầu xác thực hồ sơ', kycHtml);
+          } else {
+            alert(errMsg || 'Giấy tờ của bạn chưa được duyệt. Vui lòng cập nhật hồ sơ!');
+          }
+        } else if (errCode === 'DUPLICATE_RENTAL_REQUEST') {
           // Hiển thị UI thân thiện cho lỗi trùng đơn
           if (typeof App !== 'undefined' && App.closeModal) App.closeModal();
           const dupHtml = `

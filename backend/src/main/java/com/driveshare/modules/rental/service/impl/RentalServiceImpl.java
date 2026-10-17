@@ -76,7 +76,7 @@ public class RentalServiceImpl implements RentalService {
             renterProfileRepository.findById(renterId).ifPresent(profile -> {
                 if (profile.getLicenseVerificationStatus() == com.driveshare.common.enums.EVerificationStatus.REJECTED
                         || profile.getVerificationStatus() == com.driveshare.common.enums.EVerificationStatus.REJECTED) {
-                    throw new AppException(ErrorCode.UNAUTHORIZED, "Hồ sơ GPLX/CCCD của bạn đã bị từ chối. Vui lòng cập nhật lại trước khi thuê xe");
+                    throw new AppException(ErrorCode.KYC_NOT_VERIFIED, "Hồ sơ GPLX/CCCD của bạn đã bị từ chối. Vui lòng cập nhật lại giấy tờ trong mục Hồ sơ cá nhân trước khi thuê xe");
                 }
             });
         }

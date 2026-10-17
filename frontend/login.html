@@ -27,7 +27,7 @@
       }
       .auth-card-wrapper {
         width: 100%;
-        max-width: 480px;
+        max-width: 520px;
         background: #ffffff;
         border-radius: 20px;
         box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(226, 232, 240, 0.8);
@@ -522,9 +522,9 @@
 
             <!-- Thông báo trạng thái tài khoản -->
             <div id="regRoleNotice">
-              <div class="alert-box alert-success">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                <span>Tài khoản <strong>Khách thuê (Renter)</strong> sẽ được kích hoạt <strong>ACTIVE</strong> ngay sau khi đăng ký để bạn đặt xe lập tức!</span>
+              <div class="alert-box alert-warning">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span>Hồ sơ giấy tờ (CCCD &amp; GPLX) sẽ được gửi tới Ban quản trị để <strong>phê duyệt danh tính (PENDING)</strong> trước khi kích hoạt tài khoản.</span>
               </div>
             </div>
 
@@ -590,8 +590,156 @@
                 />
               </div>
 
+              <!-- PHẦN 1: GIẤY TỜ ĐỊNH DANH CCCD (BẮT BUỘC CHO CẢ 2 VAI TRÒ) -->
+              <div style="margin: 1.5rem 0 1rem 0; padding-top: 1.25rem; border-top: 1.5px dashed #e2e8f0;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <span style="font-size: 1.1rem;">🪪</span>
+                  <label class="form-label" style="margin-bottom: 0; font-size: 0.95rem; font-weight: 800; color: #0f172a;">
+                    Giấy tờ Định danh cá nhân (CMND / CCCD) *
+                  </label>
+                </div>
+                <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 12px 0;">
+                  Bắt buộc upload đủ 2 mặt để Admin thẩm định danh tính hợp lệ.
+                </p>
+
+                <div class="form-group">
+                  <label class="form-label" for="regIdCardNumber">Số CMND / CCCD (12 chữ số) *</label>
+                  <input
+                    type="text"
+                    id="regIdCardNumber"
+                    class="form-input"
+                    required
+                    placeholder="VD: 001200000001"
+                    maxlength="20"
+                  />
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.25rem;">
+                  <!-- Mặt trước CCCD -->
+                  <div>
+                    <label class="form-label" style="font-size: 0.82rem;">Mặt trước CCCD *</label>
+                    <div
+                      class="upload-dropzone"
+                      id="dropzoneCccdFront"
+                      onclick="document.getElementById('fileCccdFront').click()"
+                      style="padding: 12px 8px; min-height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center;"
+                    >
+                      <div id="contentCccdFront">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" style="margin-bottom: 4px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <div style="font-size: 0.76rem; font-weight: 700; color: #0f766e;">Chọn / Kéo thả ảnh</div>
+                        <div style="font-size: 0.68rem; color: #94a3b8;">JPG, PNG (Tối đa 10MB)</div>
+                      </div>
+                      <div id="previewCccdFrontWrap" style="display: none; position: relative; width: 100%;">
+                        <img id="previewCccdFront" style="width: 100%; height: 95px; object-fit: cover; border-radius: 6px;" alt="Mặt trước CCCD" />
+                        <button type="button" class="btn btn-danger btn-xs" style="position: absolute; top: 4px; right: 4px; padding: 2px 6px; font-size: 10px;" onclick="event.stopPropagation(); RegisterController.clearDocPreview('cccdFront')">Đổi</button>
+                      </div>
+                      <input type="file" id="fileCccdFront" onclick="event.stopPropagation()" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
+                    </div>
+                  </div>
+
+                  <!-- Mặt sau CCCD -->
+                  <div>
+                    <label class="form-label" style="font-size: 0.82rem;">Mặt sau CCCD *</label>
+                    <div
+                      class="upload-dropzone"
+                      id="dropzoneCccdBack"
+                      onclick="document.getElementById('fileCccdBack').click()"
+                      style="padding: 12px 8px; min-height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center;"
+                    >
+                      <div id="contentCccdBack">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" style="margin-bottom: 4px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <div style="font-size: 0.76rem; font-weight: 700; color: #0f766e;">Chọn / Kéo thả ảnh</div>
+                        <div style="font-size: 0.68rem; color: #94a3b8;">JPG, PNG (Tối đa 10MB)</div>
+                      </div>
+                      <div id="previewCccdBackWrap" style="display: none; position: relative; width: 100%;">
+                        <img id="previewCccdBack" style="width: 100%; height: 95px; object-fit: cover; border-radius: 6px;" alt="Mặt sau CCCD" />
+                        <button type="button" class="btn btn-danger btn-xs" style="position: absolute; top: 4px; right: 4px; padding: 2px 6px; font-size: 10px;" onclick="event.stopPropagation(); RegisterController.clearDocPreview('cccdBack')">Đổi</button>
+                      </div>
+                      <input type="file" id="fileCccdBack" onclick="event.stopPropagation()" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PHẦN 2: BẰNG LÁI XE GPLX (CHỈ DÀNH CHO KHÁCH THUÊ - RENTER) -->
+              <div id="sectionRenterDocs" style="margin-bottom: 1.25rem; padding-top: 1.15rem; border-top: 1px solid #f1f5f9;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <span style="font-size: 1.1rem;">🚗</span>
+                  <label class="form-label" style="margin-bottom: 0; font-size: 0.95rem; font-weight: 800; color: #0f172a;">
+                    Giấy phép lái xe (GPLX) *
+                  </label>
+                </div>
+                <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 12px 0;">
+                  Bắt buộc bằng lái ô tô hợp lệ (Hạng B1, B2, C...) để thuê xe tự lái.
+                </p>
+
+                <div class="form-group">
+                  <label class="form-label" for="regLicenseNumber">Số Giấy phép lái xe *</label>
+                  <input
+                    type="text"
+                    id="regLicenseNumber"
+                    class="form-input"
+                    placeholder="VD: 790123456789"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" style="font-size: 0.82rem;">Ảnh chụp mặt trước GPLX *</label>
+                  <div
+                    class="upload-dropzone"
+                    id="dropzoneGplx"
+                    onclick="document.getElementById('fileGplxFront').click()"
+                    style="padding: 14px 10px; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center;"
+                  >
+                    <div id="contentGplx">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" style="margin-bottom: 4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                      <div style="font-size: 0.82rem; font-weight: 700; color: #0f766e;">Chọn / Kéo thả ảnh bằng lái xe</div>
+                      <div style="font-size: 0.72rem; color: #94a3b8;">Hỗ trợ ảnh rõ nét JPG, PNG (Tối đa 10MB)</div>
+                    </div>
+                    <div id="previewGplxWrap" style="display: none; position: relative; width: 100%; max-width: 280px;">
+                      <img id="previewGplx" style="width: 100%; height: 110px; object-fit: cover; border-radius: 6px;" alt="Bằng lái xe GPLX" />
+                      <button type="button" class="btn btn-danger btn-xs" style="position: absolute; top: 4px; right: 4px; padding: 2px 6px; font-size: 10px;" onclick="event.stopPropagation(); RegisterController.clearDocPreview('gplxFront')">Đổi</button>
+                    </div>
+                    <input type="file" id="fileGplxFront" onclick="event.stopPropagation()" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- PHẦN 3: THÔNG TIN NGÂN HÀNG (CHỈ DÀNH CHO CHỦ XE - OWNER) -->
+              <div id="sectionOwnerBank" style="display: none; margin-bottom: 1.25rem; padding-top: 1.15rem; border-top: 1px solid #f1f5f9;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <span style="font-size: 1.1rem;">🏦</span>
+                  <label class="form-label" style="margin-bottom: 0; font-size: 0.95rem; font-weight: 800; color: #0f172a;">
+                    Tài khoản ngân hàng nhận tiền cọc/doanh thu *
+                  </label>
+                </div>
+                <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 12px 0;">
+                  Dùng để nhận thanh toán cọc và kết toán tiền thuê xe định kỳ từ DriveShare.
+                </p>
+
+                <div class="form-group">
+                  <label class="form-label" for="regBankName">Tên ngân hàng *</label>
+                  <input
+                    type="text"
+                    id="regBankName"
+                    class="form-input"
+                    placeholder="VD: Vietcombank, Techcombank, MB Bank..."
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="regBankAccountNumber">Số tài khoản ngân hàng *</label>
+                  <input
+                    type="text"
+                    id="regBankAccountNumber"
+                    class="form-input"
+                    placeholder="VD: 0123456789"
+                  />
+                </div>
+              </div>
+
               <button type="submit" id="btnSubmitRegister" class="btn-submit-auth">
-                Đăng ký tài khoản
+                Đăng ký &amp; Gửi hồ sơ xét duyệt
               </button>
             </form>
           </div>
@@ -600,9 +748,9 @@
     </main>
 
     <!-- Scripts -->
-    <script src="js/toast.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/register.js"></script>
+    <script src="js/toast.js?v=20261018_v999"></script>
+    <script src="js/auth.js?v=20261018_v999"></script>
+    <script src="js/register.js?v=20261018_v999"></script>
     <script>
       function handleGoogleClick(e) {
         e.preventDefault();

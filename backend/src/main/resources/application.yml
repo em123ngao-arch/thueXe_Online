@@ -14,9 +14,9 @@ spring:
     default-property-inclusion: non_null
 
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:demo}
-  api-key: ${CLOUDINARY_API_KEY:}
-  api-secret: ${CLOUDINARY_API_SECRET:}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:ajutfp98}
+  api-key: ${CLOUDINARY_API_KEY:264588314216624}
+  api-secret: ${CLOUDINARY_API_SECRET:rVsIDYc1lxeUovD8FyvWp7Jat5o}
 
 driveshare:
   upload:

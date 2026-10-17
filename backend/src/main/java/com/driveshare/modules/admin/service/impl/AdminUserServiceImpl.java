@@ -231,6 +231,10 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Trạng thái phê duyệt không hợp lệ. Chỉ chấp nhận 'verified' hoặc 'rejected'");
         }
 
+        if (user.getStatus() == EUserStatus.PENDING) {
+            user.setStatus(EUserStatus.ACTIVE);
+        }
+
         userRepository.save(user);
         return mapToUserItemResponse(user);
     }
@@ -362,9 +366,12 @@ public class AdminUserServiceImpl implements AdminUserService {
                         .fullName(u.getFullName())
                         .email(u.getEmail())
                         .phone(u.getPhone())
+                        .idCardNumber(u.getIdCardNumber())
                         .role("OWNER")
                         .cccdFrontUrl(u.getOwnerProfile().getIdCardFrontUrl())
                         .cccdBackUrl(u.getOwnerProfile().getIdCardBackUrl())
+                        .bankName(u.getOwnerProfile().getBankName())
+                        .bankAccountNumber(u.getOwnerProfile().getBankAccountNumber())
                         .submittedAt(u.getOwnerProfile().getUpdatedAt() != null ? u.getOwnerProfile().getUpdatedAt() : u.getCreatedAt())
                         .build());
             } else if (isPendingRenter) {
@@ -373,9 +380,12 @@ public class AdminUserServiceImpl implements AdminUserService {
                         .fullName(u.getFullName())
                         .email(u.getEmail())
                         .phone(u.getPhone())
+                        .idCardNumber(u.getIdCardNumber())
                         .role("RENTER")
                         .cccdFrontUrl(u.getRenterProfile().getIdCardFrontUrl())
                         .cccdBackUrl(u.getRenterProfile().getIdCardBackUrl())
+                        .licenseNumber(u.getRenterProfile().getLicenseNumber())
+                        .licenseFrontUrl(u.getRenterProfile().getLicenseFrontUrl())
                         .submittedAt(u.getRenterProfile().getUpdatedAt() != null ? u.getRenterProfile().getUpdatedAt() : u.getCreatedAt())
                         .build());
             }
@@ -410,13 +420,22 @@ public class AdminUserServiceImpl implements AdminUserService {
                 user.setStatus(EUserStatus.ACTIVE);
             } else {
                 user.getOwnerProfile().setRejectionReason(reason.trim());
+                user.setStatus(EUserStatus.ACTIVE);
             }
         }
 
         if (user.getRenterProfile() != null) {
             user.getRenterProfile().setVerificationStatus(targetStatus);
-            if (!isApproved) {
+            if (isApproved) {
+                if (user.getRenterProfile().getLicenseVerificationStatus() == EVerificationStatus.PENDING) {
+                    user.getRenterProfile().setLicenseVerificationStatus(EVerificationStatus.VERIFIED);
+                    user.getRenterProfile().setLicenseVerifiedAt(Instant.now());
+                    user.getRenterProfile().setLicenseVerifiedBy(actorId);
+                }
+                user.setStatus(EUserStatus.ACTIVE);
+            } else {
                 user.getRenterProfile().setRejectionReason(reason.trim());
+                user.setStatus(EUserStatus.ACTIVE);
             }
         }
 

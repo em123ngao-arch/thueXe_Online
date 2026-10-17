@@ -43,6 +43,16 @@ public class AuthController {
         return ApiResponse.success(authService.registerRenter(request));
     }
 
+    @PostMapping(value = "/register-with-docs", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<Map<String, Object>> registerWithDocs(
+            @Valid @ModelAttribute RegisterRequest request,
+            @RequestParam("cccdFront") org.springframework.web.multipart.MultipartFile cccdFront,
+            @RequestParam("cccdBack") org.springframework.web.multipart.MultipartFile cccdBack,
+            @RequestParam(value = "gplxFront", required = false) org.springframework.web.multipart.MultipartFile gplxFront
+    ) {
+        return ApiResponse.success("Đăng ký tài khoản thành công", authService.registerWithDocs(request, cccdFront, cccdBack, gplxFront));
+    }
+
     @PostMapping("/refresh-token")
     public ApiResponse<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         return ApiResponse.success("Làm mới access token thành công", authService.refreshToken(request));

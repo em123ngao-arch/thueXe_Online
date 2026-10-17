@@ -920,43 +920,80 @@ const AdminService = {
       <div style="display: flex; flex-direction: column; gap: 1.5rem;">
         ${pendingList.map(u => {
           const userId = u.user_id || u.userId;
-          const fullName = u.full_name || u.fullName;
-          const email = u.email;
+          const fullName = u.full_name || u.fullName || 'Chưa cập nhật';
+          const email = u.email || '';
           const phone = u.phone || 'Chưa cập nhật';
-          const role = u.role;
-          const cccdFront = u.cccd_front_url || u.cccdFrontUrl || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80';
-          const cccdBack = u.cccd_back_url || u.cccdBackUrl || 'https://images.unsplash.com/photo-1544717305-9e6b4e057115?auto=format&fit=crop&w=600&q=80';
-          const submittedAt = u.submitted_at || u.submittedAt || 'Mới nộp';
+          const role = (u.role || '').toUpperCase();
+          const idCardNumber = u.id_card_number || u.idCardNumber || '';
+          const licenseNumber = u.license_number || u.licenseNumber || '';
+          const bankName = u.bank_name || u.bankName || '';
+          const bankAccount = u.bank_account_number || u.bankAccountNumber || '';
+          const cccdFront = u.cccd_front_url || u.cccdFrontUrl || '';
+          const cccdBack = u.cccd_back_url || u.cccdBackUrl || '';
+          const gplxFront = u.license_front_url || u.licenseFrontUrl || u.gplx_front_url || u.gplxFrontUrl || '';
+          
+          let formattedTime = 'Mới nộp';
+          if (u.submitted_at || u.submittedAt) {
+            try {
+              formattedTime = new Date(u.submitted_at || u.submittedAt).toLocaleString('vi-VN');
+            } catch (e) {
+              formattedTime = u.submitted_at || u.submittedAt;
+            }
+          }
+
+          const renderDocImg = (url, label) => {
+            if (url && url.trim()) {
+              return `
+                <div style="text-align: center;">
+                  <div style="font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 4px;">${label}</div>
+                  <img src="${url}" alt="${label}" style="width: 140px; height: 90px; object-fit: cover; border-radius: 8px; border: 1.5px solid #0f766e; cursor: zoom-in; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="window.open('${url}', '_blank')" title="Nhấp để phóng to ảnh thật" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\'font-size: 0.75rem; font-weight: 600; color: #94a3b8; margin-bottom: 4px;\\'>${label}</div><div style=\\'width: 140px; height: 90px; background: #fff1f2; border: 1.5px dashed #fda4af; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #e11d48; font-size: 0.72rem; padding: 6px;\\'><span>Ảnh bị lỗi file</span></div>';" />
+                  <div style="font-size: 0.68rem; color: #059669; font-weight: 600; margin-top: 2px;">✔ Ảnh đã tải lên</div>
+                </div>
+              `;
+            } else {
+              return `
+                <div style="text-align: center;">
+                  <div style="font-size: 0.75rem; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">${label}</div>
+                  <div style="width: 140px; height: 90px; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.72rem; padding: 6px;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-bottom: 3px; color: #cbd5e1;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    <span>Chưa có ảnh</span>
+                  </div>
+                </div>
+              `;
+            }
+          };
 
           return `
             <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-              <div style="flex: 1; min-width: 260px;">
+              <div style="flex: 1; min-width: 250px;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                   <strong style="font-size: 1.05rem; color: #0f172a;">${fullName}</strong>
                   <span class="badge ${role === 'OWNER' ? 'badge-warning' : 'badge-info'}" style="font-size: 0.72rem;">${role === 'OWNER' ? 'Chủ xe' : 'Khách thuê'}</span>
-                  <span class="badge badge-warning" style="font-size: 0.72rem;">Chờ thẩm định CCCD</span>
+                  <span class="badge badge-warning" style="font-size: 0.72rem;">Chờ thẩm định hồ sơ</span>
                 </div>
                 <div style="font-size: 0.85rem; color: #475569; margin-bottom: 3px;">Email: <strong>${email}</strong></div>
                 <div style="font-size: 0.85rem; color: #475569; margin-bottom: 3px;">Số điện thoại: <strong>${phone}</strong></div>
-                <div style="font-size: 0.78rem; color: #94a3b8;">Thời gian nộp: ${submittedAt}</div>
+                ${idCardNumber ? `<div style="font-size: 0.85rem; color: #0f766e; margin-bottom: 3px; font-weight: 600;">Số CCCD: <span style="font-family: monospace;">${idCardNumber}</span></div>` : ''}
+                ${licenseNumber ? `<div style="font-size: 0.85rem; color: #2563eb; margin-bottom: 3px; font-weight: 600;">Số GPLX: <span style="font-family: monospace;">${licenseNumber}</span></div>` : ''}
+                ${(bankName || bankAccount) ? `
+                  <div style="font-size: 0.82rem; color: #475569; margin-top: 4px; padding: 4px 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    🏦 Ngân hàng: <strong>${bankName || 'N/A'}</strong> — STK: <strong style="font-family: monospace;">${bankAccount || 'N/A'}</strong>
+                  </div>
+                ` : ''}
+                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 6px;">Thời gian nộp: ${formattedTime}</div>
               </div>
 
-              <!-- Ảnh CCCD 2 mặt -->
+              <!-- Danh sách ảnh giấy tờ thực tế đã tải lên -->
               <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <div style="text-align: center;">
-                  <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 4px;">Mặt trước CCCD</div>
-                  <img src="${cccdFront}" alt="Mặt trước" style="width: 140px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer;" onclick="window.open('${cccdFront}', '_blank')" title="Nhấp để xem ảnh lớn" />
-                </div>
-                <div style="text-align: center;">
-                  <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 4px;">Mặt sau CCCD</div>
-                  <img src="${cccdBack}" alt="Mặt sau" style="width: 140px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer;" onclick="window.open('${cccdBack}', '_blank')" title="Nhấp để xem ảnh lớn" />
-                </div>
+                ${renderDocImg(cccdFront, 'Mặt trước CCCD')}
+                ${renderDocImg(cccdBack, 'Mặt sau CCCD')}
+                ${role === 'RENTER' ? renderDocImg(gplxFront, 'Bằng lái xe (GPLX)') : ''}
               </div>
 
               <!-- Nút hành động -->
               <div style="display: flex; flex-direction: column; gap: 8px; justify-content: center; min-width: 130px;">
                 <button class="btn btn-primary btn-sm" onclick="AdminService.approveCccd(${userId})" style="font-weight: 700;">
-                  Phê duyệt CCCD
+                  Phê duyệt hồ sơ
                 </button>
                 <button class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #fca5a5;" onclick="AdminService.openRejectCccdModal(${userId})">
                   Từ chối hồ sơ
