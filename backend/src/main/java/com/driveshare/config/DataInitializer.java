@@ -1,5 +1,6 @@
 package com.driveshare.config;
 
+import com.driveshare.common.enums.BankVerificationStatus;
 import com.driveshare.common.enums.ERole;
 import com.driveshare.common.enums.EUserStatus;
 import com.driveshare.common.enums.EVerificationStatus;
@@ -121,6 +122,7 @@ public class DataInitializer implements CommandLineRunner {
                     .phone("0900000002")
                     .idCardNumber("001200000001")
                     .status(EUserStatus.ACTIVE)
+                    .bankVerificationStatus(BankVerificationStatus.VERIFIED)
                     .roles(new HashSet<>(Set.of(ownerRole)))
                     .build();
 

@@ -6,6 +6,7 @@ import com.driveshare.modules.admin.dto.request.AdminUserFilterRequest;
 import com.driveshare.modules.admin.dto.request.ApproveLicenseRequest;
 import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
 import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
+import com.driveshare.modules.admin.dto.request.VerifyBankRequest;
 import com.driveshare.modules.admin.dto.response.PendingCccdResponse;
 import com.driveshare.modules.admin.dto.response.UserItemResponse;
 import com.driveshare.modules.admin.service.AdminUserService;
@@ -94,6 +95,28 @@ public class AdminUserController {
                 ? "Đã phê duyệt CCCD thành công"
                 : "Đã từ chối hồ sơ CCCD";
         return ResponseEntity.ok(ApiResponse.success(message, null));
+    }
+
+    @PutMapping("/{userId}/verify-bank")
+    @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Phê duyệt hoặc từ chối tài khoản ngân hàng của Chủ xe (Sprint 3 - Duy Quân)")
+    public ResponseEntity<ApiResponse<UserItemResponse>> verifyBank(
+            @PathVariable Long userId,
+            @Valid @RequestBody VerifyBankRequest request,
+            Authentication authentication
+    ) {
+        Long actorId = 6L;
+        String actorUsername = "admin_tin";
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails userDetails) {
+            actorId = userDetails.getUserId();
+            actorUsername = userDetails.getUsername();
+        }
+
+        UserItemResponse user = adminUserService.verifyBank(userId, request, actorId, actorUsername);
+        String message = request.getStatus() == com.driveshare.common.enums.BankVerificationStatus.VERIFIED
+                ? "Đã phê duyệt tài khoản ngân hàng thành công"
+                : "Đã từ chối tài khoản ngân hàng";
+        return ResponseEntity.ok(ApiResponse.success(message, user));
     }
 
     @GetMapping("/{userId}")

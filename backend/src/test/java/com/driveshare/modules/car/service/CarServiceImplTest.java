@@ -1,5 +1,6 @@
 package com.driveshare.modules.car.service;
 
+import com.driveshare.common.enums.BankVerificationStatus;
 import com.driveshare.common.enums.ECarStatus;
 import com.driveshare.common.enums.EFuelType;
 import com.driveshare.common.enums.ETransmission;
@@ -89,8 +90,14 @@ class CarServiceImplTest {
         createRequest.setProvince("TP. Hồ Chí Minh");
         createRequest.setDescription("Xe đẹp, máy êm, sạch sẽ");
 
+        User mockUser = User.builder()
+                .userId(100L)
+                .bankVerificationStatus(BankVerificationStatus.VERIFIED)
+                .build();
+
         verifiedOwner = OwnerProfile.builder()
                 .userId(100L)
+                .user(mockUser)
                 .verificationStatus(EVerificationStatus.VERIFIED)
                 .build();
     }
@@ -167,6 +174,65 @@ class CarServiceImplTest {
         assertThatThrownBy(() -> carService.createCar(createRequest))
                 .isInstanceOf(AppException.class)
                 .hasMessageContaining(ErrorCode.CAR_PLATE_DUPLICATE.getMessage());
+
+        verify(carRepository, never()).save(any(Car.class));
+    }
+
+    @Test
+    @DisplayName("CRP-Sprint3: Ném ra ngoại lệ OWNER_BANK_NOT_VERIFIED (403) khi chủ xe chưa xác minh tài khoản ngân hàng (UNVERIFIED)")
+    void createCar_BankUnverified_ThrowsException() {
+        // Arrange
+        mockCurrentUser(100L);
+        User unverifiedBankUser = User.builder()
+                .userId(100L)
+                .bankVerificationStatus(BankVerificationStatus.UNVERIFIED)
+                .build();
+
+        OwnerProfile owner = OwnerProfile.builder()
+                .userId(100L)
+                .user(unverifiedBankUser)
+                .verificationStatus(EVerificationStatus.VERIFIED)
+                .build();
+
+        when(ownerProfileRepository.findById(100L)).thenReturn(Optional.of(owner));
+
+        // Act & Assert
+        assertThatThrownBy(() -> carService.createCar(createRequest))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> {
+                    AppException ae = (AppException) e;
+                    assertThat(ae.getErrorCode()).isEqualTo(ErrorCode.OWNER_BANK_NOT_VERIFIED);
+                });
+
+        verify(carRepository, never()).save(any(Car.class));
+    }
+
+    @Test
+    @DisplayName("CRP-Sprint3: Ném ra ngoại lệ OWNER_BANK_NOT_VERIFIED (403) khi tài khoản ngân hàng của chủ xe bị từ chối (REJECTED)")
+    void createCar_BankRejected_ThrowsException() {
+        // Arrange
+        mockCurrentUser(100L);
+        User rejectedBankUser = User.builder()
+                .userId(100L)
+                .bankVerificationStatus(BankVerificationStatus.REJECTED)
+                .bankRejectionReason("Tên chủ thẻ không trùng khớp với CCCD")
+                .build();
+
+        OwnerProfile owner = OwnerProfile.builder()
+                .userId(100L)
+                .user(rejectedBankUser)
+                .verificationStatus(EVerificationStatus.VERIFIED)
+                .build();
+
+        when(ownerProfileRepository.findById(100L)).thenReturn(Optional.of(owner));
+
+        // Act & Assert
+        assertThatThrownBy(() -> carService.createCar(createRequest))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> {
+                    AppException ae = (AppException) e;
+                    assertThat(ae.getErrorCode()).isEqualTo(ErrorCode.OWNER_BANK_NOT_VERIFIED);
+                });
 
         verify(carRepository, never()).save(any(Car.class));
     }

@@ -1,6 +1,7 @@
 package com.driveshare.modules.admin;
 
 import com.driveshare.common.dto.PageResponse;
+import com.driveshare.common.enums.BankVerificationStatus;
 import com.driveshare.common.enums.ERole;
 import com.driveshare.common.enums.EUserStatus;
 import com.driveshare.common.enums.EVerificationStatus;
@@ -32,6 +33,7 @@ import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
 import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
+import com.driveshare.modules.admin.dto.request.VerifyBankRequest;
 import com.driveshare.modules.admin.entity.AuditLog;
 import com.driveshare.modules.admin.repository.AuditLogRepository;
 
@@ -509,5 +511,95 @@ class AdminUserServiceTest {
                 adminUserService.approveLicense(1L, request, 6L, "admin_tin"));
 
         assertEquals(ErrorCode.RENTER_PROFILE_NOT_FOUND, ex.getErrorCode());
+    }
+
+    // =========================================================================
+    // SPRINT 3 GÓI 4 (DUY QUÂN): DUYỆT TÀI KHOẢN NGÂN HÀNG CỦA CHỦ XE
+    // =========================================================================
+
+    @Test
+    @DisplayName("Admin Verify Bank - Phê duyệt STK ngân hàng thành công (VERIFIED)")
+    void testVerifyBank_Approved_Success() {
+        User user = User.builder()
+                .userId(3L)
+                .username("tuan_owner")
+                .bankVerificationStatus(BankVerificationStatus.UNVERIFIED)
+                .build();
+
+        when(userRepository.findById(3L)).thenReturn(Optional.of(user));
+
+        VerifyBankRequest request = VerifyBankRequest.builder()
+                .status(BankVerificationStatus.VERIFIED)
+                .build();
+
+        UserItemResponse response = adminUserService.verifyBank(3L, request, 6L, "admin_tin");
+
+        assertNotNull(response);
+        assertEquals(BankVerificationStatus.VERIFIED, user.getBankVerificationStatus());
+        assertNull(user.getBankRejectionReason());
+        verify(userRepository).save(user);
+        verify(auditLogRepository).save(any(AuditLog.class));
+    }
+
+    @Test
+    @DisplayName("Admin Verify Bank - Từ chối STK ngân hàng thành công với lý do (REJECTED)")
+    void testVerifyBank_Rejected_Success() {
+        User user = User.builder()
+                .userId(3L)
+                .username("tuan_owner")
+                .bankVerificationStatus(BankVerificationStatus.UNVERIFIED)
+                .build();
+
+        when(userRepository.findById(3L)).thenReturn(Optional.of(user));
+
+        VerifyBankRequest request = VerifyBankRequest.builder()
+                .status(BankVerificationStatus.REJECTED)
+                .reason("Tên chủ tài khoản không khớp với CCCD")
+                .build();
+
+        UserItemResponse response = adminUserService.verifyBank(3L, request, 6L, "admin_tin");
+
+        assertNotNull(response);
+        assertEquals(BankVerificationStatus.REJECTED, user.getBankVerificationStatus());
+        assertEquals("Tên chủ tài khoản không khớp với CCCD", user.getBankRejectionReason());
+        verify(userRepository).save(user);
+        verify(auditLogRepository).save(any(AuditLog.class));
+    }
+
+    @Test
+    @DisplayName("Admin Verify Bank - Ném ngoại lệ INVALID_REQUEST khi từ chối nhưng thiếu lý do")
+    void testVerifyBank_Rejected_MissingReason_ThrowsException() {
+        User user = User.builder()
+                .userId(3L)
+                .username("tuan_owner")
+                .bankVerificationStatus(BankVerificationStatus.UNVERIFIED)
+                .build();
+
+        when(userRepository.findById(3L)).thenReturn(Optional.of(user));
+
+        VerifyBankRequest request = VerifyBankRequest.builder()
+                .status(BankVerificationStatus.REJECTED)
+                .reason("   ")
+                .build();
+
+        AppException ex = assertThrows(AppException.class, () ->
+                adminUserService.verifyBank(3L, request, 6L, "admin_tin"));
+
+        assertEquals(ErrorCode.INVALID_REQUEST, ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("Admin Verify Bank - Ném ngoại lệ USER_NOT_FOUND khi userId không tồn tại")
+    void testVerifyBank_UserNotFound_ThrowsException() {
+        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+        VerifyBankRequest request = VerifyBankRequest.builder()
+                .status(BankVerificationStatus.VERIFIED)
+                .build();
+
+        AppException ex = assertThrows(AppException.class, () ->
+                adminUserService.verifyBank(999L, request, 6L, "admin_tin"));
+
+        assertEquals(ErrorCode.USER_NOT_FOUND, ex.getErrorCode());
     }
 }

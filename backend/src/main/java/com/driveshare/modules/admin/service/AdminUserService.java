@@ -25,6 +25,8 @@ public interface AdminUserService {
 
     void verifyCccd(Long userId, String status, String reason, Long actorId, String actorUsername);
 
+    UserItemResponse verifyBank(Long userId, com.driveshare.modules.admin.dto.request.VerifyBankRequest request, Long actorId, String actorUsername);
+
     java.util.List<com.driveshare.modules.admin.dto.response.PendingLicenseResponse> getPendingLicenses();
 
     com.driveshare.modules.admin.dto.response.AdminStatsResponse getAdminStats();

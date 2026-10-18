@@ -83,7 +83,8 @@ public enum ErrorCode {
     INSPECTION_NOT_FOUND("INSPECTION_NOT_FOUND", "Không tìm thấy biên bản kiểm tra bàn giao xe", HttpStatus.NOT_FOUND),
     REVIEW_ALREADY_EXISTS("REVIEW_ALREADY_EXISTS", "Đơn thuê xe này đã được đánh giá trước đó", HttpStatus.CONFLICT),
     RENTAL_NOT_COMPLETED_FOR_REVIEW("RENTAL_NOT_COMPLETED_FOR_REVIEW", "Chuyến đi phải ở trạng thái hoàn tất (COMPLETED) mới có thể đánh giá", HttpStatus.BAD_REQUEST),
-    KYC_NOT_VERIFIED("KYC_NOT_VERIFIED", "Hồ sơ giấy tờ (CCCD hoặc GPLX) của bạn chưa được phê duyệt. Vui lòng kiểm tra hồ sơ cá nhân trước khi thuê xe", HttpStatus.FORBIDDEN);
+    KYC_NOT_VERIFIED("KYC_NOT_VERIFIED", "Hồ sơ giấy tờ (CCCD hoặc GPLX) của bạn chưa được phê duyệt. Vui lòng kiểm tra hồ sơ cá nhân trước khi thuê xe", HttpStatus.FORBIDDEN),
+    OWNER_BANK_NOT_VERIFIED("OWNER_BANK_NOT_VERIFIED", "Chủ xe chưa được duyệt thông tin tài khoản ngân hàng, không thể tạo xe mới", HttpStatus.FORBIDDEN);
 
     private final String code;
     private final String message;
