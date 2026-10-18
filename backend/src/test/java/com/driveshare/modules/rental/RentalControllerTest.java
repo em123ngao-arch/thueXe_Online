@@ -44,6 +44,9 @@ class RentalControllerTest {
     private com.driveshare.modules.rental.service.RentalInspectionService rentalInspectionService;
 
     @MockBean
+    private com.driveshare.modules.rental.service.RentalDisputeService rentalDisputeService;
+
+    @MockBean
     private com.driveshare.security.JwtTokenProvider jwtTokenProvider;
 
     @MockBean

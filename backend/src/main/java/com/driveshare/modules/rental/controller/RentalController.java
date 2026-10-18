@@ -35,6 +35,7 @@ public class RentalController {
     private final RentalService rentalService;
     private final RentalQueryService rentalQueryService;
     private final RentalInspectionService rentalInspectionService;
+    private final com.driveshare.modules.rental.service.RentalDisputeService rentalDisputeService;
 
     /**
      * CRP-41 & CRP-42: Gửi yêu cầu thuê xe mới (trạng thái ban đầu: PENDING).
@@ -107,6 +108,41 @@ public class RentalController {
                         .data(data)
                         .build()
         );
+    }
+
+    /**
+     * Sprint 3 Fix (Lâm Chí Vĩ): Khách báo sự cố chủ xe không giao xe và yêu cầu hoàn 100% tiền cọc.
+     */
+    @PostMapping(value = "/{id}/report-no-show", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Khách báo sự cố không nhận xe (Sprint 3)", description = "Khách thuê gửi khiếu nại kèm hình ảnh/video bằng chứng khi chủ xe không đến bàn giao xe")
+    public ResponseEntity<ApiResponse<com.driveshare.modules.rental.dto.response.RentalDisputeResponse>> reportNoShow(
+            @PathVariable("id") Long id,
+            @RequestParam("reason") String reason,
+            @RequestPart(value = "evidenceFiles", required = false) List<org.springframework.web.multipart.MultipartFile> evidenceFiles,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long userId = userDetails != null ? userDetails.getUserId() : getCurrentUserId();
+        com.driveshare.modules.rental.dto.response.RentalDisputeResponse response = rentalDisputeService.reportNoShow(
+                id,
+                reason,
+                evidenceFiles,
+                userId
+        );
+        return ResponseEntity.ok(ApiResponse.success("Gửi khiếu nại sự cố không nhận xe thành công. Hệ thống đã đóng băng tiền cọc chờ Admin giải quyết.", response));
+    }
+
+    /**
+     * Sprint 3 Fix: Xem thông tin khiếu nại sự cố của đơn thuê.
+     */
+    @GetMapping("/{id}/dispute")
+    @Operation(summary = "Xem thông tin khiếu nại của đơn thuê (Sprint 3)")
+    public ResponseEntity<ApiResponse<com.driveshare.modules.rental.dto.response.RentalDisputeResponse>> getDispute(
+            @PathVariable("id") Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long userId = userDetails != null ? userDetails.getUserId() : getCurrentUserId();
+        com.driveshare.modules.rental.dto.response.RentalDisputeResponse response = rentalDisputeService.getDisputeByRentalId(id, userId);
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin khiếu nại thành công", response));
     }
 
     private Long getCurrentUserId() {
