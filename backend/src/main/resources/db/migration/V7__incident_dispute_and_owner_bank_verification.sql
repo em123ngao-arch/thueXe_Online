@@ -25,6 +25,10 @@ CREATE INDEX IF NOT EXISTS idx_rental_disputes_rental ON rental_disputes(rental_
 CREATE INDEX IF NOT EXISTS idx_rental_disputes_status ON rental_disputes(status);
 CREATE INDEX IF NOT EXISTS idx_rental_disputes_reporter ON rental_disputes(reporter_id);
 
+ALTER TABLE rental_disputes ADD COLUMN IF NOT EXISTS resolved_by BIGINT REFERENCES users(user_id);
+ALTER TABLE rental_disputes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
+ALTER TABLE rental_disputes ADD COLUMN IF NOT EXISTS updated_by BIGINT;
+
 -- 2. Bổ sung các cột kiểm duyệt tài khoản ngân hàng chủ xe cho bảng users (Phục vụ Quân & Khiêm)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_verification_status VARCHAR(30) DEFAULT 'UNVERIFIED';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_rejection_reason TEXT;

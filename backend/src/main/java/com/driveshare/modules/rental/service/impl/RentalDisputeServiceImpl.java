@@ -152,11 +152,30 @@ public class RentalDisputeServiceImpl implements RentalDisputeService {
     ) {
         log.info("Admin userId={} giải quyết khiếu nại disputeId={} với action={}", adminId, disputeId, request.getAction());
 
+        if (adminId == null) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        // Kiểm tra quyền Admin/Staff của người thực hiện giải quyết tranh chấp
+        User admin = userRepository.findById(adminId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        boolean hasAdminRole = admin.getRoles() != null && admin.getRoles().stream()
+                .anyMatch(r -> r.getRoleName() != null && (
+                        "ROLE_ADMIN".equalsIgnoreCase(r.getRoleName().name()) ||
+                        "ADMIN".equalsIgnoreCase(r.getRoleName().name()) ||
+                        "ROLE_STAFF".equalsIgnoreCase(r.getRoleName().name()) ||
+                        "STAFF".equalsIgnoreCase(r.getRoleName().name())
+                ));
+        if (!hasAdminRole) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
         if (request.getAction() == null || request.getAction().isBlank()) {
             throw new AppException(ErrorCode.DISPUTE_INVALID_ACTION);
         }
 
-        RentalDispute dispute = rentalDisputeRepository.findById(disputeId)
+        // Khóa bi quan (PESSIMISTIC_WRITE) để ngăn chặn tranh chấp giải quyết đồng thời gây hoàn cọc 2 lần
+        RentalDispute dispute = rentalDisputeRepository.findByIdForUpdate(disputeId)
                 .orElseThrow(() -> new AppException(ErrorCode.DISPUTE_NOT_FOUND));
 
         // Kiểm tra dispute đã được xử lý trước đó chưa (bảo vệ idempotent chống xử lý tài chính 2 lần)
@@ -172,19 +191,23 @@ public class RentalDisputeServiceImpl implements RentalDisputeService {
         if ("REFUND_RENTER".equals(action)) {
             // 1. Chuyển trạng thái đơn thuê thành CANCELLED_BY_HOST
             rental.setStatus(ERentalStatus.CANCELLED_BY_HOST);
-            rental.setRejectReason("Đã hủy và hoàn 100% tiền cọc cho khách do chủ xe vi phạm giao xe (Khiếu nại #" + dispute.getId() + ")");
+            rental.setRejectReason("Đã hủy và tạo lệnh hoàn 100% tiền cọc (chờ xử lý) cho khách do chủ xe vi phạm giao xe (Khiếu nại #" + dispute.getId() + ")");
             rentalRepository.save(rental);
 
-            // 2. Hoàn 100% tiền cọc cho khách qua luồng thanh toán hiện có
-            BigDecimal depositAmount = rental.getDepositAmount() != null ? rental.getDepositAmount() : BigDecimal.ZERO;
+            // 2. Lấy số tiền cọc thực tế từ giao dịch thanh toán
             Payment depositPayment = paymentRepository.findByRentalId(rental.getRentalId()).orElse(null);
+            BigDecimal depositAmount = (depositPayment != null && depositPayment.getAmount() != null)
+                    ? depositPayment.getAmount()
+                    : (rental.getDepositAmount() != null ? rental.getDepositAmount() : BigDecimal.ZERO);
+
             if (depositPayment != null) {
-                log.info("Thực hiện hoàn cọc {} VNĐ cho giao dịch paymentId={}", depositAmount, depositPayment.getPaymentId());
+                log.info("Cập nhật trạng thái giao dịch paymentId={} sang CANCELLED và ghi nhận hoàn cọc {} VNĐ",
+                        depositPayment.getPaymentId(), depositAmount);
                 depositPayment.setStatus(EPaymentStatus.CANCELLED);
                 paymentRepository.save(depositPayment);
             }
 
-            // 3. Ghi nhận phạt chủ xe
+            // 3. Ghi nhận công nợ phạt chủ xe
             BigDecimal penaltyAmount = (request.getPenaltyAmount() != null && request.getPenaltyAmount().compareTo(BigDecimal.ZERO) > 0)
                     ? request.getPenaltyAmount()
                     : depositAmount;
@@ -194,30 +217,34 @@ public class RentalDisputeServiceImpl implements RentalDisputeService {
             dispute.setRefundAmount(depositAmount);
             dispute.setPenaltyAmount(penaltyAmount);
             dispute.setAdminNote(request.getAdminNote());
+            dispute.setResolvedBy(adminId);
             dispute.setResolvedAt(Instant.now());
-            rentalDisputeRepository.save(dispute);
+            RentalDispute savedDispute = rentalDisputeRepository.save(dispute);
 
-            // 5. Gửi thông báo hoàn tiền & phạt
-            sendResolveNotifications(rental, dispute, true);
+            // 5. Gửi thông báo hoàn tiền (chờ xử lý) & phạt công nợ
+            sendResolveNotifications(rental, savedDispute, true);
+
+            return mapToResponse(savedDispute);
 
         } else if ("REJECT".equals(action)) {
             // Bác bỏ khiếu nại (bằng chứng không đủ hoặc chủ xe đã giao xe đúng hẹn)
             dispute.setStatus(EDisputeStatus.REJECTED);
             dispute.setAdminNote(request.getAdminNote());
+            dispute.setResolvedBy(adminId);
             dispute.setResolvedAt(Instant.now());
-            rentalDisputeRepository.save(dispute);
+            RentalDispute savedDispute = rentalDisputeRepository.save(dispute);
 
             // Đưa đơn thuê trở lại CONFIRMED
             rental.setStatus(ERentalStatus.CONFIRMED);
             rentalRepository.save(rental);
 
-            sendResolveNotifications(rental, dispute, false);
+            sendResolveNotifications(rental, savedDispute, false);
+
+            return mapToResponse(savedDispute);
 
         } else {
             throw new AppException(ErrorCode.DISPUTE_INVALID_ACTION, "Hành động chỉ có thể là REFUND_RENTER hoặc REJECT");
         }
-
-        return mapToResponse(dispute);
     }
 
     @Override
@@ -270,23 +297,23 @@ public class RentalDisputeServiceImpl implements RentalDisputeService {
             Long ownerId = (car != null) ? car.getOwnerId() : null;
 
             if (isRefund) {
-                // Cho khách
+                // Cho khách: Thông báo rõ ràng trạng thái hoàn tiền đang chờ ngân hàng/kế toán đối soát xử lý, không nói dối là đã chuyển tiền thành công
                 notificationRepository.save(Notification.builder()
                         .userId(rental.getRenterId())
-                        .title("Khiếu nại thành công - Hoàn cọc 100%")
-                        .content("DriveShare đã chấp thuận khiếu nại cho đơn #" + rental.getRentalId() + ". Số tiền cọc " + dispute.getRefundAmount() + " VNĐ đã được giải ngân hoàn lại cho bạn.")
-                        .type("DISPUTE_REFUNDED")
+                        .title("Khiếu nại được chấp thuận - Đang xử lý hoàn cọc 100%")
+                        .content("DriveShare đã chấp thuận khiếu nại cho đơn #" + rental.getRentalId() + ". Yêu cầu hoàn 100% tiền cọc (" + dispute.getRefundAmount() + " VNĐ) đã được phê duyệt và đang chờ xử lý hoàn tiền qua tài khoản ngân hàng của bạn trong vòng 1-3 ngày làm việc.")
+                        .type("DISPUTE_REFUND_PENDING")
                         .referenceId(rental.getRentalId())
                         .isRead(false)
                         .createdAt(Instant.now())
                         .build());
 
-                // Cho chủ xe
+                // Cho chủ xe: Ghi nhận công nợ phạt rõ ràng
                 if (ownerId != null) {
                     notificationRepository.save(Notification.builder()
                             .userId(ownerId)
                             .title("Thông báo xử phạt sự cố không giao xe #" + rental.getRentalId())
-                            .content("Admin đã giải quyết khiếu nại: Đơn thuê bị hủy do vi phạm giao xe. Bạn bị ghi nhận mức phạt: " + dispute.getPenaltyAmount() + " VNĐ.")
+                            .content("Admin đã giải quyết khiếu nại: Đơn thuê bị hủy do vi phạm giao xe. Bạn bị ghi nhận công nợ mức phạt: " + dispute.getPenaltyAmount() + " VNĐ. Khoản phạt này sẽ được khấu trừ vào các kỳ thanh toán tiếp theo.")
                             .type("DISPUTE_PENALTY")
                             .referenceId(rental.getRentalId())
                             .isRead(false)
@@ -321,6 +348,18 @@ public class RentalDisputeServiceImpl implements RentalDisputeService {
             reporterPhone = reporter.getPhone() != null ? reporter.getPhone() : "N/A";
         }
 
+        String resolverName = null;
+        if (dispute.getResolvedBy() != null) {
+            User resolver = userRepository.findById(dispute.getResolvedBy()).orElse(null);
+            if (resolver != null) {
+                resolverName = (resolver.getFullName() != null && !resolver.getFullName().isBlank())
+                        ? resolver.getFullName()
+                        : resolver.getUsername();
+            } else {
+                resolverName = "Admin #" + dispute.getResolvedBy();
+            }
+        }
+
         List<String> proofList = new ArrayList<>();
         if (dispute.getProofUrls() != null && !dispute.getProofUrls().isBlank()) {
             proofList = Arrays.stream(dispute.getProofUrls().split(";"))
@@ -340,6 +379,8 @@ public class RentalDisputeServiceImpl implements RentalDisputeService {
                 .refundAmount(dispute.getRefundAmount())
                 .penaltyAmount(dispute.getPenaltyAmount())
                 .adminNote(dispute.getAdminNote())
+                .resolvedBy(dispute.getResolvedBy())
+                .resolverName(resolverName)
                 .createdAt(dispute.getCreatedAt())
                 .resolvedAt(dispute.getResolvedAt())
                 .build();

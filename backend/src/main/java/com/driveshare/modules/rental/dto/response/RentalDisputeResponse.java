@@ -48,6 +48,12 @@ public class RentalDisputeResponse {
     @JsonProperty("admin_note")
     private String adminNote;
 
+    @JsonProperty("resolved_by")
+    private Long resolvedBy;
+
+    @JsonProperty("resolver_name")
+    private String resolverName;
+
     @JsonProperty("created_at")
     private Instant createdAt;
 

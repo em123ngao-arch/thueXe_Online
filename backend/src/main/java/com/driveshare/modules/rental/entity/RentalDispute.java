@@ -66,6 +66,13 @@ public class RentalDispute extends BaseEntity {
     @Column(name = "admin_note", columnDefinition = "TEXT")
     private String adminNote;
 
+    @Column(name = "resolved_by")
+    private Long resolvedBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "resolved_by", insertable = false, updatable = false)
+    private User resolver;
+
     @Column(name = "resolved_at")
     private Instant resolvedAt;
 }

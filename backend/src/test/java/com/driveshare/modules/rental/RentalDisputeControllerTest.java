@@ -82,13 +82,17 @@ class RentalDisputeControllerTest {
 
     @org.junit.jupiter.api.BeforeEach
     void setUpSecurity() {
+        com.driveshare.modules.user.entity.Role adminRole = com.driveshare.modules.user.entity.Role.builder()
+                .roleId(1L)
+                .roleName(com.driveshare.common.enums.ERole.ROLE_ADMIN)
+                .build();
         com.driveshare.modules.user.entity.User mockUser = com.driveshare.modules.user.entity.User.builder()
                 .userId(100L)
-                .username("renter01")
-                .email("renter01@example.com")
+                .username("admin01")
+                .email("admin01@example.com")
                 .passwordHash("hashed")
                 .status(com.driveshare.common.enums.EUserStatus.ACTIVE)
-                .roles(java.util.Set.of())
+                .roles(java.util.Set.of(adminRole))
                 .build();
         com.driveshare.security.CustomUserDetails userDetails = com.driveshare.security.CustomUserDetails.build(mockUser);
         org.springframework.security.core.Authentication auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(

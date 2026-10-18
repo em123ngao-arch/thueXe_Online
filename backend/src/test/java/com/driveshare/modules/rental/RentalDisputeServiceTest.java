@@ -38,6 +38,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -45,6 +48,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class RentalDisputeServiceTest {
 
     @Mock
@@ -120,6 +124,18 @@ class RentalDisputeServiceTest {
                 .amount(new BigDecimal("600000"))
                 .status(EPaymentStatus.SUCCESS)
                 .build();
+
+        com.driveshare.modules.user.entity.Role adminRole = com.driveshare.modules.user.entity.Role.builder()
+                .roleId(1L)
+                .roleName(com.driveshare.common.enums.ERole.ROLE_ADMIN)
+                .build();
+        User adminUser = User.builder()
+                .userId(adminId)
+                .username("admin01")
+                .fullName("System Administrator")
+                .roles(java.util.Set.of(adminRole))
+                .build();
+        when(userRepository.findById(adminId)).thenReturn(Optional.of(adminUser));
     }
 
     // =========================================================================
@@ -255,6 +271,7 @@ class RentalDisputeServiceTest {
                 .status(EDisputeStatus.PENDING)
                 .build();
 
+        when(rentalDisputeRepository.findByIdForUpdate(disputeId)).thenReturn(Optional.of(dispute));
         when(rentalDisputeRepository.findById(disputeId)).thenReturn(Optional.of(dispute));
         when(rentalRepository.findById(rentalId)).thenReturn(Optional.of(rental));
         when(paymentRepository.findByRentalId(rentalId)).thenReturn(Optional.of(payment));
@@ -273,12 +290,56 @@ class RentalDisputeServiceTest {
         assertThat(response.getStatus()).isEqualTo(EDisputeStatus.RESOLVED_REFUND);
         assertThat(response.getRefundAmount()).isEqualByComparingTo("600000");
         assertThat(response.getPenaltyAmount()).isEqualByComparingTo("600000");
+        assertThat(response.getResolvedBy()).isEqualTo(adminId);
+        assertThat(response.getResolverName()).isEqualTo("System Administrator");
         assertThat(rental.getStatus()).isEqualTo(ERentalStatus.CANCELLED_BY_HOST);
         assertThat(payment.getStatus()).isEqualTo(EPaymentStatus.CANCELLED);
 
         verify(rentalRepository).save(rental);
         verify(paymentRepository).save(payment);
         verify(rentalDisputeRepository).save(dispute);
+    }
+
+    @Test
+    @DisplayName("Ca 7b: Edge Case 1 - Người không có quyền Admin/Staff giải quyết khiếu nại -> Ném 403 UNAUTHORIZED")
+    void resolveDispute_NonAdmin_ThrowsUnauthorized() {
+        com.driveshare.modules.user.entity.Role customerRole = com.driveshare.modules.user.entity.Role.builder()
+                .roleId(2L)
+                .roleName(com.driveshare.common.enums.ERole.ROLE_RENTER)
+                .build();
+        User customerUser = User.builder()
+                .userId(otherUserId)
+                .username("customer01")
+                .fullName("Customer No Admin")
+                .roles(java.util.Set.of(customerRole))
+                .build();
+        when(userRepository.findById(otherUserId)).thenReturn(Optional.of(customerUser));
+
+        ResolveDisputeRequest request = ResolveDisputeRequest.builder()
+                .action("REFUND_RENTER")
+                .adminNote("Khách thường thử giải quyết khiếu nại")
+                .build();
+
+        assertThatThrownBy(() -> rentalDisputeService.resolveDispute(disputeId, request, otherUserId))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.UNAUTHORIZED);
+
+        verify(rentalDisputeRepository, never()).findByIdForUpdate(any());
+        verify(rentalRepository, never()).save(any());
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Ca 7c: Caller chưa đăng nhập (adminId == null) giải quyết khiếu nại -> Ném 401 UNAUTHENTICATED")
+    void resolveDispute_Unauthenticated_ThrowsUnauthenticated() {
+        ResolveDisputeRequest request = ResolveDisputeRequest.builder()
+                .action("REFUND_RENTER")
+                .adminNote("Chưa đăng nhập")
+                .build();
+
+        assertThatThrownBy(() -> rentalDisputeService.resolveDispute(disputeId, request, null))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.UNAUTHENTICATED);
     }
 
     @Test
@@ -292,6 +353,7 @@ class RentalDisputeServiceTest {
                 .status(EDisputeStatus.PENDING)
                 .build();
 
+        when(rentalDisputeRepository.findByIdForUpdate(disputeId)).thenReturn(Optional.of(dispute));
         when(rentalDisputeRepository.findById(disputeId)).thenReturn(Optional.of(dispute));
         when(rentalRepository.findById(rentalId)).thenReturn(Optional.of(rental));
         when(carRepository.findById(carId)).thenReturn(Optional.of(car));
@@ -306,13 +368,14 @@ class RentalDisputeServiceTest {
 
         assertThat(response).isNotNull();
         assertThat(response.getStatus()).isEqualTo(EDisputeStatus.REJECTED);
+        assertThat(response.getResolvedBy()).isEqualTo(adminId);
         assertThat(rental.getStatus()).isEqualTo(ERentalStatus.CONFIRMED);
         verify(rentalRepository).save(rental);
         verify(rentalDisputeRepository).save(dispute);
     }
 
     @Test
-    @DisplayName("Ca 9: Admin resolve cùng 1 dispute đã xử lý -> Ném 400 DISPUTE_ALREADY_RESOLVED (chống hoàn tiền 2 lần)")
+    @DisplayName("Ca 9: Edge Case 2 - Admin resolve cùng 1 dispute đã xử lý -> Ném 400 DISPUTE_ALREADY_RESOLVED (chống hoàn tiền 2 lần)")
     void resolveDispute_AlreadyResolved_ThrowsException() {
         RentalDispute resolvedDispute = RentalDispute.builder()
                 .id(disputeId)
@@ -321,6 +384,7 @@ class RentalDisputeServiceTest {
                 .status(EDisputeStatus.RESOLVED_REFUND)
                 .build();
 
+        when(rentalDisputeRepository.findByIdForUpdate(disputeId)).thenReturn(Optional.of(resolvedDispute));
         when(rentalDisputeRepository.findById(disputeId)).thenReturn(Optional.of(resolvedDispute));
 
         ResolveDisputeRequest request = ResolveDisputeRequest.builder()
@@ -345,6 +409,7 @@ class RentalDisputeServiceTest {
                 .status(EDisputeStatus.PENDING)
                 .build();
 
+        when(rentalDisputeRepository.findByIdForUpdate(disputeId)).thenReturn(Optional.of(dispute));
         when(rentalDisputeRepository.findById(disputeId)).thenReturn(Optional.of(dispute));
         when(rentalRepository.findById(rentalId)).thenReturn(Optional.of(rental));
 
