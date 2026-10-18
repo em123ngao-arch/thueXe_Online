@@ -101,7 +101,7 @@ public ResponseEntity<ApiResponse<ChatReplyResponse>> reply(@Valid @RequestBody 
   ```powershell
   cd backend; .\mvnw.cmd compile
   ```
-- **Chạy toàn bộ bài Unit Test (103 tests)**:
+- **Chạy toàn bộ bài Unit Test (150 tests)**:
   ```powershell
   cd backend; .\mvnw.cmd test
   ```
@@ -113,3 +113,29 @@ public ResponseEntity<ApiResponse<ChatReplyResponse>> reply(@Valid @RequestBody 
   ```powershell
   cd frontend; python -m http.server 3000
   ```
+
+---
+
+## 6. Quy Chuẩn Quản Lý Nhánh & GitHub Workflow Chuẩn Doanh Nghiệp
+
+### 6.1 Cấu Trúc Nhánh & Quyền Hạn
+- **`develop`**: Nhánh tích hợp chính (Default branch). Toàn bộ tính năng (`feature/*`) và sửa lỗi (`fix/*`) mở PR vào đây.
+- **`main`**: Nhánh Production/Release kết nối với Render Web Service. Chỉ nhận PR từ `develop` do Tech Lead duyệt.
+- **CẤM**: Không được push trực tiếp vào `develop` và `main`. Mọi thay đổi phải qua Pull Request.
+- **CODEOWNERS**: Tech Lead Nguyễn Duy Bảo (`@em123ngao-arch`) là người duyệt bắt buộc (Required Approval).
+
+### 6.2 Chiến Lược Hợp Nhất (Merge Strategy)
+- **Feature/Fix PR $\rightarrow$ `develop`**: Sử dụng **Squash and Merge** (Gom các commit nhỏ lẻ thành 1 commit sạch đẹp).
+- **`develop` $\rightarrow$ `main`**: Sử dụng **Create a Merge Commit** (Lưu giữ mốc phát hành phiên bản).
+
+### 6.3 Quy Trình 5 Bước Làm Việc Của Thành Viên (Chống Ghi Đè Code)
+1. **Bắt đầu**: Chuyển về `develop` và kéo code mới nhất:  
+   `git checkout develop && git pull origin develop`
+2. **Tạo nhánh**: Tạo nhánh riêng theo định dạng chuẩn:  
+   `git checkout -b feature/<ma-task>-<ten-ngan-gon>` hoặc `git checkout -b fix/<ma-task>-<ten-loi>`
+3. **Phát triển & Kiểm thử local**: Code, viết test và chạy `.\mvnw.cmd test` (bắt buộc pass 150/150 tests) và kiểm tra syntax JS.
+4. **Đồng bộ trước khi tạo PR**: Kéo `develop` mới nhất về nhánh để giải quyết xung đột trên máy mình:  
+   `git fetch origin && git merge origin/develop`  
+   *(Xác nhận kỹ lưỡng không ghi đè hoặc làm mất code của đồng đội).*
+5. **Mở Pull Request**: Đẩy nhánh lên GitHub và tạo PR vào `develop`, điền đầy đủ Checklist trong PR Template kèm ảnh chụp minh chứng.
+

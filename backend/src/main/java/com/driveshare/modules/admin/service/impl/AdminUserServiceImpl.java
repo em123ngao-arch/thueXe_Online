@@ -231,6 +231,10 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Trạng thái phê duyệt không hợp lệ. Chỉ chấp nhận 'verified' hoặc 'rejected'");
         }
 
+        if (user.getStatus() == EUserStatus.PENDING) {
+            user.setStatus(EUserStatus.ACTIVE);
+        }
+
         userRepository.save(user);
         return mapToUserItemResponse(user);
     }
@@ -362,9 +366,12 @@ public class AdminUserServiceImpl implements AdminUserService {
                         .fullName(u.getFullName())
                         .email(u.getEmail())
                         .phone(u.getPhone())
+                        .idCardNumber(u.getIdCardNumber())
                         .role("OWNER")
                         .cccdFrontUrl(u.getOwnerProfile().getIdCardFrontUrl())
                         .cccdBackUrl(u.getOwnerProfile().getIdCardBackUrl())
+                        .bankName(u.getOwnerProfile().getBankName())
+                        .bankAccountNumber(u.getOwnerProfile().getBankAccountNumber())
                         .submittedAt(u.getOwnerProfile().getUpdatedAt() != null ? u.getOwnerProfile().getUpdatedAt() : u.getCreatedAt())
                         .build());
             } else if (isPendingRenter) {
@@ -373,9 +380,12 @@ public class AdminUserServiceImpl implements AdminUserService {
                         .fullName(u.getFullName())
                         .email(u.getEmail())
                         .phone(u.getPhone())
+                        .idCardNumber(u.getIdCardNumber())
                         .role("RENTER")
                         .cccdFrontUrl(u.getRenterProfile().getIdCardFrontUrl())
                         .cccdBackUrl(u.getRenterProfile().getIdCardBackUrl())
+                        .licenseNumber(u.getRenterProfile().getLicenseNumber())
+                        .licenseFrontUrl(u.getRenterProfile().getLicenseFrontUrl())
                         .submittedAt(u.getRenterProfile().getUpdatedAt() != null ? u.getRenterProfile().getUpdatedAt() : u.getCreatedAt())
                         .build());
             }
@@ -410,13 +420,22 @@ public class AdminUserServiceImpl implements AdminUserService {
                 user.setStatus(EUserStatus.ACTIVE);
             } else {
                 user.getOwnerProfile().setRejectionReason(reason.trim());
+                user.setStatus(EUserStatus.ACTIVE);
             }
         }
 
         if (user.getRenterProfile() != null) {
             user.getRenterProfile().setVerificationStatus(targetStatus);
-            if (!isApproved) {
+            if (isApproved) {
+                if (user.getRenterProfile().getLicenseVerificationStatus() == EVerificationStatus.PENDING) {
+                    user.getRenterProfile().setLicenseVerificationStatus(EVerificationStatus.VERIFIED);
+                    user.getRenterProfile().setLicenseVerifiedAt(Instant.now());
+                    user.getRenterProfile().setLicenseVerifiedBy(actorId);
+                }
+                user.setStatus(EUserStatus.ACTIVE);
+            } else {
                 user.getRenterProfile().setRejectionReason(reason.trim());
+                user.setStatus(EUserStatus.ACTIVE);
             }
         }
 
@@ -489,6 +508,33 @@ public class AdminUserServiceImpl implements AdminUserService {
                             || u.getRenterProfile().getLicenseVerificationStatus() == null))
                 .count();
 
+        List<com.driveshare.modules.rental.entity.Rental> allRentals = rentalRepository.findAll();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.Instant startOfDay = today.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+
+        long todayRentals = allRentals.stream()
+                .filter(r -> r.getCreatedAt() != null && !r.getCreatedAt().isBefore(startOfDay))
+                .count();
+
+        // GMV: Tổng giá trị giao dịch của các đơn đã được duyệt hoặc thành công
+        java.math.BigDecimal totalGmv = allRentals.stream()
+                .filter(r -> r.getStatus() == com.driveshare.common.enums.ERentalStatus.CONFIRMED 
+                          || r.getStatus() == com.driveshare.common.enums.ERentalStatus.IN_PROGRESS 
+                          || r.getStatus() == com.driveshare.common.enums.ERentalStatus.COMPLETED)
+                .map(r -> r.getTotalPrice() != null ? r.getTotalPrice() : java.math.BigDecimal.ZERO)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        // Tổng cọc VietQR 30% đã thu
+        java.math.BigDecimal totalDeposits = allRentals.stream()
+                .filter(r -> r.getStatus() == com.driveshare.common.enums.ERentalStatus.CONFIRMED 
+                          || r.getStatus() == com.driveshare.common.enums.ERentalStatus.IN_PROGRESS 
+                          || r.getStatus() == com.driveshare.common.enums.ERentalStatus.COMPLETED)
+                .map(r -> r.getDepositAmount() != null ? r.getDepositAmount() : java.math.BigDecimal.ZERO)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        // Hoa hồng sàn (10% GMV)
+        java.math.BigDecimal platformCommission = totalGmv.multiply(java.math.BigDecimal.valueOf(0.10));
+
         return AdminStatsResponse.builder()
                 .pendingCarsCount(pendingCars)
                 .pendingCccdCount(pendingCccd)
@@ -496,6 +542,10 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .activeCarsCount(activeCars)
                 .totalBookingsCount(totalRentals)
                 .totalUsersCount(totalUsers)
+                .todayBookingsCount(todayRentals)
+                .totalGmv(totalGmv)
+                .totalDepositsCollected(totalDeposits)
+                .platformCommissionRevenue(platformCommission)
                 .build();
     }
 }

@@ -32,6 +32,9 @@ public class RegisterRequest {
 
     private String idCardNumber;
 
+    // Specific to Renter
+    private String licenseNumber;
+
     // Specific to Owner
     private String bankAccountNumber;
     private String bankName;

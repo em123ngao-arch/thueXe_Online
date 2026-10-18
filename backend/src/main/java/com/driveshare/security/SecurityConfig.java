@@ -66,7 +66,9 @@ public class SecurityConfig {
                         // Public endpoints
                         .requestMatchers(
                                 "/api/v1/auth/login",
+                                "/api/v1/auth/register",
                                 "/api/v1/auth/register/**",
+                                "/api/v1/auth/register-with-docs",
                                 "/api/v1/auth/refresh-token",
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/reset-password",

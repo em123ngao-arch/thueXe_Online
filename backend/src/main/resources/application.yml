@@ -6,21 +6,25 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 30MB
+      max-file-size: 50MB
+      max-request-size: 70MB
 
   jackson:
     property-naming-strategy: SNAKE_CASE
     default-property-inclusion: non_null
 
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:demo}
-  api-key: ${CLOUDINARY_API_KEY:}
-  api-secret: ${CLOUDINARY_API_SECRET:}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:ajutfp98}
+  api-key: ${CLOUDINARY_API_KEY:264588314216624}
+  api-secret: ${CLOUDINARY_API_SECRET:rVsIDYc1lxeUovD8FyvWp7Jat5o}
 
 driveshare:
   upload:
     dir: uploads
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
 
 
 server:

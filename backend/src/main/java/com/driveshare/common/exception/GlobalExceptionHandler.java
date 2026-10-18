@@ -97,6 +97,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceededException(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        log.warn("Upload size limit exceeded: {}", ex.getMessage());
+        ErrorResponse response = ErrorResponse.builder()
+                .success(false)
+                .message("Kích thước tập tin vượt quá giới hạn tối đa cho phép (50MB)")
+                .errorCode(ErrorCode.FILE_SIZE_EXCEEDED.getCode())
+                .timestamp(Instant.now())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
         ErrorResponse response = ErrorResponse.builder()

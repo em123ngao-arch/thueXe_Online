@@ -11,9 +11,9 @@ class CloudinaryLiveTest {
     @Disabled("Chạy thủ công khi cần kiểm thử kết nối trực tiếp Cloudinary")
     @Test
     void testLiveUploadToCloudinary() {
-        String cloudName = System.getenv().getOrDefault("CLOUDINARY_CLOUD_NAME", "demo");
-        String apiKey = System.getenv().getOrDefault("CLOUDINARY_API_KEY", "");
-        String apiSecret = System.getenv().getOrDefault("CLOUDINARY_API_SECRET", "");
+        String cloudName = "ajutfp98";
+        String apiKey = "264588314216624";
+        String apiSecret = "rVsIDYc1lxeUovD8FyvWp7Jat5o";
         CloudinaryService service = new CloudinaryService(
                 cloudName,
                 apiKey,

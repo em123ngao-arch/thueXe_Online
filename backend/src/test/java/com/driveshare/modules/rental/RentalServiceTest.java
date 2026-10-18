@@ -295,4 +295,72 @@ class RentalServiceTest {
                     assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.CAR_ALREADY_RENTED);
                 });
     }
+
+    @Test
+    @DisplayName("Sprint 3 - Chauffeur: Thuê kèm tài xế thành công, tính đúng phụ phí tài xế và miễn kiểm tra GPLX")
+    void createRentalRequest_WithDriver_Success() {
+        LocalDate startDate = LocalDate.now().plusDays(1);
+        LocalDate endDate = LocalDate.now().plusDays(3); // 2 ngày
+
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(startDate)
+                .endDate(endDate)
+                .withDriver(true)
+                .build();
+
+        Car car = Car.builder()
+                .carId(CAR_ID)
+                .ownerId(OWNER_ID)
+                .pricePerDay(BigDecimal.valueOf(1_000_000))
+                .hasDriverService(true)
+                .driverFeePerDay(BigDecimal.valueOf(500_000))
+                .status(ECarStatus.ACTIVE)
+                .build();
+
+        when(rentalRepository.countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING)).thenReturn(0L);
+        when(carRepository.findByCarIdAndDeletedAtIsNull(CAR_ID)).thenReturn(Optional.of(car));
+        when(rentalRepository.save(any(Rental.class))).thenAnswer(invocation -> {
+            Rental r = invocation.getArgument(0);
+            r.setRentalId(99L);
+            return r;
+        });
+
+        RentalResponse response = rentalService.createRentalRequest(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getWithDriver()).isTrue();
+        assertThat(response.getDriverFee()).isEqualByComparingTo(BigDecimal.valueOf(1_000_000)); // 500k * 2 ngày
+        assertThat(response.getTotalPrice()).isEqualByComparingTo(BigDecimal.valueOf(3_000_000)); // (1tr * 2) + 1tr
+        assertThat(response.getDepositAmount()).isEqualByComparingTo(BigDecimal.valueOf(900_000)); // 30% của 3tr
+    }
+
+    @Test
+    @DisplayName("Sprint 3 - Chauffeur: Xe không hỗ trợ tài xế nhưng khách chọn kèm tài xế -> ném INVALID_REQUEST")
+    void createRentalRequest_WithDriver_WhenCarNotSupported_ThrowsException() {
+        LocalDate startDate = LocalDate.now().plusDays(1);
+        LocalDate endDate = LocalDate.now().plusDays(3);
+
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(startDate)
+                .endDate(endDate)
+                .withDriver(true)
+                .build();
+
+        Car car = Car.builder()
+                .carId(CAR_ID)
+                .ownerId(OWNER_ID)
+                .pricePerDay(BigDecimal.valueOf(1_000_000))
+                .hasDriverService(false)
+                .status(ECarStatus.ACTIVE)
+                .build();
+
+        when(rentalRepository.countByRenterIdAndStatus(RENTER_ID, ERentalStatus.PENDING)).thenReturn(0L);
+        when(carRepository.findByCarIdAndDeletedAtIsNull(CAR_ID)).thenReturn(Optional.of(car));
+
+        assertThatThrownBy(() -> rentalService.createRentalRequest(request))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST));
+    }
 }

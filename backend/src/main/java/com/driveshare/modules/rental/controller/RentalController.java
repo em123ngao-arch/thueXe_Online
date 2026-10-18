@@ -1,31 +1,46 @@
 package com.driveshare.modules.rental.controller;
 
 import com.driveshare.common.dto.ApiResponse;
+import com.driveshare.common.exception.AppException;
+import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.rental.dto.CreateRentalRequest;
 import com.driveshare.modules.rental.dto.RentalResponse;
+import com.driveshare.modules.rental.dto.response.RentalInspectionResponse;
 import com.driveshare.modules.rental.dto.response.RentalSummaryResponse;
+import com.driveshare.modules.rental.dto.RentalDisputeRequest;
+import com.driveshare.modules.rental.dto.response.RentalDisputeResponse;
+import com.driveshare.modules.rental.service.RentalDisputeService;
+import com.driveshare.modules.rental.service.RentalInspectionService;
 import com.driveshare.modules.rental.service.RentalQueryService;
 import com.driveshare.modules.rental.service.RentalService;
+import com.driveshare.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/rentals")
 @RequiredArgsConstructor
-@Tag(name = "Rental Management", description = "API quản lý và truy vấn yêu cầu thuê xe (CRP-41, CRP-42, CRP-44)")
+@Tag(name = "Rental Management", description = "API quản lý và truy vấn yêu cầu thuê xe (CRP-41, CRP-42, CRP-44, Sprint 3 Inspection & Dispute)")
 @SecurityRequirement(name = "bearerAuth")
 public class RentalController {
 
     private final RentalService rentalService;
     private final RentalQueryService rentalQueryService;
+    private final RentalInspectionService rentalInspectionService;
+    private final RentalDisputeService rentalDisputeService;
 
     /**
      * CRP-41 & CRP-42: Gửi yêu cầu thuê xe mới (trạng thái ban đầu: PENDING).
@@ -77,5 +92,61 @@ public class RentalController {
                         .data(data)
                         .build()
         );
+    }
+
+    /**
+     * Sprint 3: Xem toàn bộ biên bản bàn giao (Check-in) và nghiệm thu trả xe (Check-out) của chuyến đi.
+     */
+    @GetMapping("/{id}/inspections")
+    @Operation(summary = "Xem biên bản bàn giao và trả xe (Sprint 3)", description = "Chủ xe hoặc khách thuê xem chi tiết 2 biên bản nhận & trả kèm ảnh đối chiếu")
+    public ResponseEntity<ApiResponse<List<RentalInspectionResponse>>> getRentalInspections(
+            @PathVariable("id") Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long userId = userDetails != null ? userDetails.getUserId() : getCurrentUserId();
+        List<RentalInspectionResponse> data = rentalInspectionService.getInspections(id, userId);
+        return ResponseEntity.ok(
+                ApiResponse.<List<RentalInspectionResponse>>builder()
+                        .code(200)
+                        .success(true)
+                        .message("Lấy danh sách biên bản giao nhận thành công")
+                        .data(data)
+                        .build()
+        );
+    }
+
+    /**
+     * Sprint 3: Báo cáo sự cố nhận xe / chủ xe không giao xe (report-no-show).
+     */
+    @PostMapping(value = "/{id}/report-no-show", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('RENTER')")
+    @Operation(summary = "Báo cáo sự cố chủ xe không giao xe (Sprint 3)", description = "Khách thuê gửi khiếu nại đính kèm ảnh và video bằng chứng khi chủ xe không đến bàn giao xe")
+    public ResponseEntity<ApiResponse<RentalDisputeResponse>> reportNoShow(
+            @PathVariable("id") Long id,
+            @RequestParam("reason") String reason,
+            @RequestPart(value = "evidenceFiles", required = false) List<MultipartFile> evidenceFiles,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long renterId = userDetails != null ? userDetails.getUserId() : getCurrentUserId();
+        List<MultipartFile> allFiles = (evidenceFiles != null && !evidenceFiles.isEmpty()) ? evidenceFiles : files;
+        RentalDisputeRequest request = RentalDisputeRequest.builder()
+                .reason(reason)
+                .evidenceFiles(allFiles)
+                .build();
+        RentalDisputeResponse response = rentalDisputeService.reportNoShow(id, renterId, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof CustomUserDetails userDetails) {
+            return userDetails.getUserId();
+        }
+        throw new AppException(ErrorCode.UNAUTHENTICATED);
     }
 }

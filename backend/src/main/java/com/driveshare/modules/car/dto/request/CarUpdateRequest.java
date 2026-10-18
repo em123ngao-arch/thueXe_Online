@@ -56,4 +56,11 @@ public class CarUpdateRequest {
 
     @Size(max = 500, message = "URL ảnh bìa không được vượt quá 500 ký tự")
     private String thumbnailUrl;
+
+    // Sprint 3: Dịch vụ tài xế (Chauffeur Service)
+    private Boolean hasDriverService;
+
+    @DecimalMin(value = "0", message = "Phụ phí tài xế không được âm")
+    private BigDecimal driverFeePerDay;
 }
+

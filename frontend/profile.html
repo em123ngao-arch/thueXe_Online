@@ -189,6 +189,7 @@
           <span>DriveShare</span>
         </a>
         <div class="nav-actions">
+          <div id="notificationBellContainer" class="notification-bell-container"></div>
           <div id="navAuthContainer" style="display: flex; align-items: center; gap: 0.5rem"></div>
           <a href="index.html" class="btn btn-outline btn-sm" style="font-weight: 600;">
             Trang chủ
@@ -219,6 +220,7 @@
         <input
           type="file"
           id="avatarFileInput"
+          onclick="event.stopPropagation()"
           accept="image/png, image/jpeg, image/jpg"
           style="display: none;"
         />
@@ -372,7 +374,7 @@
                   <span class="badge" id="cccdFrontStatusBadge" style="position: absolute; top: 6px; left: 6px; font-size: 11px; display: none;"></span>
                   <button type="button" class="btn btn-danger btn-xs" style="position: absolute; top: 6px; right: 6px; padding: 2px 7px; font-size: 10px;" onclick="event.stopPropagation(); ProfileController.clearCccdPreview('front')">Đổi ảnh</button>
                 </div>
-                <input type="file" id="cccdFrontFile" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
+                <input type="file" id="cccdFrontFile" onclick="event.stopPropagation()" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
               </div>
 
               <div class="upload-box" id="cccdBackBox" onclick="document.getElementById('cccdBackFile').click()">
@@ -383,7 +385,7 @@
                   <span class="badge" id="cccdBackStatusBadge" style="position: absolute; top: 6px; left: 6px; font-size: 11px; display: none;"></span>
                   <button type="button" class="btn btn-danger btn-xs" style="position: absolute; top: 6px; right: 6px; padding: 2px 7px; font-size: 10px;" onclick="event.stopPropagation(); ProfileController.clearCccdPreview('back')">Đổi ảnh</button>
                 </div>
-                <input type="file" id="cccdBackFile" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
+                <input type="file" id="cccdBackFile" onclick="event.stopPropagation()" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
               </div>
             </div>
 
@@ -412,7 +414,7 @@
                 <span class="badge" id="gplxImageStatusBadge" style="position: absolute; top: 6px; left: 6px; font-size: 11px; display: none;"></span>
                 <button type="button" class="btn btn-danger btn-xs" style="position: absolute; top: 6px; right: 6px; padding: 2px 7px; font-size: 10px;" onclick="event.stopPropagation(); ProfileController.clearGplxPreview()">Đổi ảnh</button>
               </div>
-              <input type="file" id="gplxFile" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
+              <input type="file" id="gplxFile" onclick="event.stopPropagation()" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
             </div>
 
             <button type="submit" id="btnUploadGplx" class="btn btn-outline" style="margin-top: 1.25rem; font-weight: 700;">
@@ -486,8 +488,8 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/toast.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/profile.js"></script>
+    <script src="js/toast.js?v=20261018_v999"></script>
+    <script src="js/auth.js?v=20261018_v999"></script>
+    <script src="js/profile.js?v=20261018_v999"></script>
   </body>
 </html>

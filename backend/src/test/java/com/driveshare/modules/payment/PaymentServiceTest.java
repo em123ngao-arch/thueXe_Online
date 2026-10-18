@@ -187,6 +187,35 @@ class PaymentServiceTest {
         assertEquals(ErrorCode.PAYMENT_ALREADY_COMPLETED, exception.getErrorCode());
     }
 
+    @Test
+    @DisplayName("Giai đoạn 3: Tạo cọc khi đơn WAITING_PAYMENT đã quá hạn 45 phút -> Ném lỗi và tự động chuyển EXPIRED")
+    void createDepositPayment_WaitingPaymentPastExpiresAt_ThrowsExceptionAndExpiresRental() {
+        sampleRental.setStatus(ERentalStatus.WAITING_PAYMENT);
+        sampleRental.setPaymentExpiresAt(Instant.now().minusSeconds(120));
+
+        Rental onHoldRental = Rental.builder()
+                .rentalId(12L)
+                .carId(1L)
+                .status(ERentalStatus.ON_HOLD)
+                .rejectReason("Chờ cọc")
+                .build();
+
+        when(rentalRepository.findById(10L)).thenReturn(Optional.of(sampleRental));
+        when(rentalRepository.findCompetingRentals(eq(1L), any(), any(), eq(10L), any()))
+                .thenReturn(List.of(onHoldRental));
+
+        AppException exception = assertThrows(AppException.class, () ->
+                paymentService.createDepositPayment(10L, null, 4L));
+
+        assertEquals(ErrorCode.RENTAL_NOT_APPROVED, exception.getErrorCode());
+        assertEquals(ERentalStatus.EXPIRED, sampleRental.getStatus());
+        assertEquals(ERentalStatus.PENDING_APPROVAL, onHoldRental.getStatus());
+        assertNull(onHoldRental.getRejectReason());
+
+        verify(rentalRepository).save(sampleRental);
+        verify(rentalRepository).saveAll(List.of(onHoldRental));
+    }
+
     // =========================================================================
     // CRP-52 & CRP-53: Handle Payment Result States & Booking Lifecycle
     // =========================================================================
@@ -240,6 +269,52 @@ class PaymentServiceTest {
         verify(rentalRepository).saveAll(List.of(competing));
     }
 
+    @Test
+    @DisplayName("Giai đoạn 3: Xác nhận cọc khi đơn thuê đã EXPIRED -> Ném lỗi và đánh dấu Payment FAILED")
+    void confirmPayment_RentalExpired_ThrowsException() {
+        sampleRental.setStatus(ERentalStatus.EXPIRED);
+        when(paymentRepository.findById(100L)).thenReturn(Optional.of(samplePayment));
+        when(rentalRepository.findById(10L)).thenReturn(Optional.of(sampleRental));
+
+        AppException exception = assertThrows(AppException.class, () ->
+                paymentService.confirmPayment(100L, 4L));
+
+        assertEquals(ErrorCode.RENTAL_NOT_APPROVED, exception.getErrorCode());
+        assertEquals(EPaymentStatus.FAILED, samplePayment.getStatus());
+        verify(paymentRepository).save(samplePayment);
+    }
+
+    @Test
+    @DisplayName("Giai đoạn 3: Xác nhận cọc khi đơn WAITING_PAYMENT đã quá hạn 45 phút -> Chuyển EXPIRED, mở lại ON_HOLD và ném lỗi")
+    void confirmPayment_WaitingPaymentPastExpiresAt_ThrowsException() {
+        sampleRental.setStatus(ERentalStatus.WAITING_PAYMENT);
+        sampleRental.setPaymentExpiresAt(Instant.now().minusSeconds(120));
+
+        Rental onHoldRental = Rental.builder()
+                .rentalId(12L)
+                .carId(1L)
+                .status(ERentalStatus.ON_HOLD)
+                .rejectReason("Chờ cọc")
+                .build();
+
+        when(paymentRepository.findById(100L)).thenReturn(Optional.of(samplePayment));
+        when(rentalRepository.findById(10L)).thenReturn(Optional.of(sampleRental));
+        when(rentalRepository.findCompetingRentals(eq(1L), any(), any(), eq(10L), any()))
+                .thenReturn(List.of(onHoldRental));
+
+        AppException exception = assertThrows(AppException.class, () ->
+                paymentService.confirmPayment(100L, 4L));
+
+        assertEquals(ErrorCode.RENTAL_NOT_APPROVED, exception.getErrorCode());
+        assertEquals(ERentalStatus.EXPIRED, sampleRental.getStatus());
+        assertEquals(EPaymentStatus.FAILED, samplePayment.getStatus());
+        assertEquals(ERentalStatus.PENDING_APPROVAL, onHoldRental.getStatus());
+        assertNull(onHoldRental.getRejectReason());
+
+        verify(rentalRepository).save(sampleRental);
+        verify(paymentRepository).save(samplePayment);
+        verify(rentalRepository).saveAll(List.of(onHoldRental));
+    }
 
     @Test
     @DisplayName("CRP-52: Đánh dấu thất bại -> Payment chuyển sang FAILED")

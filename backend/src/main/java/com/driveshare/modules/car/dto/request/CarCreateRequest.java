@@ -101,4 +101,15 @@ public class CarCreateRequest {
     @JsonProperty("thumbnailUrl")
     @JsonAlias({"thumbnail_url", "imageUrl", "image_url"})
     private String thumbnailUrl;
+
+    // Sprint 3: Dịch vụ tài xế (Chauffeur Service)
+    @JsonProperty("hasDriverService")
+    @JsonAlias({"has_driver_service", "hasDriver"})
+    private Boolean hasDriverService;
+
+    @DecimalMin(value = "0", message = "Phụ phí tài xế không được âm")
+    @JsonProperty("driverFeePerDay")
+    @JsonAlias({"driver_fee_per_day", "driverFee"})
+    private BigDecimal driverFeePerDay;
 }
+
