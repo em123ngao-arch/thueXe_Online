@@ -111,7 +111,7 @@ async function runBrowserE2ETests() {
     await page.screenshot({ path: screen4 });
     
     const cardStatus = await page.evaluate(() => {
-      const card = document.querySelector('.trip-card');
+      const card = document.querySelector('.renter-trip-card') || document.querySelector('.trip-card');
       return card ? card.innerText : '';
     });
     const hasDisputedBadge = cardStatus.includes('ĐANG KHIẾU NẠI') || cardStatus.includes('DISPUTED');
@@ -178,14 +178,41 @@ async function runBrowserE2ETests() {
     // -------------------------------------------------------------------------
     // SCENARIO 4: Automated Test Suite Page Summary
     // -------------------------------------------------------------------------
-    console.log('\n[SCENARIO 4] Mở Bảng Ma Trận Kiểm Thử qa-test-suite.html ...');
+    console.log('\n[SCENARIO 4] Mở Bảng Ma Trận Kiểm Thử qa-test-suite.html và Chạy 10 Bài Test ...');
     await page.setViewport({ width: 1280, height: 900 });
     await page.goto('http://127.0.0.1:3000/qa-test-suite.html', { waitUntil: 'domcontentloaded' });
+    await new Promise(r => setTimeout(r, 600));
+
+    // Bấm nút chạy toàn bộ bài kiểm thử
+    await page.click('#btnRunAllTests');
+    await page.waitForFunction(() => {
+      const btn = document.getElementById('btnRunAllTests');
+      return btn && !btn.disabled && btn.textContent.includes('Hoàn tất');
+    }, { timeout: 15000 });
     await new Promise(r => setTimeout(r, 500));
+
+    // Đọc kết quả từ DOM
+    const testResults = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('.test-case-row'));
+      return rows.map(r => ({
+        id: r.querySelector('.test-id')?.textContent?.trim(),
+        title: r.querySelector('strong')?.textContent?.trim(),
+        status: r.querySelector('.test-status')?.textContent?.trim(),
+        details: r.querySelector('.test-details')?.textContent?.trim()
+      }));
+    });
+
+    testResults.forEach(r => {
+      console.log(`   [${r.status}] ${r.id}: ${r.title}`);
+      console.log(`          -> ${r.details}`);
+    });
+
+    const allPassed = testResults.every(r => r.status && r.status.includes('PASS'));
+    console.log(`\n   Kết quả ma trận trình duyệt: ${testResults.filter(r => r.status.includes('PASS')).length}/${testResults.length} PASS`);
 
     const screen8 = path.join(SCREENSHOT_DIR, '08_qa_test_suite_matrix.png');
     await page.screenshot({ path: screen8, fullPage: true });
-    console.log(`[PASS] 08. Đã chụp ảnh ma trận kiểm thử qa-test-suite.html.`);
+    console.log(`[PASS] 08. Đã chụp ảnh ma trận kiểm thử qa-test-suite.html với trạng thái đã chạy.`);
     console.log(`       -> Ảnh chụp: ${screen8}`);
 
     console.log('\n================================================================================');

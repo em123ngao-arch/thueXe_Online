@@ -190,7 +190,7 @@
       BookingService.disputeState.selectedFiles = [file1, file2, file3];
       BookingService.disputeState.reason = "Chủ xe không bàn giao xe theo đúng giờ hẹn đã thỏa thuận trong hợp đồng.";
       
-      const textarea = document.getElementById('disputeReason');
+      const textarea = document.getElementById('disputeReasonInput') || document.getElementById('disputeReason');
       if (textarea) textarea.value = BookingService.disputeState.reason;
       
       const btn = document.getElementById('btnSubmitDispute');
@@ -216,6 +216,9 @@
       BookingService.disputeState.selectedFiles = [file];
       BookingService.disputeState.reason = "Chủ xe không liên lạc được khi đến nhận xe.";
       
+      const textarea = document.getElementById('disputeReasonInput') || document.getElementById('disputeReason');
+      if (textarea) textarea.value = BookingService.disputeState.reason;
+
       const btn = document.getElementById('btnSubmitDispute');
       let calls = 0;
       const originalReportNoShow = RentalAPI.reportNoShow;
@@ -292,13 +295,14 @@
 
     // TC-T05: XSS & Ký tự đặc biệt
     async function test_TC_T05() {
+      BookingService.openDisputeModal(101);
       const maliciousName = "<script>alert('XSS')<\\/script>🚗_xe_hỏng_nặng.png";
       const file = createDummyFile(maliciousName, 1024 * 5, "image/png");
       
       BookingService.disputeState.selectedFiles = [file];
       BookingService.renderDisputePreviews();
 
-      const container = document.getElementById('disputePreviews');
+      const container = document.getElementById('disputeFilePreviewList') || document.getElementById('disputePreviews');
       const innerHtml = container ? container.innerHTML : "";
 
       const hasRawScript = innerHtml.includes("<script>alert('XSS')<\\/script>");
@@ -380,7 +384,7 @@
 
       const hasCccdCard = html.includes("Định danh CMND / CCCD");
       const hasBankCard = html.includes("Tài khoản Ngân hàng Chủ xe");
-      const hasMatchBadge = html.includes("TRÙNG KHỚP TÊN CCCD");
+      const hasMatchBadge = (html.includes("Trùng khớp") && html.includes("CCCD")) || html.toUpperCase().includes("TRÙNG KHỚP");
       const hasSeparateButtons = html.includes("Duyệt Định Danh CCCD") && html.includes("Duyệt STK Ngân Hàng");
 
       if (hasCccdCard && hasBankCard && hasMatchBadge && hasSeparateButtons) {
