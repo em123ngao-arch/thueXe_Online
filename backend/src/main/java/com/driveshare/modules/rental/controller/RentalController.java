@@ -7,6 +7,9 @@ import com.driveshare.modules.rental.dto.CreateRentalRequest;
 import com.driveshare.modules.rental.dto.RentalResponse;
 import com.driveshare.modules.rental.dto.response.RentalInspectionResponse;
 import com.driveshare.modules.rental.dto.response.RentalSummaryResponse;
+import com.driveshare.modules.rental.dto.RentalDisputeRequest;
+import com.driveshare.modules.rental.dto.response.RentalDisputeResponse;
+import com.driveshare.modules.rental.service.RentalDisputeService;
 import com.driveshare.modules.rental.service.RentalInspectionService;
 import com.driveshare.modules.rental.service.RentalQueryService;
 import com.driveshare.modules.rental.service.RentalService;
@@ -16,25 +19,28 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/rentals")
 @RequiredArgsConstructor
-@Tag(name = "Rental Management", description = "API quản lý và truy vấn yêu cầu thuê xe (CRP-41, CRP-42, CRP-44, Sprint 3 Inspection)")
+@Tag(name = "Rental Management", description = "API quản lý và truy vấn yêu cầu thuê xe (CRP-41, CRP-42, CRP-44, Sprint 3 Inspection & Dispute)")
 @SecurityRequirement(name = "bearerAuth")
 public class RentalController {
 
     private final RentalService rentalService;
     private final RentalQueryService rentalQueryService;
     private final RentalInspectionService rentalInspectionService;
+    private final RentalDisputeService rentalDisputeService;
 
     /**
      * CRP-41 & CRP-42: Gửi yêu cầu thuê xe mới (trạng thái ban đầu: PENDING).
@@ -107,6 +113,29 @@ public class RentalController {
                         .data(data)
                         .build()
         );
+    }
+
+    /**
+     * Sprint 3: Báo cáo sự cố nhận xe / chủ xe không giao xe (report-no-show).
+     */
+    @PostMapping(value = "/{id}/report-no-show", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('RENTER')")
+    @Operation(summary = "Báo cáo sự cố chủ xe không giao xe (Sprint 3)", description = "Khách thuê gửi khiếu nại đính kèm ảnh và video bằng chứng khi chủ xe không đến bàn giao xe")
+    public ResponseEntity<ApiResponse<RentalDisputeResponse>> reportNoShow(
+            @PathVariable("id") Long id,
+            @RequestParam("reason") String reason,
+            @RequestPart(value = "evidenceFiles", required = false) List<MultipartFile> evidenceFiles,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long renterId = userDetails != null ? userDetails.getUserId() : getCurrentUserId();
+        List<MultipartFile> allFiles = (evidenceFiles != null && !evidenceFiles.isEmpty()) ? evidenceFiles : files;
+        RentalDisputeRequest request = RentalDisputeRequest.builder()
+                .reason(reason)
+                .evidenceFiles(allFiles)
+                .build();
+        RentalDisputeResponse response = rentalDisputeService.reportNoShow(id, renterId, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     private Long getCurrentUserId() {

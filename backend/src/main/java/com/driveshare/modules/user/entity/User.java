@@ -1,5 +1,6 @@
 package com.driveshare.modules.user.entity;
 
+import com.driveshare.common.enums.BankVerificationStatus;
 import com.driveshare.common.entity.BaseEntity;
 import com.driveshare.common.enums.EAuthProvider;
 import com.driveshare.common.enums.EUserStatus;
@@ -73,6 +74,14 @@ public class User extends BaseEntity {
     @Column(name = "auth_provider", length = 20, nullable = false)
     @Builder.Default
     private EAuthProvider authProvider = EAuthProvider.LOCAL;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "bank_verification_status", length = 30)
+    @Builder.Default
+    private BankVerificationStatus bankVerificationStatus = BankVerificationStatus.UNVERIFIED;
+
+    @Column(name = "bank_rejection_reason")
+    private String bankRejectionReason;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

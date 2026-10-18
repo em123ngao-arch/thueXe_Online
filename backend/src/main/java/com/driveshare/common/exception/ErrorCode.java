@@ -41,6 +41,7 @@ public enum ErrorCode {
     // Upload & File Validation (BR-08)
     MISSING_CCCD_SIDE("MISSING_CCCD_SIDE", "Phải upload đủ cả mặt trước và mặt sau CCCD", HttpStatus.BAD_REQUEST),
     INVALID_FILE_FORMAT("INVALID_FILE_FORMAT", "Định dạng không hợp lệ. Chỉ chấp nhận JPG, PNG", HttpStatus.BAD_REQUEST),
+    INVALID_FILE_TYPE("INVALID_FILE_TYPE", "Định dạng tập tin không được hỗ trợ hoặc có nguy cơ bảo mật. Chỉ chấp nhận ảnh (JPG, PNG, WEBP) hoặc video (MP4, MOV)", HttpStatus.BAD_REQUEST),
     FILE_SIZE_EXCEEDED("FILE_SIZE_EXCEEDED", "Kích thước file vượt quá giới hạn cho phép", HttpStatus.BAD_REQUEST),
     FIELD_LOCKED("FIELD_LOCKED", "Thông tin định danh đã được phê duyệt, không thể chỉnh sửa. Vui lòng liên hệ Admin", HttpStatus.BAD_REQUEST),
     ROLE_NOT_SUPPORTED("ROLE_NOT_SUPPORTED", "Chức năng này chỉ áp dụng cho vai trò Khách thuê (Renter)", HttpStatus.BAD_REQUEST),
