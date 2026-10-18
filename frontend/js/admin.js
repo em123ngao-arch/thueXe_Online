@@ -963,41 +963,142 @@ const AdminService = {
             }
           };
 
+          const isOwner = role.includes('OWNER');
+          const cccdStatus = (u.cccd_status || u.verification_status || 'PENDING').toUpperCase();
+          const bankStatus = (u.bank_verification_status || u.bankVerificationStatus || (u.owner_profile?.verification_status) || (u.ownerProfile?.verificationStatus) || 'UNVERIFIED').toUpperCase();
+          
+          // Tên chủ thẻ ngân hàng (ưu tiên trường riêng nếu có, fallback họ tên chủ xe in hoa)
+          const cardHolderName = (u.bank_account_holder || u.bankAccountHolder || u.card_holder_name || fullName || '').toUpperCase();
+          
+          // Hàm chuẩn hóa tiếng Việt để so sánh tên chủ thẻ và họ tên trên CCCD
+          const cleanName = (str) => (str || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/Đ/g, 'D')
+            .trim()
+            .toUpperCase();
+          const isHolderNameMatching = cleanName(fullName) === cleanName(cardHolderName);
+
           return `
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-              <div style="flex: 1; min-width: 250px;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                  <strong style="font-size: 1.05rem; color: #0f172a;">${fullName}</strong>
-                  <span class="badge ${role === 'OWNER' ? 'badge-warning' : 'badge-info'}" style="font-size: 0.72rem;">${role === 'OWNER' ? 'Chủ xe' : 'Khách thuê'}</span>
-                  <span class="badge badge-warning" style="font-size: 0.72rem;">Chờ thẩm định hồ sơ</span>
-                </div>
-                <div style="font-size: 0.85rem; color: #475569; margin-bottom: 3px;">Email: <strong>${email}</strong></div>
-                <div style="font-size: 0.85rem; color: #475569; margin-bottom: 3px;">Số điện thoại: <strong>${phone}</strong></div>
-                ${idCardNumber ? `<div style="font-size: 0.85rem; color: #0f766e; margin-bottom: 3px; font-weight: 600;">Số CCCD: <span style="font-family: monospace;">${idCardNumber}</span></div>` : ''}
-                ${licenseNumber ? `<div style="font-size: 0.85rem; color: #2563eb; margin-bottom: 3px; font-weight: 600;">Số GPLX: <span style="font-family: monospace;">${licenseNumber}</span></div>` : ''}
-                ${(bankName || bankAccount) ? `
-                  <div style="font-size: 0.82rem; color: #475569; margin-top: 4px; padding: 4px 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
-                    🏦 Ngân hàng: <strong>${bankName || 'N/A'}</strong> — STK: <strong style="font-family: monospace;">${bankAccount || 'N/A'}</strong>
+            <div class="admin-verification-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.35rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 1.25rem;">
+              <!-- User Header Summary -->
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1.15rem; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div style="width: 42px; height: 42px; border-radius: 50%; background: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.05rem;">
+                    ${fullName.charAt(0).toUpperCase()}
                   </div>
-                ` : ''}
-                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 6px;">Thời gian nộp: ${formattedTime}</div>
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      <strong style="font-size: 1.1rem; color: #0f172a;">${fullName}</strong>
+                      <span class="badge ${isOwner ? 'badge-warning' : 'badge-info'}" style="font-size: 0.75rem;">
+                        ${isOwner ? 'Chủ xe (Owner)' : 'Khách thuê (Renter)'}
+                      </span>
+                    </div>
+                    <div style="font-size: 0.82rem; color: #64748b; margin-top: 2px;">
+                      ID: <strong>#${userId}</strong> · Email: <strong>${email}</strong> · SĐT: <strong>${phone}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div style="font-size: 0.78rem; color: #94a3b8;">
+                  Thời gian nộp: <strong>${formattedTime}</strong>
+                </div>
               </div>
 
-              <!-- Danh sách ảnh giấy tờ thực tế đã tải lên -->
-              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                ${renderDocImg(cccdFront, 'Mặt trước CCCD')}
-                ${renderDocImg(cccdBack, 'Mặt sau CCCD')}
-                ${role === 'RENTER' ? renderDocImg(gplxFront, 'Bằng lái xe (GPLX)') : ''}
-              </div>
+              <!-- 2 CỘT TÁCH BIỆT: [1. ĐỊNH DANH CCCD] & [2. TÀI KHOẢN NGÂN HÀNG] -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+                
+                <!-- KHỐI 1: ĐỊNH DANH CMND / CCCD -->
+                <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="2.2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="7" y1="8" x2="17" y2="8"></line><line x1="7" y1="12" x2="13" y2="12"></line></svg>
+                        <strong style="font-size: 0.95rem; color: #0f172a;">1. Định danh CMND / CCCD</strong>
+                      </div>
+                      <span class="badge ${cccdStatus === 'APPROVED' ? 'badge-success' : (cccdStatus === 'REJECTED' ? 'badge-danger' : 'badge-warning')}" id="cccdBadge_${userId}" style="font-size: 0.74rem;">
+                        ${cccdStatus === 'APPROVED' ? '✔ Đã duyệt CCCD' : (cccdStatus === 'REJECTED' ? '✗ Từ chối CCCD' : '⏳ Chờ duyệt CCCD')}
+                      </span>
+                    </div>
 
-              <!-- Nút hành động -->
-              <div style="display: flex; flex-direction: column; gap: 8px; justify-content: center; min-width: 130px;">
-                <button class="btn btn-primary btn-sm" onclick="AdminService.approveCccd(${userId})" style="font-weight: 700;">
-                  Phê duyệt hồ sơ
-                </button>
-                <button class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #fca5a5;" onclick="AdminService.openRejectCccdModal(${userId})">
-                  Từ chối hồ sơ
-                </button>
+                    <div style="font-size: 0.86rem; color: #334155; margin-bottom: 0.85rem; background: #fff; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                      Số CMND/CCCD: <strong style="font-family: monospace; font-size: 1rem; color: #0f766e;">${idCardNumber || 'Chưa cung cấp'}</strong>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; justify-content: center;">
+                      ${renderDocImg(cccdFront, 'Mặt trước CCCD')}
+                      ${renderDocImg(cccdBack, 'Mặt sau CCCD')}
+                      ${role === 'RENTER' ? renderDocImg(gplxFront, 'Giấy phép lái xe (GPLX)') : ''}
+                    </div>
+                  </div>
+
+                  <!-- CỤM NÚT 1: DUYỆT ĐỊNH DANH CCCD (TÁCH BIỆT) -->
+                  <div style="display: flex; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 0.85rem; margin-top: auto;">
+                    <button class="btn btn-primary btn-sm" id="btnApproveCccd_${userId}" onclick="AdminService.approveCccd(${userId})" style="flex: 1; font-weight: 700; background: #0f766e; border-color: #0f766e;">
+                      ✔ Duyệt Định Danh CCCD
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="AdminService.openRejectCccdModal(${userId})" style="color: #ef4444; border-color: #fca5a5;">
+                      Từ chối CCCD
+                    </button>
+                  </div>
+                </div>
+
+                <!-- KHỐI 2: DUYỆT TÀI KHOẢN NGÂN HÀNG (DÀNH CHO CHỦ XE & NHẬN TIỀN SÀN) -->
+                <div style="background: ${isOwner ? '#f0fdf4' : '#f8fafc'}; border: 1.5px solid ${isOwner ? '#86efac' : '#cbd5e1'}; border-radius: 12px; padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                        <strong style="font-size: 0.95rem; color: #0f172a;">2. Tài khoản Ngân hàng Chủ xe</strong>
+                      </div>
+                      <span class="badge ${bankStatus === 'VERIFIED' ? 'badge-success' : (bankStatus === 'REJECTED' ? 'badge-danger' : 'badge-warning')}" id="bankBadge_${userId}" style="font-size: 0.74rem;">
+                        ${bankStatus === 'VERIFIED' ? '✔ Đã duyệt STK' : (bankStatus === 'REJECTED' ? '✗ Từ chối STK' : '⏳ Chờ duyệt STK')}
+                      </span>
+                    </div>
+
+                    ${(bankName || bankAccount) ? `
+                      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 0.85rem; font-size: 0.86rem; display: flex; flex-direction: column; gap: 8px;">
+                        <div>
+                          <span style="color: #64748b; font-size: 0.74rem; text-transform: uppercase; font-weight: 600;">Tên Ngân hàng:</span>
+                          <div style="font-weight: 700; color: #0f172a; font-size: 0.92rem;">${bankName || 'Chưa cập nhật'}</div>
+                        </div>
+                        <div>
+                          <span style="color: #64748b; font-size: 0.74rem; text-transform: uppercase; font-weight: 600;">Số tài khoản (STK):</span>
+                          <div style="font-family: monospace; font-size: 1.1rem; font-weight: 800; color: #0f766e; letter-spacing: 0.5px;">${bankAccount || 'Chưa cập nhật'}</div>
+                        </div>
+                        <div>
+                          <span style="color: #64748b; font-size: 0.74rem; text-transform: uppercase; font-weight: 600;">Tên chủ thẻ / chủ tài khoản:</span>
+                          <div style="font-weight: 800; color: #1e293b; text-transform: uppercase; font-size: 0.95rem;">
+                            ${cardHolderName}
+                          </div>
+                        </div>
+
+                        <!-- Chip đối chiếu họ tên chủ thẻ với CCCD -->
+                        <div style="margin-top: 4px; padding: 6px 10px; border-radius: 6px; font-size: 0.78rem; display: flex; align-items: center; gap: 6px; ${isHolderNameMatching ? 'background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;' : 'background: #fef9c3; color: #854d0e; border: 1px solid #fde68a;'}">
+                          ${isHolderNameMatching 
+                            ? '<span>✔ <strong>Trùng khớp:</strong> Tên chủ thẻ khớp 100% với CCCD (' + fullName + ').</span>'
+                            : '<span>⚠ <strong>Cần đối chiếu:</strong> Tên chủ thẻ (' + cardHolderName + ') khác với CCCD (' + fullName + '). Cần kiểm tra kỹ!</span>'
+                          }
+                        </div>
+                      </div>
+                    ` : `
+                      <div style="background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 2rem 1rem; text-align: center; color: #64748b; font-size: 0.85rem; margin-bottom: 0.85rem;">
+                        Chủ xe chưa hoàn tất khai báo tài khoản ngân hàng thụ hưởng.
+                      </div>
+                    `}
+                  </div>
+
+                  <!-- CỤM NÚT 2: DUYỆT STK NGÂN HÀNG (TÁCH BIỆT HOÀN TOÀN) -->
+                  <div style="display: flex; gap: 8px; border-top: 1px solid ${isOwner ? '#bbf7d0' : '#e2e8f0'}; padding-top: 0.85rem; margin-top: auto;">
+                    <button class="btn btn-primary btn-sm" id="btnApproveBank_${userId}" onclick="AdminService.approveBank(${userId})" style="flex: 1; font-weight: 700; background: #059669; border-color: #059669;" ${(!bankName && !bankAccount) ? 'disabled title="Chưa có STK để duyệt"' : ''}>
+                      ✔ Duyệt STK Ngân Hàng
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="AdminService.openRejectBankModal(${userId})" style="color: #dc2626; border-color: #fca5a5;" ${(!bankName && !bankAccount) ? 'disabled' : ''}>
+                      Từ chối STK
+                    </button>
+                  </div>
+                </div>
+
               </div>
             </div>
           `;
@@ -1022,10 +1123,15 @@ const AdminService = {
       }
     }
 
+    const badge = document.getElementById(`cccdBadge_${userId}`);
+    if (badge) {
+      badge.className = 'badge badge-success';
+      badge.innerText = '✔ Đã duyệt CCCD';
+    }
+
     if (typeof showToast === 'function') {
       showToast(`Đã phê duyệt CMND/CCCD thành công cho user #${userId}!`, 'success', 2500);
     }
-    this.renderCccdList();
     this.loadAdminStats();
   },
 
@@ -1038,7 +1144,7 @@ const AdminService = {
         </p>
         <div class="form-group" style="margin-bottom: 1rem;">
           <label style="display: block; font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; color: #1e293b;">
-            Lý do từ chối * (Bắt buộc)
+            Lý do từ chối CCCD * (Bắt buộc)
           </label>
           <textarea id="cccdRejectReasonInput" class="form-control" rows="3" placeholder="Ví dụ: Ảnh chụp bị mờ số CMND, ảnh mặt sau bị lóa sáng không đọc được ngày cấp..." style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 0.9rem; box-sizing: border-box;"></textarea>
           <div id="cccdRejectReasonError" style="color: #ef4444; font-size: 0.8rem; font-weight: 600; margin-top: 5px; display: none;"></div>
@@ -1083,11 +1189,109 @@ const AdminService = {
       }
     }
 
+    const badge = document.getElementById(`cccdBadge_${userId}`);
+    if (badge) {
+      badge.className = 'badge badge-danger';
+      badge.innerText = '✗ Từ chối CCCD';
+    }
+
     if (typeof showToast === 'function') {
       showToast(`Đã từ chối CMND/CCCD user #${userId}. Lý do: ${reason}`, 'info', 3000);
     }
     this.closeModal();
-    this.renderCccdList();
+    this.loadAdminStats();
+  },
+
+  // SPRINT 3 FIX (ISSUE #39): DUYỆT TÀI KHOẢN NGÂN HÀNG CỦA CHỦ XE
+  async approveBank(userId) {
+    if (typeof ApiService !== 'undefined' && ApiService.verifyBank) {
+      await ApiService.verifyBank(userId, 'VERIFIED');
+    } else {
+      try {
+        await fetch(`${getAdminApiBase()}/admin/users/${userId}/verify-bank`, {
+          method: 'PUT',
+          headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'VERIFIED' })
+        });
+      } catch (e) {
+        console.warn('Approve Bank API offline:', e);
+      }
+    }
+
+    const badge = document.getElementById(`bankBadge_${userId}`);
+    if (badge) {
+      badge.className = 'badge badge-success';
+      badge.innerText = '✔ Đã duyệt STK';
+    }
+
+    if (typeof showToast === 'function') {
+      showToast(`Đã duyệt tài khoản ngân hàng thành công cho user #${userId}!`, 'success', 2500);
+    }
+    this.loadAdminStats();
+  },
+
+  openRejectBankModal(userId) {
+    const html = `
+      <div style="padding: 0.5rem 0;">
+        <p style="color: #475569; font-size: 0.9rem; margin-bottom: 1rem;">
+          Từ chối tài khoản ngân hàng của chủ xe <strong>#${userId}</strong>. Vui lòng nhập lý do (Ví dụ: Tên chủ thẻ không khớp với họ tên trên CCCD, sai số tài khoản...)
+        </p>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label style="display: block; font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; color: #1e293b;">
+            Lý do từ chối STK Ngân hàng * (Bắt buộc)
+          </label>
+          <textarea id="bankRejectReasonInput" class="form-control" rows="3" placeholder="Ví dụ: Tên chủ tài khoản ngân hàng không trùng khớp với họ tên định danh trên CCCD..." style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 0.9rem; box-sizing: border-box;"></textarea>
+          <div id="bankRejectReasonError" style="color: #ef4444; font-size: 0.8rem; font-weight: 600; margin-top: 5px; display: none;"></div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="AdminService.closeModal()">Hủy</button>
+          <button type="button" class="btn btn-primary btn-sm" style="background: #ef4444; border-color: #dc2626;" onclick="AdminService.submitRejectBank(${userId})">Xác nhận từ chối</button>
+        </div>
+      </div>
+    `;
+    this.openModal(`Từ chối tài khoản ngân hàng #${userId}`, html);
+  },
+
+  async submitRejectBank(userId) {
+    const reasonInput = document.getElementById('bankRejectReasonInput');
+    const errorEl = document.getElementById('bankRejectReasonError');
+    const reason = reasonInput ? reasonInput.value.trim() : '';
+
+    if (!reason) {
+      if (errorEl) {
+        errorEl.innerText = 'Lý do từ chối là bắt buộc khi từ chối tài khoản ngân hàng!';
+        errorEl.style.display = 'block';
+      }
+      if (typeof showToast === 'function') {
+        showToast('Lý do từ chối là bắt buộc khi từ chối tài khoản ngân hàng!', 'error', 2500);
+      }
+      return;
+    }
+
+    if (typeof ApiService !== 'undefined' && ApiService.verifyBank) {
+      await ApiService.verifyBank(userId, 'REJECTED', reason);
+    } else {
+      try {
+        await fetch(`${getAdminApiBase()}/admin/users/${userId}/verify-bank`, {
+          method: 'PUT',
+          headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'REJECTED', reason })
+        });
+      } catch (e) {
+        console.warn('Reject Bank API offline:', e);
+      }
+    }
+
+    const badge = document.getElementById(`bankBadge_${userId}`);
+    if (badge) {
+      badge.className = 'badge badge-danger';
+      badge.innerText = '✗ Từ chối STK';
+    }
+
+    if (typeof showToast === 'function') {
+      showToast(`Đã từ chối STK ngân hàng user #${userId}. Lý do: ${reason}`, 'info', 3000);
+    }
+    this.closeModal();
     this.loadAdminStats();
   },
 

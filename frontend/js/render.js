@@ -484,8 +484,8 @@ const RenderService = {
     };
 
     // Phân loại trạng thái
-    const isUrgent = (s) => s === 'PENDING' || s === 'PENDING_APPROVAL' || s === 'WAITING_PAYMENT' || s === 'APPROVED';
-    const isActive = (s) => ['CONFIRMED', 'DEPOSIT_PAID', 'IN_PROGRESS', 'ON_HOLD'].includes(s);
+    const isUrgent = (s) => s === 'PENDING' || s === 'PENDING_APPROVAL' || s === 'WAITING_PAYMENT' || s === 'APPROVED' || s === 'DISPUTED';
+    const isActive = (s) => ['CONFIRMED', 'DEPOSIT_PAID', 'IN_PROGRESS', 'ON_HOLD', 'DISPUTED'].includes(s);
     const isHistory = (s) => ['COMPLETED', 'REJECTED', 'WITHDRAWN_BY_GUEST', 'EXPIRED', 'AUTO_EXPIRED_NO_HOST_ACTION', 'CANCELLED', 'CANCELLED_BY_GUEST', 'CANCELLED_BY_HOST'].includes(s);
 
     const totalCount = allBookings.length;
@@ -713,11 +713,32 @@ const RenderService = {
           } else if (bk.status === 'CONFIRMED' || bk.status === 'DEPOSIT_PAID') {
             statusBadge = '<span class="badge badge-success" style="font-weight:700;">Đã chốt cọc 30%</span>';
             actionButtons = `
+              <button class="btn btn-outline btn-sm" style="color:#ea580c; border-color:#fdba74; background:#fff7ed; font-weight:700; display:inline-flex; align-items:center; gap:4px;" onclick="BookingService.openDisputeModal(${id})">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                Báo cáo sự cố nhận xe
+              </button>
               <button class="btn btn-primary btn-sm" style="background:#059669; border-color:#059669;" onclick="App.showContactOwner('${id}')">
                 Liên hệ chủ xe
               </button>
               <button class="btn btn-outline btn-sm" onclick="App.showHandoverInfo('${id}')">
                 Biên bản bàn giao
+              </button>
+            `;
+            activeStep = 4;
+          } else if (bk.status === 'DISPUTED') {
+            statusBadge = '<span class="badge" style="background:#fef2f2; color:#dc2626; border:1.5px solid #fecaca; font-weight:800; padding:4px 10px; border-radius:6px; letter-spacing:0.02em;">ĐANG KHIẾU NẠI</span>';
+            alertBanner = `
+              <div class="trip-alert-banner danger" style="background:#fff1f2; border:1px solid #fecdd3; color:#9f1239; border-radius:8px; padding:10px 14px; margin-bottom:12px; display:flex; align-items:flex-start; gap:8px; font-size:0.86rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0; margin-top:1px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <div><strong>Đang khiếu nại sự cố nhận xe:</strong> Ban quản trị DriveShare đang kiểm tra bằng chứng hình ảnh/video tại điểm hẹn và nhật ký liên lạc. Khoản tiền cọc 30% của bạn được bảo vệ an toàn 100%.</div>
+              </div>
+            `;
+            actionButtons = `
+              <button class="btn btn-outline btn-sm" style="color:#dc2626; border-color:#fca5a5; font-weight:700;" onclick="BookingService.viewDisputeDetails(${id})">
+                Xem chi tiết khiếu nại
+              </button>
+              <button class="btn btn-primary btn-sm" style="background:#0f766e; border-color:#0f766e;" onclick="App.showContactOwner('${id}')">
+                Liên hệ hỗ trợ sàn
               </button>
             `;
             activeStep = 4;

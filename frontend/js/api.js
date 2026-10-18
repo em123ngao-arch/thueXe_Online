@@ -26,9 +26,13 @@ const API_CONFIG = {
       if (saved) return saved;
     } catch (e) {}
 
-    return (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? 'http://localhost:8080/api/v1'
-      : 'https://driveshare-backend-9ppk.onrender.com/api/v1';
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      if (window.location.port === '3000') {
+        return 'http://localhost:3000/api/v1';
+      }
+      return 'http://localhost:8080/api/v1';
+    }
+    return 'https://driveshare-backend-9ppk.onrender.com/api/v1';
   })(),
   TIMEOUT_MS: 60000
 };
@@ -707,6 +711,37 @@ const ApiService = {
   },
 
   /**
+   * API: Phê duyệt hoặc từ chối Tài khoản Ngân Hàng của Chủ xe (Admin - Issue #39)
+   * PUT /api/v1/admin/users/{userId}/verify-bank
+   */
+  async verifyBank(userId, status = 'VERIFIED', reason = '') {
+    const url = `${API_CONFIG.BASE_URL}/admin/users/${userId}/verify-bank`;
+    try {
+      const body = { status };
+      if (reason) body.reason = reason;
+      const res = await this.fetchWithTimeout(url, {
+        method: 'PUT',
+        body: JSON.stringify(body)
+      });
+      const json = await res.json().catch(() => null);
+      if (res.ok) {
+        return { success: true, source: 'BACKEND_API', message: json?.message || 'Đã duyệt tài khoản ngân hàng thành công' };
+      }
+      // Fallback nếu backend hỗ trợ endpoint approveOwner
+      if (res.status === 404 && typeof this.approveOwner === 'function') {
+        return await this.approveOwner(userId, {
+          verification_status: status.toLowerCase(),
+          rejection_reason: reason
+        });
+      }
+      return { success: false, message: json?.message || `Lỗi HTTP ${res.status}` };
+    } catch (e) {
+      console.warn('DriveShare: Lỗi duyệt STK Ngân hàng:', e.message);
+      return { success: false, message: e.message };
+    }
+  },
+
+  /**
    * API: Lấy danh sách hồ sơ GPLX cần xác thực (Admin)
    * GET /api/v1/admin/users/pending-licenses
    */
@@ -1072,6 +1107,44 @@ const RentalAPI = {
     } catch (err) {
       console.warn('[RentalAPI] cancelRental offline/error:', err);
       return { success: false, message: 'Lỗi kết nối máy chủ khi hủy yêu cầu' };
+    }
+  },
+
+  /**
+   * Khách thuê báo cáo sự cố nhận xe / vắng mặt chủ xe (Issue #39: POST /api/v1/rentals/{id}/report-no-show)
+   * @param {number|string} rentalId
+   * @param {FormData} formData Chứa: reason (string), evidenceFiles (File[])
+   */
+  async reportNoShow(rentalId, formData) {
+    const url = `${API_CONFIG.BASE_URL}/rentals/${rentalId}/report-no-show`;
+    try {
+      const headers = this.getAuthHeaders();
+      // Với FormData, KHÔNG set Content-Type để trình duyệt tự thêm boundary chuẩn
+      delete headers['Content-Type'];
+      delete headers['content-type'];
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: formData
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        return {
+          success: false,
+          status: res.status,
+          errorCode: json?.errorCode || json?.code,
+          message: json?.message || 'Không thể gửi báo cáo sự cố nhận xe'
+        };
+      }
+      return {
+        success: true,
+        data: json?.data || json,
+        message: json?.message || 'Đã gửi báo cáo sự cố nhận xe thành công'
+      };
+    } catch (err) {
+      console.warn('[RentalAPI] reportNoShow network error:', err);
+      return { success: false, message: 'Lỗi kết nối máy chủ khi gửi báo cáo sự cố' };
     }
   },
 
