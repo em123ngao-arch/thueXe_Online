@@ -24,7 +24,7 @@ const API_BASE = (() => {
   } catch (e) {}
 
   if (typeof window !== 'undefined' && window.location.port === '3000') {
-    return 'http://localhost:3000/api/v1';
+    return `${window.location.origin}/api/v1`;
   }
   return (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:8080/api/v1'

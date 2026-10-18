@@ -292,7 +292,7 @@
 
     // TC-T05: XSS & Ký tự đặc biệt
     async function test_TC_T05() {
-      const maliciousName = "<script>alert('XSS')</script>🚗_xe_hỏng_nặng.png";
+      const maliciousName = "<script>alert('XSS')<\\/script>🚗_xe_hỏng_nặng.png";
       const file = createDummyFile(maliciousName, 1024 * 5, "image/png");
       
       BookingService.disputeState.selectedFiles = [file];
@@ -301,7 +301,7 @@
       const container = document.getElementById('disputePreviews');
       const innerHtml = container ? container.innerHTML : "";
 
-      const hasRawScript = innerHtml.includes("<script>alert('XSS')</script>");
+      const hasRawScript = innerHtml.includes("<script>alert('XSS')<\\/script>");
       const hasEscaped = innerHtml.includes("&lt;script&gt;") || innerHtml.includes("🚗_xe_hỏng_nặng.png");
 
       if (!hasRawScript && hasEscaped) {

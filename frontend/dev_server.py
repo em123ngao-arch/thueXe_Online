@@ -134,6 +134,8 @@ def parse_multipart(data_bytes, boundary):
     return fields, files
 
 class QAHttpHandler(http.server.SimpleHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=FRONTEND_DIR, **kwargs)
 
@@ -375,9 +377,12 @@ class QAHttpHandler(http.server.SimpleHTTPRequestHandler):
         return self._send_json(405, {"code": 405, "message": "Method Not Allowed"})
 
 
+class ThreadingServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
 def run():
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", PORT), QAHttpHandler) as httpd:
+    with ThreadingServer(("", PORT), QAHttpHandler) as httpd:
         print(f"[DriveShare QA Server] Running on http://localhost:{PORT}")
         print(f"[DriveShare QA Server] Serving directory: {FRONTEND_DIR}")
         try:

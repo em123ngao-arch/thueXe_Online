@@ -28,7 +28,7 @@ const API_CONFIG = {
 
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       if (window.location.port === '3000') {
-        return 'http://localhost:3000/api/v1';
+        return `${window.location.origin}/api/v1`;
       }
       return 'http://localhost:8080/api/v1';
     }

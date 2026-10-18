@@ -1168,7 +1168,7 @@ const BookingService = {
    */
   async submitDispute() {
     const btn = document.getElementById('btnSubmitDispute');
-    const reasonInput = document.getElementById('disputeReasonInput');
+    const reasonInput = document.getElementById('disputeReasonInput') || document.getElementById('disputeReason');
     const reasonErr = document.getElementById('disputeReasonError');
     const reason = reasonInput ? reasonInput.value.trim() : this.disputeState.reason.trim();
 
@@ -1212,9 +1212,14 @@ const BookingService = {
     }
 
     // TC-T07: Kiểm tra bằng chứng (phải có ít nhất 1 ảnh hoặc 1 video)
-    const hasImages = Array.isArray(this.disputeState.images) && this.disputeState.images.length > 0;
-    const hasVideo = this.disputeState.video !== null;
-    if (!hasImages && !hasVideo) {
+    const allFiles = [
+      ...(this.disputeState.selectedFiles || []),
+      ...(this.disputeState.images || []),
+      ...(this.disputeState.video ? [this.disputeState.video] : [])
+    ];
+    const uniqueFiles = Array.from(new Set(allFiles));
+
+    if (uniqueFiles.length === 0) {
       this.showDisputeToast('Vui lòng cung cấp ít nhất 1 ảnh hoặc 1 video làm bằng chứng tại điểm hẹn!', 'warning');
       resetSubmitBtn();
       return;
@@ -1223,14 +1228,10 @@ const BookingService = {
     // Đóng gói FormData gửi lên server (Multipart/form-data chuẩn)
     const formData = new FormData();
     formData.append('reason', reason);
-    if (hasImages) {
-      this.disputeState.images.forEach(img => {
-        formData.append('evidenceFiles', img);
-      });
-    }
-    if (hasVideo) {
-      formData.append('evidenceFiles', this.disputeState.video);
-    }
+    uniqueFiles.forEach(f => {
+      formData.append('files', f);
+      formData.append('evidenceFiles', f);
+    });
 
     const rentalId = this.disputeState.rentalId;
 
