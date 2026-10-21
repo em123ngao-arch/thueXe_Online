@@ -18,6 +18,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import com.driveshare.common.enums.ERentalStatus;
+import com.driveshare.common.exception.AppException;
+import com.driveshare.common.exception.ErrorCode;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -27,14 +29,16 @@ import java.util.List;
 @RequiredArgsConstructor
 @Tag(name = "Admin Rentals", description = "Quản trị viên quản lý toàn bộ đơn đặt xe trên sàn")
 @SecurityRequirement(name = "bearerAuth")
+@PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
 public class AdminRentalController {
 
     private final RentalRepository rentalRepository;
     private final CarRepository carRepository;
     private final UserRepository userRepository;
+    private final com.driveshare.modules.rental.service.RentalDisputeService rentalDisputeService;
 
     @GetMapping
-    @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     @Operation(summary = "Lấy toàn bộ đơn đặt xe trong hệ thống")
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<AdminRentalResponse>>> getAllRentals(
@@ -136,9 +140,46 @@ public class AdminRentalController {
     }
 
     @PostMapping("/{rentalId}/payout")
-    @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     @Operation(summary = "Xác nhận đối soát & giải ngân thu nhập 90% cho chủ xe")
     public ResponseEntity<ApiResponse<String>> confirmPayoutToOwner(@PathVariable Long rentalId) {
         return ResponseEntity.ok(ApiResponse.success("Đã xác nhận giải ngân thành công cho chủ xe"));
+    }
+
+    /**
+     * Sprint 3 Fix (Lâm Chí Vĩ): Admin giải quyết khiếu nại sự cố không nhận xe.
+     * Hoàn 100% tiền cọc cho khách, hủy xe CANCELLED_BY_HOST và ghi nhận phạt chủ xe.
+     */
+    @PostMapping("/disputes/{id}/resolve")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Admin giải quyết khiếu nại sự cố bàn giao xe (Sprint 3)")
+    public ResponseEntity<ApiResponse<com.driveshare.modules.rental.dto.response.RentalDisputeResponse>> resolveDispute(
+            @PathVariable("id") Long id,
+            @jakarta.validation.Valid @RequestBody com.driveshare.modules.rental.dto.ResolveDisputeRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.driveshare.security.CustomUserDetails userDetails
+    ) {
+        if (userDetails == null) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+        Long adminId = userDetails.getUserId();
+        com.driveshare.modules.rental.dto.response.RentalDisputeResponse response = rentalDisputeService.resolveDispute(
+                id,
+                request,
+                adminId
+        );
+        return ResponseEntity.ok(ApiResponse.success("Xử lý khiếu nại tranh chấp thành công", response));
+    }
+
+    /**
+     * Sprint 3 Fix: Admin xem danh sách toàn bộ khiếu nại tranh chấp.
+     */
+    @GetMapping("/disputes")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Admin xem danh sách khiếu nại tranh chấp (Sprint 3)")
+    public ResponseEntity<ApiResponse<List<com.driveshare.modules.rental.dto.response.RentalDisputeResponse>>> getAllDisputes(
+            @RequestParam(required = false) com.driveshare.common.enums.EDisputeStatus status
+    ) {
+        List<com.driveshare.modules.rental.dto.response.RentalDisputeResponse> result = rentalDisputeService.getAllDisputes(status);
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách khiếu nại thành công", result));
     }
 }
