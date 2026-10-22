@@ -1264,7 +1264,7 @@ const BookingService = {
         const headers = (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {};
         delete headers['Content-Type'];
         delete headers['content-type'];
-        const apiBase = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) ? API_CONFIG.BASE_URL : 'http://localhost:3000/api/v1';
+        const apiBase = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) ? API_CONFIG.BASE_URL : 'http://localhost:8080/api/v1';
         const response = await fetch(`${apiBase}/rentals/${rentalId}/report-no-show`, {
           method: 'POST',
           headers,

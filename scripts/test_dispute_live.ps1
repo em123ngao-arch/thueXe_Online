@@ -190,11 +190,17 @@ Write-Host ""
 Write-Host "--- 5. LUONG HOAN COK 100% & EDGE CASE 2: CHONG HOAN TIEN HAI LAN ---" -ForegroundColor Cyan
 
 # 5.1 Renter tao don thue xe khong trung lich (dat xa sau 35 ngay)
+$activeCarsRes = Call-Api -Method "GET" -Path "/api/v1/public/cars"
+$targetCarId = 13
+if ($activeCarsRes.Data.data.items -and $activeCarsRes.Data.data.items.Count -gt 0) {
+    $targetCarId = $activeCarsRes.Data.data.items[0].car_id
+}
+
 $startStr = (Get-Date).AddDays(35).ToString("yyyy-MM-dd")
 $endStr   = (Get-Date).AddDays(37).ToString("yyyy-MM-dd")
 
 $bookRes = Call-Api -Method "POST" -Path "/api/v1/rentals" -Token $renterToken -Body @{
-    car_id = 1
+    car_id = $targetCarId
     start_date = $startStr
     end_date = $endStr
     note = "Kiem thu live khieu nai"

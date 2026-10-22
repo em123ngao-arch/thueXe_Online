@@ -119,10 +119,17 @@ $dummyTxt = "test_invalid_file.exe"
 # ------------------------------------------------------------------------------
 Write-Host "`n--- GIAI DOAN 2: API BAO SU CO KHONG NHAN XE (TC01 - TC08) ---" -ForegroundColor Cyan
 
+# Lay xe active dang co tren he thong
+$pubCars = Call-Api -Method "GET" -Path "/api/v1/public/cars"
+$activeCarId = 13
+if ($pubCars.Data.data.items -and $pubCars.Data.data.items.Count -gt 0) {
+    $activeCarId = $pubCars.Data.data.items[0].car_id
+}
+
 # TC05: Don thue khong o trang thai duoc phep khieu nai (tao don o ngay 150, khong duyet/khong coc -> PENDING_APPROVAL)
 $s5 = (Get-Date).AddDays(150).ToString("yyyy-MM-dd")
 $e5 = (Get-Date).AddDays(152).ToString("yyyy-MM-dd")
-$b5 = Call-Api -Method "POST" -Path "/api/v1/rentals" -Token $renterToken -Body @{ car_id = 1; start_date = $s5; end_date = $e5; note = "Test TC05 not eligible" }
+$b5 = Call-Api -Method "POST" -Path "/api/v1/rentals" -Token $renterToken -Body @{ car_id = $activeCarId; start_date = $s5; end_date = $e5; note = "Test TC05 not eligible" }
 $ridNotEligible = $b5.Data.data.rental_id
 
 $outTC05 = curl.exe -s -m 10 -X POST "$baseUrl/api/v1/rentals/$ridNotEligible/report-no-show" `
@@ -139,7 +146,7 @@ if ($jTC05.error_code -eq "RENTAL_NOT_ELIGIBLE_FOR_DISPUTE" -or $jTC05.code -eq 
 # Setup 1 don thue hop le (ngay 160 -> 162), Chu xe APPROVE, Khach COC 30% VietQR -> Sang CONFIRMED
 $sVal = (Get-Date).AddDays(160).ToString("yyyy-MM-dd")
 $eVal = (Get-Date).AddDays(162).ToString("yyyy-MM-dd")
-$bVal = Call-Api -Method "POST" -Path "/api/v1/rentals" -Token $renterToken -Body @{ car_id = 1; start_date = $sVal; end_date = $eVal; note = "Test valid confirmed rental" }
+$bVal = Call-Api -Method "POST" -Path "/api/v1/rentals" -Token $renterToken -Body @{ car_id = $activeCarId; start_date = $sVal; end_date = $eVal; note = "Test valid confirmed rental" }
 $ridValid = $bVal.Data.data.rental_id
 
 Call-Api -Method "PUT" -Path "/api/v1/owner/rentals/$ridValid/approve" -Token $ownerToken | Out-Null

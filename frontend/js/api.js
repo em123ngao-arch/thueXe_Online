@@ -27,9 +27,6 @@ const API_CONFIG = {
     } catch (e) {}
 
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      if (window.location.port === '3000') {
-        return `${window.location.origin}/api/v1`;
-      }
       return 'http://localhost:8080/api/v1';
     }
     return 'https://driveshare-backend-9ppk.onrender.com/api/v1';
