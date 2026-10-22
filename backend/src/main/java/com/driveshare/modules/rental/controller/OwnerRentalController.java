@@ -2,16 +2,26 @@ package com.driveshare.modules.rental.controller;
 
 import com.driveshare.common.dto.ApiResponse;
 import com.driveshare.common.enums.ERentalStatus;
+import com.driveshare.common.exception.AppException;
+import com.driveshare.common.exception.ErrorCode;
+import com.driveshare.modules.rental.dto.CheckInRequest;
+import com.driveshare.modules.rental.dto.CheckOutRequest;
 import com.driveshare.modules.rental.dto.RejectRentalRequest;
+import com.driveshare.modules.rental.dto.response.RentalInspectionResponse;
 import com.driveshare.modules.rental.dto.response.RentalSummaryResponse;
 import com.driveshare.modules.rental.service.OwnerRentalService;
+import com.driveshare.modules.rental.service.RentalInspectionService;
 import com.driveshare.modules.rental.service.RentalQueryService;
+import com.driveshare.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,11 +29,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/owner/rentals")
 @RequiredArgsConstructor
-@Tag(name = "Owner Rental Management", description = "API quản lý yêu cầu thuê gửi đến xe của Chủ xe (CRP-46, CRP-47, CRP-48, Giai đoạn 2 & 3)")
+@Tag(name = "Owner Rental Management", description = "API quản lý yêu cầu thuê gửi đến xe của Chủ xe (CRP-46, CRP-47, CRP-48, Giai đoạn 2 & 3, Sprint 3 Inspection)")
 public class OwnerRentalController {
 
     private final RentalQueryService rentalQueryService;
     private final OwnerRentalService ownerRentalService;
+    private final RentalInspectionService rentalInspectionService;
 
     @GetMapping
     @PreAuthorize("hasRole('OWNER')")
@@ -116,6 +127,86 @@ public class OwnerRentalController {
                         .data(data)
                         .build()
         );
+    }
+
+    /**
+     * Sprint 3: Chủ xe bàn giao xe và lập biên bản Check-in (chuyển đơn sang IN_PROGRESS).
+     */
+    @PostMapping("/{id}/check-in")
+    @PreAuthorize("hasRole('OWNER')")
+    @Operation(summary = "Lập biên bản bàn giao xe (Check-in)", description = "Chủ xe bàn giao xe, ghi nhận ODO, mức xăng, ảnh hiện trạng và chuyển đơn sang IN_PROGRESS")
+    public ResponseEntity<ApiResponse<RentalInspectionResponse>> checkIn(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody CheckInRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long ownerId = userDetails != null ? userDetails.getUserId() : getCurrentUserId();
+        RentalInspectionResponse data = rentalInspectionService.checkIn(id, ownerId, request);
+        return ResponseEntity.ok(
+                ApiResponse.<RentalInspectionResponse>builder()
+                        .code(200)
+                        .success(true)
+                        .message("Lập biên bản bàn giao xe thành công. Chuyến đi đã bắt đầu.")
+                        .data(data)
+                        .build()
+        );
+    }
+
+    /**
+     * Sprint 3: Chủ xe nghiệm thu nhận lại xe và lập biên bản Check-out (chuyển đơn sang COMPLETED).
+     */
+    @PostMapping("/{id}/check-out")
+    @PreAuthorize("hasRole('OWNER')")
+    @Operation(summary = "Lập biên bản nghiệm thu trả xe (Check-out)", description = "Chủ xe nghiệm thu nhận lại xe, ghi nhận ODO, phụ phí phát sinh và chuyển đơn sang COMPLETED")
+    public ResponseEntity<ApiResponse<RentalInspectionResponse>> checkOut(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody CheckOutRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long ownerId = userDetails != null ? userDetails.getUserId() : getCurrentUserId();
+        RentalInspectionResponse data = rentalInspectionService.checkOut(id, ownerId, request);
+        return ResponseEntity.ok(
+                ApiResponse.<RentalInspectionResponse>builder()
+                        .code(200)
+                        .success(true)
+                        .message("Lập biên bản trả xe thành công. Chuyến đi đã hoàn tất.")
+                        .data(data)
+                        .build()
+        );
+    }
+
+    /**
+     * Sprint 3: Chủ xe xem danh sách biên bản giao nhận xe của chuyến đi.
+     */
+    @GetMapping("/{id}/inspections")
+    @PreAuthorize("hasRole('OWNER')")
+    @Operation(summary = "Xem biên bản giao nhận xe của chủ xe", description = "Chủ xe xem danh sách các biên bản giao nhận xe (Check-in / Check-out)")
+    public ResponseEntity<ApiResponse<List<RentalInspectionResponse>>> getOwnerRentalInspections(
+            @PathVariable("id") Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long ownerId = userDetails != null ? userDetails.getUserId() : getCurrentUserId();
+        List<RentalInspectionResponse> data = rentalInspectionService.getInspections(id, ownerId);
+        return ResponseEntity.ok(
+                ApiResponse.<List<RentalInspectionResponse>>builder()
+                        .code(200)
+                        .success(true)
+                        .message("Lấy danh sách biên bản giao nhận thành công")
+                        .data(data)
+                        .build()
+        );
+    }
+
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof CustomUserDetails userDetails) {
+            return userDetails.getUserId();
+        }
+        throw new AppException(ErrorCode.UNAUTHENTICATED);
     }
 }
 

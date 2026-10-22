@@ -24,6 +24,8 @@ import com.driveshare.security.CustomUserDetails;
 import com.driveshare.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.driveshare.common.service.CloudinaryService;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -55,12 +57,136 @@ public class AuthService {
     private final AuthSessionRepository sessionRepository;
     private final PasswordResetTokenRepository resetTokenRepository;
     private final EmailChangeTokenRepository emailChangeTokenRepository;
+    private final CloudinaryService cloudinaryService;
     private static final long EMAIL_CHANGE_MINUTES = 15;
 
     @Value("${driveshare.frontend.base-url:http://127.0.0.1:5500/thueXe_Online/frontend/index.html}")
     private String frontendBaseUrl;
 
     private final ConcurrentHashMap<String, FailureWindow> ipFailures = new ConcurrentHashMap<>();
+
+    @Transactional
+    public Map<String, Object> registerWithDocs(
+            RegisterRequest request,
+            MultipartFile cccdFront,
+            MultipartFile cccdBack,
+            MultipartFile gplxFront
+    ) {
+        if (request == null) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED);
+        }
+
+        // 1. Bắt buộc có cả 2 mặt CCCD
+        if (cccdFront == null || cccdFront.isEmpty() || cccdBack == null || cccdBack.isEmpty()) {
+            throw new AppException(ErrorCode.MISSING_CCCD_SIDE);
+        }
+
+        // 2. Xác định vai trò
+        ERole targetRole = ("OWNER".equalsIgnoreCase(request.getRole()) || "ROLE_OWNER".equalsIgnoreCase(request.getRole()))
+                ? ERole.ROLE_OWNER
+                : ERole.ROLE_RENTER;
+
+        // 3. Khách thuê xe bắt buộc phải có GPLX
+        if (targetRole == ERole.ROLE_RENTER) {
+            if (gplxFront == null || gplxFront.isEmpty()) {
+                throw new AppException(ErrorCode.VALIDATION_FAILED, "Khách thuê xe bắt buộc phải tải lên ảnh Giấy phép lái xe (GPLX)");
+            }
+        }
+
+        // 4. Validate các trường thông tin cơ bản
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Email không được để trống");
+        }
+        String email = request.getEmail().trim().toLowerCase();
+        if (userRepository.existsByEmail(email)) {
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
+        }
+
+        validatePassword(request.getPassword());
+
+        if (request.getConfirmPassword() != null && !request.getConfirmPassword().isBlank()
+                && !request.getPassword().equals(request.getConfirmPassword())) {
+            throw new AppException(ErrorCode.PASSWORD_CONFIRM_MISMATCH);
+        }
+
+        String username = request.getUsername() != null && !request.getUsername().isBlank()
+                ? request.getUsername().trim()
+                : generateUsername(email);
+
+        if (userRepository.existsByUsername(username)) {
+            throw new AppException(ErrorCode.USERNAME_EXISTED);
+        }
+
+        if (request.getPhone() != null && !request.getPhone().isBlank()
+                && userRepository.existsByPhone(request.getPhone().trim())) {
+            throw new AppException(ErrorCode.PHONE_EXISTED);
+        }
+
+        if (request.getIdCardNumber() != null && !request.getIdCardNumber().isBlank()
+                && userRepository.existsByIdCardNumber(request.getIdCardNumber().trim())) {
+            throw new AppException(ErrorCode.ID_CARD_EXISTED);
+        }
+
+        // 5. Upload ảnh giấy tờ
+        String cccdFrontUrl = cloudinaryService.uploadImage(cccdFront, "driveshare/cccd", 10 * 1024 * 1024L);
+        String cccdBackUrl = cloudinaryService.uploadImage(cccdBack, "driveshare/cccd", 10 * 1024 * 1024L);
+        String gplxFrontUrl = (gplxFront != null && !gplxFront.isEmpty())
+                ? cloudinaryService.uploadImage(gplxFront, "driveshare/gplx", 10 * 1024 * 1024L)
+                : null;
+
+        // 6. Tạo người dùng với trạng thái PENDING
+        Role role = roleRepository.findByRoleName(targetRole)
+                .orElseGet(() -> roleRepository.save(Role.builder().roleName(targetRole).build()));
+
+        User user = User.builder()
+                .email(email)
+                .username(username)
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .fullName(request.getFullName() != null && !request.getFullName().isBlank() ? request.getFullName().trim() : username)
+                .phone(request.getPhone() != null && !request.getPhone().isBlank() ? request.getPhone().trim() : null)
+                .idCardNumber(request.getIdCardNumber() != null && !request.getIdCardNumber().isBlank() ? request.getIdCardNumber().trim() : null)
+                .status(EUserStatus.PENDING)
+                .roles(new HashSet<>(Set.of(role)))
+                .build();
+
+        User savedUser = userRepository.save(user);
+
+        // 7. Tạo Profile tương ứng
+        if (targetRole == ERole.ROLE_OWNER) {
+            OwnerProfile profile = OwnerProfile.builder()
+                    .user(savedUser)
+                    .idCardFrontUrl(cccdFrontUrl)
+                    .idCardBackUrl(cccdBackUrl)
+                    .bankAccountNumber(request.getBankAccountNumber())
+                    .bankName(request.getBankName())
+                    .verificationStatus(EVerificationStatus.PENDING)
+                    .build();
+            ownerProfileRepository.save(profile);
+        } else {
+            RenterProfile profile = RenterProfile.builder()
+                    .user(savedUser)
+                    .idCardFrontUrl(cccdFrontUrl)
+                    .idCardBackUrl(cccdBackUrl)
+                    .licenseNumber(request.getLicenseNumber() != null ? request.getLicenseNumber().trim() : null)
+                    .licenseFrontUrl(gplxFrontUrl)
+                    .verificationStatus(EVerificationStatus.PENDING)
+                    .licenseVerificationStatus(EVerificationStatus.PENDING)
+                    .build();
+            renterProfileRepository.save(profile);
+        }
+
+        log.info("[REGISTER_WITH_DOCS] User #{} ({}) registered with PENDING status. CCCD front={}, back={}, GPLX={}",
+                savedUser.getUserId(), savedUser.getEmail(), cccdFrontUrl != null, cccdBackUrl != null, gplxFrontUrl != null);
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("message", "Đăng ký tài khoản thành công! Hồ sơ giấy tờ (CCCD & GPLX) của bạn đã được gửi tới Ban quản trị để phê duyệt danh tính. Vui lòng đợi tài khoản được kích hoạt trước khi đăng nhập.");
+        resp.put("userId", savedUser.getUserId());
+        resp.put("username", savedUser.getUsername());
+        resp.put("email", savedUser.getEmail());
+        resp.put("status", savedUser.getStatus().name());
+        resp.put("role", targetRole.name());
+        return resp;
+    }
 
     @Transactional
     public Map<String, Object> registerOwner(RegisterRequest request) {

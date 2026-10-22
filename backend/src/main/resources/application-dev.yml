@@ -27,9 +27,9 @@ spring:
               - email
 
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:demo}
-  api-key: ${CLOUDINARY_API_KEY:}
-  api-secret: ${CLOUDINARY_API_SECRET:}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:ajutfp98}
+  api-key: ${CLOUDINARY_API_KEY:264588314216624}
+  api-secret: ${CLOUDINARY_API_SECRET:rVsIDYc1lxeUovD8FyvWp7Jat5o}
 
 driveshare:
   jwt:
@@ -37,6 +37,10 @@ driveshare:
     secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
     expiration-ms: 86400000        # 24 giờ cho Access Token
     refresh-expiration-ms: 604800000 # 7 ngày cho Refresh Token
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
 
 logging:
   level:

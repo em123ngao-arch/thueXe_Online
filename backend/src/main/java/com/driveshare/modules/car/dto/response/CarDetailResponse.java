@@ -77,6 +77,21 @@ public class CarDetailResponse {
     @Schema(description = "Danh sách các ngày xe đã được đặt (không thể đặt)")
     private List<LocalDate> unavailableDates;
 
+    // -----------------------------------------------------------------
+    // Sprint 3: Dịch vụ có tài xế & Đánh giá (Rating)
+    // -----------------------------------------------------------------
+    @Schema(description = "Có hỗ trợ tài xế riêng (Sprint 3)", example = "true")
+    private Boolean hasDriverService;
+
+    @Schema(description = "Phụ phí tài xế riêng / ngày (VNĐ)", example = "500000")
+    private BigDecimal driverFeePerDay;
+
+    @Schema(description = "Điểm đánh giá trung bình", example = "4.8")
+    private BigDecimal rating;
+
+    @Schema(description = "Số lượt đánh giá", example = "5")
+    private Integer ratingCount;
+
     @Data
     @Builder
     @NoArgsConstructor

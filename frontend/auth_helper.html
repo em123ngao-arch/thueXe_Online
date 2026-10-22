@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>DriveShare Auth Helper</title>
+  <script>
+    window.addEventListener('DOMContentLoaded', async () => {
+      const params = new URLSearchParams(window.location.search);
+      const role = (params.get('role') || 'ADMIN').toUpperCase();
+      const target = params.get('target') || 'admin.html';
+
+      const credentials = {
+        ADMIN: { identifier: 'admin@driveshare.com', password: 'Admin123@' },
+        OWNER: { identifier: 'owner@driveshare.com', password: 'Owner123@' },
+        RENTER: { identifier: 'renter@driveshare.com', password: 'Renter123@' }
+      };
+
+      const cred = credentials[role] || credentials.ADMIN;
+
+      const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:8080/api/v1'
+        : 'https://driveshare-backend-9ppk.onrender.com/api/v1';
+
+      try {
+        const resp = await fetch(`${apiBase}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cred)
+        });
+        const json = await resp.json();
+        if (json.data && json.data.access_token) {
+          const d = json.data;
+          const token = d.access_token;
+          const refresh = d.refresh_token;
+
+          localStorage.setItem('access_token', token);
+          localStorage.setItem('ds_access_token', token);
+          localStorage.setItem('driveshare_access_token', token);
+          localStorage.setItem('refresh_token', refresh);
+          localStorage.setItem('ds_refresh_token', refresh);
+
+          const user = {
+            userId: d.user_id,
+            id: d.user_id,
+            name: d.username,
+            fullName: d.username,
+            email: d.email,
+            role: role,
+            roles: ['ROLE_' + role],
+            status: 'ACTIVE',
+            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'
+          };
+
+          localStorage.setItem('user_info', JSON.stringify(user));
+          localStorage.setItem('ds_user', JSON.stringify(user));
+          localStorage.setItem('driveshare_current_auth_user', JSON.stringify(user));
+          localStorage.setItem('driveshare_current_role', role);
+
+          window.location.href = target;
+        } else {
+          document.body.innerText = 'Login failed: ' + JSON.stringify(json);
+        }
+      } catch (err) {
+        document.body.innerText = 'Error: ' + err.message;
+      }
+    });
+  </script>
+</head>
+<body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh;">
+  <h3>Đang đăng nhập DriveShare...</h3>
+</body>
+</html>

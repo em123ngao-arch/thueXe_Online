@@ -71,4 +71,55 @@ class RentalExpirationSchedulerTest {
 
         verify(rentalRepository, never()).saveAll(any());
     }
+
+    @Test
+    @DisplayName("Giai đoạn 3 & 4: Tự động hết hạn đơn WAITING_PAYMENT quá 45 phút và phục hồi các đơn ON_HOLD")
+    void autoExpireWaitingPaymentSoftLocks_ExpiredRentalsFound_UpdatesToExpiredAndRevivesOnHoldRentals() {
+        Rental expiredRental = Rental.builder()
+                .rentalId(10L)
+                .carId(1L)
+                .startDate(java.time.LocalDate.now().plusDays(2))
+                .endDate(java.time.LocalDate.now().plusDays(4))
+                .status(ERentalStatus.WAITING_PAYMENT)
+                .paymentExpiresAt(Instant.now().minusSeconds(120))
+                .build();
+
+        Rental onHoldRental = Rental.builder()
+                .rentalId(11L)
+                .carId(1L)
+                .startDate(expiredRental.getStartDate())
+                .endDate(expiredRental.getEndDate())
+                .status(ERentalStatus.ON_HOLD)
+                .rejectReason("Chờ thanh toán")
+                .build();
+
+        when(rentalRepository.findExpiredWaitingPaymentRentals(eq(ERentalStatus.WAITING_PAYMENT), any(Instant.class)))
+                .thenReturn(List.of(expiredRental));
+        when(rentalRepository.findCompetingRentals(eq(1L), any(), any(), eq(10L), any()))
+                .thenReturn(List.of(onHoldRental));
+
+        scheduler.autoExpireWaitingPaymentSoftLocks();
+
+        // Đơn quá hạn chuyển sang EXPIRED
+        assertThat(expiredRental.getStatus()).isEqualTo(ERentalStatus.EXPIRED);
+        assertThat(expiredRental.getRejectReason()).contains("45 phút");
+
+        // Đơn ON_HOLD được hồi sinh về PENDING_APPROVAL
+        assertThat(onHoldRental.getStatus()).isEqualTo(ERentalStatus.PENDING_APPROVAL);
+        assertThat(onHoldRental.getRejectReason()).isNull();
+
+        verify(rentalRepository).saveAll(List.of(onHoldRental));
+        verify(rentalRepository).saveAll(List.of(expiredRental));
+    }
+
+    @Test
+    @DisplayName("Giai đoạn 3 & 4: Không có đơn WAITING_PAYMENT quá hạn -> không thực hiện giải phóng")
+    void autoExpireWaitingPaymentSoftLocks_NoExpiredRentals_DoesNothing() {
+        when(rentalRepository.findExpiredWaitingPaymentRentals(eq(ERentalStatus.WAITING_PAYMENT), any(Instant.class)))
+                .thenReturn(Collections.emptyList());
+
+        scheduler.autoExpireWaitingPaymentSoftLocks();
+
+        verify(rentalRepository, never()).saveAll(any());
+    }
 }

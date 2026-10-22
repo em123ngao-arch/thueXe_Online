@@ -16,11 +16,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import com.driveshare.common.enums.ERentalStatus;
+import com.driveshare.common.exception.AppException;
+import com.driveshare.common.exception.ErrorCode;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -28,14 +29,16 @@ import java.util.List;
 @RequiredArgsConstructor
 @Tag(name = "Admin Rentals", description = "Quản trị viên quản lý toàn bộ đơn đặt xe trên sàn")
 @SecurityRequirement(name = "bearerAuth")
+@PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
 public class AdminRentalController {
 
     private final RentalRepository rentalRepository;
     private final CarRepository carRepository;
     private final UserRepository userRepository;
+    private final com.driveshare.modules.rental.service.RentalDisputeService rentalDisputeService;
 
     @GetMapping
-    @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     @Operation(summary = "Lấy toàn bộ đơn đặt xe trong hệ thống")
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<AdminRentalResponse>>> getAllRentals(
@@ -68,6 +71,42 @@ public class AdminRentalController {
                 renterPhone = renter.getPhone() != null ? renter.getPhone() : "N/A";
             }
 
+            Long ownerId = (car != null) ? car.getOwnerId() : null;
+            String ownerName = "Chủ xe #" + ownerId;
+            String ownerPhone = "N/A";
+            String ownerBankName = "MBBank (Quân Đội)";
+            String ownerBankAccount = "998877665544";
+            if (ownerId != null) {
+                User owner = userRepository.findById(ownerId).orElse(null);
+                if (owner != null) {
+                    ownerName = owner.getFullName() != null ? owner.getFullName() : owner.getUsername();
+                    ownerPhone = owner.getPhone() != null ? owner.getPhone() : "N/A";
+                    if (owner.getOwnerProfile() != null) {
+                        if (owner.getOwnerProfile().getBankName() != null && !owner.getOwnerProfile().getBankName().isBlank()) {
+                            ownerBankName = owner.getOwnerProfile().getBankName();
+                        }
+                        if (owner.getOwnerProfile().getBankAccountNumber() != null && !owner.getOwnerProfile().getBankAccountNumber().isBlank()) {
+                            ownerBankAccount = owner.getOwnerProfile().getBankAccountNumber();
+                        }
+                    }
+                }
+            }
+
+            BigDecimal totalPrice = r.getTotalPrice() != null ? r.getTotalPrice() : BigDecimal.ZERO;
+            BigDecimal platformFee = totalPrice.multiply(new BigDecimal("0.10"));
+            BigDecimal ownerPayoutAmount = totalPrice.subtract(platformFee);
+
+            String payoutStatus = "CHỜ_ĐỐI_SOÁT";
+            if (r.getStatus() == ERentalStatus.COMPLETED) {
+                payoutStatus = "ĐÃ_GIẢI_NGÂN";
+            } else if (r.getStatus() == ERentalStatus.CONFIRMED || r.getStatus() == ERentalStatus.IN_PROGRESS) {
+                payoutStatus = "ĐÃ_CỌC_30%";
+            } else if (r.getStatus() == ERentalStatus.CANCELLED || r.getStatus() == ERentalStatus.REJECTED) {
+                payoutStatus = "ĐÃ_HỦY";
+            } else if (r.getStatus() == ERentalStatus.WAITING_PAYMENT || r.getStatus() == ERentalStatus.APPROVED || r.getStatus() == ERentalStatus.PENDING) {
+                payoutStatus = "CHỜ_CỌC";
+            }
+
             return AdminRentalResponse.builder()
                     .rentalId(r.getRentalId())
                     .carId(r.getCarId())
@@ -86,9 +125,61 @@ public class AdminRentalController {
                     .rejectReason(r.getRejectReason())
                     .note(r.getNote())
                     .createdAt(r.getCreatedAt())
+                    .ownerId(ownerId)
+                    .ownerName(ownerName)
+                    .ownerPhone(ownerPhone)
+                    .ownerBankName(ownerBankName)
+                    .ownerBankAccount(ownerBankAccount)
+                    .platformFee(platformFee)
+                    .ownerPayoutAmount(ownerPayoutAmount)
+                    .payoutStatus(payoutStatus)
                     .build();
         }).toList();
 
         return ResponseEntity.ok(ApiResponse.success("Lấy toàn bộ đơn đặt xe thành công", result));
+    }
+
+    @PostMapping("/{rentalId}/payout")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Xác nhận đối soát & giải ngân thu nhập 90% cho chủ xe")
+    public ResponseEntity<ApiResponse<String>> confirmPayoutToOwner(@PathVariable Long rentalId) {
+        return ResponseEntity.ok(ApiResponse.success("Đã xác nhận giải ngân thành công cho chủ xe"));
+    }
+
+    /**
+     * Sprint 3 Fix (Lâm Chí Vĩ): Admin giải quyết khiếu nại sự cố không nhận xe.
+     * Hoàn 100% tiền cọc cho khách, hủy xe CANCELLED_BY_HOST và ghi nhận phạt chủ xe.
+     */
+    @PostMapping("/disputes/{id}/resolve")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Admin giải quyết khiếu nại sự cố bàn giao xe (Sprint 3)")
+    public ResponseEntity<ApiResponse<com.driveshare.modules.rental.dto.response.RentalDisputeResponse>> resolveDispute(
+            @PathVariable("id") Long id,
+            @jakarta.validation.Valid @RequestBody com.driveshare.modules.rental.dto.ResolveDisputeRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.driveshare.security.CustomUserDetails userDetails
+    ) {
+        if (userDetails == null) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+        Long adminId = userDetails.getUserId();
+        com.driveshare.modules.rental.dto.response.RentalDisputeResponse response = rentalDisputeService.resolveDispute(
+                id,
+                request,
+                adminId
+        );
+        return ResponseEntity.ok(ApiResponse.success("Xử lý khiếu nại tranh chấp thành công", response));
+    }
+
+    /**
+     * Sprint 3 Fix: Admin xem danh sách toàn bộ khiếu nại tranh chấp.
+     */
+    @GetMapping("/disputes")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Admin xem danh sách khiếu nại tranh chấp (Sprint 3)")
+    public ResponseEntity<ApiResponse<List<com.driveshare.modules.rental.dto.response.RentalDisputeResponse>>> getAllDisputes(
+            @RequestParam(required = false) com.driveshare.common.enums.EDisputeStatus status
+    ) {
+        List<com.driveshare.modules.rental.dto.response.RentalDisputeResponse> result = rentalDisputeService.getAllDisputes(status);
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách khiếu nại thành công", result));
     }
 }

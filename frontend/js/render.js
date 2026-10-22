@@ -371,6 +371,45 @@ const RenderService = {
               </li>
             </ul>
           </div>
+
+          <!-- Dịch vụ xe có tài xế (Sprint 3 Chauffeur Feature) -->
+          <div style="background: ${(car.has_driver_service || car.hasDriverService) ? '#f0fdfa' : '#f8fafc'}; border: 1.5px solid ${(car.has_driver_service || car.hasDriverService) ? '#99f6e4' : '#e2e8f0'}; border-radius: var(--radius-md); padding: 0.95rem; margin-top: 1.15rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong style="color: ${(car.has_driver_service || car.hasDriverService) ? '#0f766e' : '#64748b'}; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v7c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+                Dịch vụ xe có tài xế riêng:
+              </strong>
+              ${(car.has_driver_service || car.hasDriverService) ? `
+                <span class="badge" style="background: #ccfbf1; color: #0f766e; font-weight: 700; font-size: 0.78rem;">
+                  Có hỗ trợ (+${StorageService.formatCurrency(Number(car.driver_fee_per_day || car.driverFeePerDay || 300000))}/ngày)
+                </span>
+              ` : `
+                <span class="badge" style="background: #f1f5f9; color: #64748b; font-size: 0.78rem;">Chỉ cho thuê tự lái</span>
+              `}
+            </div>
+            ${(car.has_driver_service || car.hasDriverService) ? `
+              <p style="margin: 0.4rem 0 0 0; font-size: 0.8rem; color: #0f766e; line-height: 1.4;">
+                ✓ Khi chọn thuê kèm tài xế: <strong>Tự động miễn nộp bằng lái GPLX</strong> và <strong>miễn ký quỹ thế chấp 15 triệu/xe máy</strong>.
+              </p>
+            ` : ''}
+          </div>
+
+          <!-- Đánh giá từ khách hàng (Sprint 3 Reviews & Ratings) -->
+          <div style="margin-top: 1.35rem; border-top: 1px solid var(--slate-200); padding-top: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+              <h4 class="detail-section-title" style="margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                <span style="color: #f59e0b; font-size: 1.15rem;">★</span> Đánh giá từ khách hàng
+              </h4>
+              <span id="carDetailReviewSummary" class="badge" style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 0.8rem;">
+                ⭐ ${(Number(car.rating || 5.0)).toFixed(1)} (${car.ratingCount || car.rating_count || 0} nhận xét)
+              </span>
+            </div>
+            <div id="carDetailReviewsList" style="display: flex; flex-direction: column; gap: 0.65rem;">
+              <div style="font-size: 0.82rem; color: var(--slate-500); text-align: center; padding: 0.85rem; background: var(--slate-50); border-radius: var(--radius-md);">
+                Đang tải các đánh giá mới nhất từ khách thuê...
+              </div>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -394,6 +433,12 @@ const RenderService = {
               <span>Đơn giá ngày:</span>
               <span style="font-weight: 700;">${StorageService.formatCurrency(pricePerDay)}</span>
             </div>
+            ${(car.has_driver_service || car.hasDriverService) ? `
+            <div class="calc-row" style="color: #0f766e; font-weight: 600; background: #f0fdfa; padding: 4px 6px; border-radius: 4px;">
+              <span>Tùy chọn kèm tài xế:</span>
+              <span>+${StorageService.formatCurrency(Number(car.driver_fee_per_day || car.driverFeePerDay || 300000))} / ngày</span>
+            </div>
+            ` : ''}
             <div class="calc-row">
               <span>Bảo hiểm chuyến đi MIC:</span>
               <span>100.000 đ / ngày</span>
@@ -417,6 +462,7 @@ const RenderService = {
     `;
   },
 
+
   // 3. Render Danh sách đơn thuê của tôi (Khách thuê - Giai đoạn 1 v2.0.0)
   renderMyBookings(bookings, containerId = "myBookingsListContainer", activeTab = "ALL", searchQuery = "") {
     const container = document.getElementById(containerId);
@@ -438,8 +484,8 @@ const RenderService = {
     };
 
     // Phân loại trạng thái
-    const isUrgent = (s) => s === 'PENDING' || s === 'PENDING_APPROVAL' || s === 'WAITING_PAYMENT' || s === 'APPROVED';
-    const isActive = (s) => ['CONFIRMED', 'DEPOSIT_PAID', 'IN_PROGRESS', 'ON_HOLD'].includes(s);
+    const isUrgent = (s) => s === 'PENDING' || s === 'PENDING_APPROVAL' || s === 'WAITING_PAYMENT' || s === 'APPROVED' || s === 'DISPUTED';
+    const isActive = (s) => ['CONFIRMED', 'DEPOSIT_PAID', 'IN_PROGRESS', 'ON_HOLD', 'DISPUTED'].includes(s);
     const isHistory = (s) => ['COMPLETED', 'REJECTED', 'WITHDRAWN_BY_GUEST', 'EXPIRED', 'AUTO_EXPIRED_NO_HOST_ACTION', 'CANCELLED', 'CANCELLED_BY_GUEST', 'CANCELLED_BY_HOST'].includes(s);
 
     const totalCount = allBookings.length;
@@ -667,11 +713,32 @@ const RenderService = {
           } else if (bk.status === 'CONFIRMED' || bk.status === 'DEPOSIT_PAID') {
             statusBadge = '<span class="badge badge-success" style="font-weight:700;">Đã chốt cọc 30%</span>';
             actionButtons = `
+              <button class="btn btn-outline btn-sm" style="color:#ea580c; border-color:#fdba74; background:#fff7ed; font-weight:700; display:inline-flex; align-items:center; gap:4px;" onclick="BookingService.openDisputeModal(${id})">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                Báo cáo sự cố nhận xe
+              </button>
               <button class="btn btn-primary btn-sm" style="background:#059669; border-color:#059669;" onclick="App.showContactOwner('${id}')">
                 Liên hệ chủ xe
               </button>
               <button class="btn btn-outline btn-sm" onclick="App.showHandoverInfo('${id}')">
                 Biên bản bàn giao
+              </button>
+            `;
+            activeStep = 4;
+          } else if (bk.status === 'DISPUTED') {
+            statusBadge = '<span class="badge" style="background:#fef2f2; color:#dc2626; border:1.5px solid #fecaca; font-weight:800; padding:4px 10px; border-radius:6px; letter-spacing:0.02em;">ĐANG KHIẾU NẠI</span>';
+            alertBanner = `
+              <div class="trip-alert-banner danger" style="background:#fff1f2; border:1px solid #fecdd3; color:#9f1239; border-radius:8px; padding:10px 14px; margin-bottom:12px; display:flex; align-items:flex-start; gap:8px; font-size:0.86rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0; margin-top:1px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <div><strong>Đang khiếu nại sự cố nhận xe:</strong> Ban quản trị DriveShare đang kiểm tra bằng chứng hình ảnh/video tại điểm hẹn và nhật ký liên lạc. Khoản tiền cọc 30% của bạn được bảo vệ an toàn 100%.</div>
+              </div>
+            `;
+            actionButtons = `
+              <button class="btn btn-outline btn-sm" style="color:#dc2626; border-color:#fca5a5; font-weight:700;" onclick="BookingService.viewDisputeDetails(${id})">
+                Xem chi tiết khiếu nại
+              </button>
+              <button class="btn btn-primary btn-sm" style="background:#0f766e; border-color:#0f766e;" onclick="App.showContactOwner('${id}')">
+                Liên hệ hỗ trợ sàn
               </button>
             `;
             activeStep = 4;

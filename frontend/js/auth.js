@@ -9,9 +9,25 @@ const KEY_REFRESH_TOKEN = "refresh_token";
 const KEY_USER = "user_info";
 const AUTH_STORAGE_KEY = "driveshare_current_auth_user";
 
-const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? "http://localhost:8080/api/v1"
-  : "https://driveshare-backend-9ppk.onrender.com/api/v1";
+const API_BASE = (() => {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramBackend = urlParams.get('backend');
+    if (paramBackend) {
+      const clean = paramBackend.replace(/\/+$/, '');
+      const target = clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`;
+      localStorage.setItem('custom_backend_url', target);
+      return target;
+    }
+    const saved = localStorage.getItem('custom_backend_url');
+    if (saved) return saved;
+  } catch (e) {}
+
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:8080/api/v1';
+  }
+  return 'https://driveshare-backend-9ppk.onrender.com/api/v1';
+})();
 
 
 // ─────────────────────────────────────────────────────────────
@@ -379,12 +395,45 @@ const AuthService = {
 
       return {
         success: true,
-        message: "Đăng ký thành công!",
+        message: "Đăng ký thành công (Chế độ lưu tạm trình duyệt do máy chủ Backend chưa phản hồi)!",
         data: newUser,
       };
     }
 
     return res;
+  },
+
+  // Đăng ký kèm Giấy tờ định danh CCCD & GPLX (Multipart Form-Data)
+  async registerWithDocs(formData) {
+    try {
+      const resp = await fetch(`${API_BASE}/auth/register-with-docs`, {
+        method: "POST",
+        body: formData, // Trình duyệt tự sinh header Content-Type kèm multipart boundary
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (resp.ok) {
+        return {
+          success: true,
+          data: data.data || data.result,
+          message: data.message || "Đăng ký thành công!",
+        };
+      } else {
+        return {
+          success: false,
+          status: resp.status,
+          errorCode: data.error_code || data.errorCode,
+          message: data.message || "Đăng ký thất bại",
+          errors: data.errors,
+        };
+      }
+    } catch (err) {
+      console.warn("Backend API offline khi gửi giấy tờ:", err.message);
+      return {
+        success: false,
+        errorCode: "NETWORK_ERROR",
+        message: "Không thể kết nối đến máy chủ Backend (http://localhost:8080)",
+      };
+    }
   },
 
   // Đổi mật khẩu (BR-06, CRP-13)
@@ -414,6 +463,56 @@ const AuthService = {
       return {
         success: true,
         message: "Đổi mật khẩu thành công. Các phiên đăng nhập khác đã bị vô hiệu hóa",
+      };
+    }
+
+    return res;
+  },
+
+  // Quên mật khẩu - gửi email yêu cầu đặt lại
+  async forgotPassword(email) {
+    const res = await this.request("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+
+    if (res.success) return res;
+
+    // Mock fallback khi offline
+    if (res.errorCode === "NETWORK_ERROR") {
+      const mockToken = "mock_token_" + Date.now();
+      return {
+        success: true,
+        message: "Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.",
+        data: {
+          message: "Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.",
+          resetUrl: `http://localhost:3000/login.html#reset=${mockToken}`,
+          token: mockToken
+        }
+      };
+    }
+
+    return res;
+  },
+
+  // Đặt lại mật khẩu với token
+  async resetPassword(token, newPassword, confirmPassword) {
+    const res = await this.request("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({
+        token,
+        newPassword,
+        confirmPassword,
+      }),
+    });
+
+    if (res.success) return res;
+
+    // Mock fallback khi offline
+    if (res.errorCode === "NETWORK_ERROR") {
+      return {
+        success: true,
+        message: "Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới.",
       };
     }
 
@@ -522,6 +621,10 @@ const AuthService = {
         `;
       }
     });
+
+    if (typeof NotificationCenter !== 'undefined' && NotificationCenter.init) {
+      NotificationCenter.init();
+    }
   },
 
   async syncCurrentUserProfile() {

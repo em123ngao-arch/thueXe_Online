@@ -31,8 +31,10 @@ import java.util.Set;
 
 import com.driveshare.modules.car.repository.CarImageRepository;
 import com.driveshare.modules.user.repository.UserRepository;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
+
 
 @Slf4j
 @Service
@@ -96,6 +98,8 @@ public class CarServiceImpl implements CarService {
                 .description(request.getDescription())
                 .features(request.getFeatures())
                 .thumbnailUrl(request.getThumbnailUrl())
+                .hasDriverService(Boolean.TRUE.equals(request.getHasDriverService()))
+                .driverFeePerDay(request.getDriverFeePerDay() != null ? request.getDriverFeePerDay() : BigDecimal.ZERO)
                 .status(ECarStatus.PENDING_REVIEW) // Mặc định: chờ Admin duyệt
                 .build();
 
@@ -135,6 +139,9 @@ public class CarServiceImpl implements CarService {
         if (request.getDescription() != null)  car.setDescription(request.getDescription());
         if (request.getFeatures() != null)     car.setFeatures(request.getFeatures());
         if (request.getThumbnailUrl() != null) car.setThumbnailUrl(request.getThumbnailUrl());
+        if (request.getHasDriverService() != null) car.setHasDriverService(request.getHasDriverService());
+        if (request.getDriverFeePerDay() != null)  car.setDriverFeePerDay(request.getDriverFeePerDay());
+
 
         car = carRepository.save(car);
         log.info("Owner {} đã cập nhật xe carId={}", currentUserId, carId);
@@ -338,6 +345,10 @@ public class CarServiceImpl implements CarService {
                 .images(images)
                 .owner(ownerInfo)
                 .unavailableDates(new java.util.ArrayList<>(unavailableDatesSet))
+                .hasDriverService(car.getHasDriverService())
+                .driverFeePerDay(car.getDriverFeePerDay())
+                .rating(car.getRating())
+                .ratingCount(car.getRatingCount())
                 .build();
     }
 

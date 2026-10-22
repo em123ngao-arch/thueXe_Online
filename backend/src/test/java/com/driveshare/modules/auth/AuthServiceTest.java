@@ -52,6 +52,8 @@ class AuthServiceTest {
     private PasswordResetTokenRepository resetTokenRepository;
     @Mock
     private EmailChangeTokenRepository emailChangeTokenRepository;
+    @Mock
+    private com.driveshare.common.service.CloudinaryService cloudinaryService;
 
     private AuthService authService;
 
@@ -66,7 +68,8 @@ class AuthServiceTest {
                 tokenProvider,
                 sessionRepository,
                 resetTokenRepository,
-                emailChangeTokenRepository
+                emailChangeTokenRepository,
+                cloudinaryService
         );
     }
 
@@ -193,5 +196,41 @@ class AuthServiceTest {
         assertNotNull(token.getUsedAt());
         verify(userRepository).save(user);
         verify(sessionRepository).revokeAllByUserId(1L);
+    }
+
+    @Test
+    @DisplayName("registerWithDocs: Ném lỗi MISSING_CCCD_SIDE khi thiếu mặt trước hoặc sau")
+    void registerWithDocs_MissingCccd_ThrowsMissingCccdSide() {
+        com.driveshare.modules.auth.dto.RegisterRequest request = com.driveshare.modules.auth.dto.RegisterRequest.builder()
+                .email("test@example.com")
+                .password("Password123@")
+                .role("RENTER")
+                .build();
+
+        org.springframework.mock.web.MockMultipartFile front =
+                new org.springframework.mock.web.MockMultipartFile("cccdFront", "front.jpg", "image/jpeg", "content".getBytes());
+
+        AppException ex = assertThrows(AppException.class, () ->
+                authService.registerWithDocs(request, front, null, null));
+        assertEquals(ErrorCode.MISSING_CCCD_SIDE, ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("registerWithDocs: Renter bắt buộc phải có ảnh GPLX")
+    void registerWithDocs_RenterMissingGplx_ThrowsValidationFailed() {
+        com.driveshare.modules.auth.dto.RegisterRequest request = com.driveshare.modules.auth.dto.RegisterRequest.builder()
+                .email("test@example.com")
+                .password("Password123@")
+                .role("RENTER")
+                .build();
+
+        org.springframework.mock.web.MockMultipartFile front =
+                new org.springframework.mock.web.MockMultipartFile("cccdFront", "front.jpg", "image/jpeg", "content".getBytes());
+        org.springframework.mock.web.MockMultipartFile back =
+                new org.springframework.mock.web.MockMultipartFile("cccdBack", "back.jpg", "image/jpeg", "content".getBytes());
+
+        AppException ex = assertThrows(AppException.class, () ->
+                authService.registerWithDocs(request, front, back, null));
+        assertEquals(ErrorCode.VALIDATION_FAILED, ex.getErrorCode());
     }
 }

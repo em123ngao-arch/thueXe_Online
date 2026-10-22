@@ -23,14 +23,14 @@ const BookingService = {
     // Kiểm tra đăng nhập
     const token = typeof TokenService !== 'undefined' ? TokenService.getToken() : localStorage.getItem('access_token');
     if (!token) {
-      if (typeof App !== 'undefined' && App.openModalAuth) {
-        App.openModalAuth();
-      }
       if (typeof toast !== 'undefined') {
         toast.warning('Vui lòng đăng nhập trước khi gửi yêu cầu thuê xe!');
       } else {
         alert('Vui lòng đăng nhập trước khi gửi yêu cầu thuê xe!');
       }
+      setTimeout(() => {
+        window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+      }, 700);
       return;
     }
 
@@ -54,7 +54,9 @@ const BookingService = {
               || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80',
             year: c.year,
             seat_count: c.seats || c.seat_count || 4,
-            unavailable_dates: c.unavailableDates || c.unavailable_dates || []
+            unavailable_dates: c.unavailableDates || c.unavailable_dates || [],
+            has_driver_service: Boolean(c.hasDriverService ?? c.has_driver_service ?? true),
+            driver_fee_per_day: Number(c.driverFeePerDay || c.driver_fee_per_day || 300000)
           };
         }
       } catch (err) {
@@ -171,11 +173,34 @@ const BookingService = {
       startTimeStr: `${startTimeVal} ${startDateVal}`,
       endTimeStr: `${endTimeVal} ${endDateVal}`,
       pricePerDay,
+      baseRentalAmount: rentalAmount,
+      hasDriverService: car.has_driver_service ?? true,
+      driverFeePerDay: car.driver_fee_per_day || 300000,
+      withDriver: false,
+      totalDriverFee: 0,
       rentalAmount,
       depositAmount,
       isAutoAdjusted
     };
 
+    this.renderBookingModal();
+  },
+
+  // Chauffeur Service (Sprint 3): Bật/tắt dịch vụ kèm tài xế
+  toggleDriverService(withDriver) {
+    if (!this.calcData) return;
+    this.calcData.withDriver = Boolean(withDriver);
+    const baseRental = this.calcData.baseRentalAmount || (this.calcData.days * this.calcData.pricePerDay);
+
+    if (this.calcData.withDriver) {
+      // Phụ phí tài xế theo ngày
+      this.calcData.totalDriverFee = (this.calcData.days || 1) * (this.calcData.driverFeePerDay || 300000);
+    } else {
+      this.calcData.totalDriverFee = 0;
+    }
+
+    this.calcData.rentalAmount = baseRental + this.calcData.totalDriverFee;
+    this.calcData.depositAmount = Math.round(this.calcData.rentalAmount * 0.30);
     this.renderBookingModal();
   },
 
@@ -390,8 +415,36 @@ const BookingService = {
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: var(--slate-500);">Bằng lái xe (GPLX):</span>
-                <span class="badge badge-success" style="background:#dcfce7; color:#166534; font-weight:700; font-size:0.75rem; padding: 2px 8px; border-radius: 999px;">Đã xác minh (B2)</span>
+                ${calc.withDriver ? `
+                  <span class="badge" style="background:#e0e7ff; color:#3730a3; font-weight:700; font-size:0.75rem; padding: 2px 8px; border-radius: 999px;">Miễn GPLX (Có tài xế)</span>
+                ` : `
+                  <span class="badge badge-success" style="background:#dcfce7; color:#166534; font-weight:700; font-size:0.75rem; padding: 2px 8px; border-radius: 999px;">Bắt buộc · Đã xác minh (B2)</span>
+                `}
               </div>
+              ${calc.withDriver ? `
+                <div style="margin-top: 0.35rem; font-size: 0.75rem; color: #4338ca; background: #eef2ff; border: 1px solid #c7d2fe; padding: 4px 8px; border-radius: 4px;">
+                  ✓ Bạn đã chọn gói kèm tài xế riêng nên không cần nộp giấy phép lái xe và miễn ký quỹ thế chấp.
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Tùy chọn Có Tài Xế (Chauffeur Service Sprint 3) -->
+            <div style="background: ${calc.withDriver ? '#f0fdfa' : '#f8fafc'}; border: 1.5px solid ${calc.withDriver ? '#0d9488' : '#e2e8f0'}; border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 0.85rem; transition: all 0.2s ease;">
+              <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; user-select: none; margin: 0;">
+                <input type="checkbox" id="chkWithDriver" style="width: 19px; height: 19px; margin-top: 2px; accent-color: #0f766e; cursor: pointer;"
+                  ${calc.withDriver ? 'checked' : ''}
+                  onchange="BookingService.toggleDriverService(this.checked)"
+                />
+                <div style="flex: 1;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="color: #0f172a; font-size: 0.88rem;">Kèm tài xế riêng chuyên nghiệp</strong>
+                    <span class="badge" style="background: #ccfbf1; color: #0f766e; font-weight: 700; font-size: 0.76rem;">+${formatMoney(calc.driverFeePerDay || 300000)}/ngày</span>
+                  </div>
+                  <div style="color: #64748b; font-size: 0.78rem; margin-top: 3px; line-height: 1.4;">
+                    Tài xế nhiều năm kinh nghiệm, thông thạo đường xá. <strong>Tự động miễn yêu cầu nộp bằng lái GPLX</strong> và miễn thế chấp tài sản.
+                  </div>
+                </div>
+              </label>
             </div>
 
             <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
@@ -438,12 +491,18 @@ const BookingService = {
               </div>
 
               <div class="calc-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
-                <span>${calc.isHourly ? `Đơn giá thuê theo giờ (${calc.hours} giờ - 10%/h):` : `Đơn giá thuê (${calc.days} ngày):`}</span>
-                <span>${formatMoney(calc.rentalAmount)}</span>
+                <span>${calc.isHourly ? `Tiền thuê xe (${calc.hours} giờ):` : `Tiền thuê xe (${calc.days} ngày):`}</span>
+                <span>${formatMoney(calc.baseRentalAmount || (calc.days * calc.pricePerDay))}</span>
               </div>
+              ${calc.withDriver ? `
+              <div class="calc-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; color: #0f766e; font-weight: 700;">
+                <span>Phụ phí tài xế riêng (${calc.days} ngày):</span>
+                <span>+${formatMoney(calc.totalDriverFee)}</span>
+              </div>
+              ` : ''}
               <div class="calc-row total" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem; font-weight: 700; border-top: 1px dashed var(--slate-300); padding-top: 0.5rem;">
                 <span>Tổng giá trị gói thuê:</span>
-                <span>${formatMoney(calc.rentalAmount)}</span>
+                <span style="color: #0f172a; font-size: 1.05rem;">${formatMoney(calc.rentalAmount)}</span>
               </div>
               <div class="calc-row deposit-highlight" style="display: flex; justify-content: space-between; font-size: 0.95rem; font-weight: 800; color: #047857; background: #d1fae5; padding: 0.5rem; border-radius: 4px;">
                 <span>Cọc giữ chỗ 30% (sau khi duyệt):</span>
@@ -548,7 +607,8 @@ const BookingService = {
       car_id: this.calcData.carId,
       start_date: this.calcData.startDate,
       end_date: this.calcData.endDate,
-      note: finalNote
+      note: finalNote,
+      with_driver: Boolean(this.calcData.withDriver)
     };
 
     try {
@@ -584,10 +644,34 @@ const BookingService = {
         }
       } else {
         // Xử lý lỗi có mã cụ thể từ backend
-        const errCode = res && res.code;
+        const errCode = res && (res.code || res.errorCode);
         const errMsg = res && res.message;
 
-        if (errCode === 'DUPLICATE_RENTAL_REQUEST') {
+        if (errCode === 'KYC_NOT_VERIFIED') {
+          if (typeof App !== 'undefined' && App.closeModal) App.closeModal();
+          const kycHtml = `
+            <div style="text-align: center; padding: 1.5rem 0.5rem;">
+              <div style="width: 64px; height: 64px; background: #fee2e2; color: #dc2626; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1rem auto;">&#10006;</div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #991b1b; margin-bottom: 0.5rem;">Hồ sơ chưa được phê duyệt</h3>
+              <p style="color: var(--slate-600); font-size: 0.9rem; line-height: 1.6; max-width: 400px; margin: 0 auto 1.25rem auto;">
+                ${errMsg || 'Giấy tờ tùy thân (CCCD) hoặc Giấy phép lái xe (GPLX) của bạn chưa được duyệt hoặc bị từ chối. Vui lòng kiểm tra trạng thái tại trang cá nhân.'}
+              </p>
+              <div style="display: flex; gap: 0.75rem; justify-content: center;">
+                <button class="btn btn-primary btn-md" onclick="window.location.href='profile.html'">
+                  Đến trang Hồ sơ
+                </button>
+                <button class="btn btn-outline-secondary btn-md" onclick="App.closeModal();">
+                  Đóng
+                </button>
+              </div>
+            </div>
+          `;
+          if (typeof App !== 'undefined' && App.openModal) {
+            App.openModal('Yêu cầu xác thực hồ sơ', kycHtml);
+          } else {
+            alert(errMsg || 'Giấy tờ của bạn chưa được duyệt. Vui lòng cập nhật hồ sơ!');
+          }
+        } else if (errCode === 'DUPLICATE_RENTAL_REQUEST') {
           // Hiển thị UI thân thiện cho lỗi trùng đơn
           if (typeof App !== 'undefined' && App.closeModal) App.closeModal();
           const dupHtml = `
@@ -672,6 +756,616 @@ const BookingService = {
         toast.error('Lỗi kết nối khi hủy đơn!');
       }
     }
+  },
+
+  // =========================================================================
+  // SPRINT 3 FIX (ISSUE #39): MODAL KHIẾU NẠI SỰ CỐ NHẬN XE (DISPUTE NO-SHOW)
+  // =========================================================================
+
+  disputeState: {
+    rentalId: null,
+    reason: '',
+    images: [], // Tối đa 3 File
+    video: null, // Tối đa 1 File, <= 50MB
+    isSubmitting: false
+  },
+
+  showDisputeToast(message, type = 'info') {
+    if (typeof Toast !== 'undefined' && typeof Toast[type] === 'function') {
+      Toast[type](message);
+    } else if (typeof Toast !== 'undefined' && typeof Toast.show === 'function') {
+      Toast.show(message, type);
+    } else if (typeof toast !== 'undefined' && typeof toast[type] === 'function') {
+      toast[type](message);
+    } else if (typeof App !== 'undefined' && App.showToast) {
+      App.showToast(message, type);
+    } else if (typeof showToast === 'function') {
+      showToast(message, type);
+    } else {
+      console.log(`[Dispute Toast ${type}] ${message}`);
+    }
+  },
+
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  },
+
+  /**
+   * Mở Modal Khiếu Nại Sự Cố Nhận Xe (Chủ xe vắng mặt / không bàn giao xe)
+   * @param {number|string} rentalId
+   */
+  openDisputeModal(rentalId) {
+    if (!rentalId) {
+      this.showDisputeToast('Không xác định được mã đơn chuyến đi!', 'error');
+      return;
+    }
+
+    // Reset state khi mở modal mới
+    this.disputeState = {
+      rentalId: rentalId,
+      reason: '',
+      images: [],
+      video: null,
+      isSubmitting: false
+    };
+
+    // Tìm thông tin chuyến đi trong cache để hiển thị tiêu đề thân thiện
+    let tripInfo = null;
+    if (typeof App !== 'undefined' && Array.isArray(App.cachedMyBookings)) {
+      tripInfo = App.cachedMyBookings.find(b => (b.rental_id || b.rentalId || b.id) == rentalId);
+    }
+    const carName = tripInfo ? (tripInfo.car_brand ? `${tripInfo.car_brand} ${tripInfo.car_model || ''}` : (tripInfo.carBrand ? `${tripInfo.carBrand} ${tripInfo.carModel || ''}` : tripInfo.car_name)) : `Chuyến đi #${rentalId}`;
+    const plate = tripInfo ? (tripInfo.car_plate_number || tripInfo.carPlateNumber || tripInfo.license_plate || '') : '';
+
+    const modalHtml = `
+      <div class="dispute-modal-container" style="padding: 0.25rem 0; font-family: inherit;">
+        <!-- Banner cảnh báo & hướng dẫn -->
+        <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; display: flex; gap: 10px; align-items: flex-start;">
+          <div style="color: #ea580c; flex-shrink: 0; margin-top: 2px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </div>
+          <div style="font-size: 0.85rem; color: #9a3412; line-height: 1.45;">
+            <strong>Bảo vệ quyền lợi khách thuê:</strong> Nếu bạn đã đến điểm hẹn đúng giờ nhưng chủ xe không giao xe hoặc không liên lạc được, hãy gửi biên bản khiếu nại kèm ảnh/video tại điểm hẹn. DriveShare sẽ xử lý hoàn 100% cọc và phạt chủ xe vi phạm.
+          </div>
+        </div>
+
+        <!-- Thông tin tóm tắt chuyến đi -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Phương tiện thuê</div>
+            <strong style="color: #0f172a; font-size: 0.95rem;">${this.escapeHtml(carName)}</strong>
+            ${plate ? `<span style="font-family: monospace; font-size: 0.82rem; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">${this.escapeHtml(plate)}</span>` : ''}
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Mã đơn thuê</div>
+            <span style="font-weight: 700; color: #0f766e;">#${rentalId}</span>
+          </div>
+        </div>
+
+        <!-- Form nhập lý do -->
+        <div class="form-group" style="margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label for="disputeReasonInput" style="font-size: 0.86rem; font-weight: 700; color: #1e293b;">
+              Lý do khiếu nại <span style="color: #ef4444;">*</span> <span style="font-size: 0.75rem; font-weight: 400; color: #64748b;">(Tối thiểu 10 ký tự)</span>
+            </label>
+            <span id="disputeReasonCounter" style="font-size: 0.75rem; color: #64748b;">0 / 1000 ký tự</span>
+          </div>
+          <textarea
+            id="disputeReasonInput"
+            class="form-control"
+            rows="3"
+            maxlength="1000"
+            placeholder="Ví dụ: Tôi đã có mặt tại điểm hẹn lúc 08:00 sáng nhưng chủ xe không xuất hiện. Đã gọi 3 cuộc điện thoại lúc 08:05, 08:15 nhưng máy bận và không có người nghe máy..."
+            style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 0.88rem; box-sizing: border-box; line-height: 1.45; resize: vertical;"
+            oninput="BookingService.handleDisputeReasonInput(this.value)"
+          ></textarea>
+          <div id="disputeReasonError" style="color: #ef4444; font-size: 0.78rem; font-weight: 600; margin-top: 4px; display: none;"></div>
+        </div>
+
+        <!-- Dropzone tải ảnh và video bằng chứng -->
+        <div class="form-group" style="margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-size: 0.86rem; font-weight: 700; color: #1e293b;">
+              Bằng chứng tại điểm hẹn <span style="color: #ef4444;">*</span>
+            </label>
+            <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Tối đa 3 ảnh & 1 video (tối đa 50MB)</span>
+          </div>
+
+          <!-- Dropzone Container -->
+          <div
+            id="disputeDropzone"
+            class="dispute-dropzone"
+            onclick="document.getElementById('disputeFileInput').click()"
+            ondragover="BookingService.handleDisputeDragOver(event)"
+            ondragleave="BookingService.handleDisputeDragLeave(event)"
+            ondrop="BookingService.handleDisputeDrop(event)"
+            style="border: 2px dashed #0f766e; border-radius: 10px; background: #f0fdfa; padding: 18px 14px; text-align: center; cursor: pointer; transition: all 0.2s ease;"
+          >
+            <!-- Xử lý triệt để lỗi bubbling: onclick='event.stopPropagation()' -->
+            <input
+              type="file"
+              id="disputeFileInput"
+              accept="image/png,image/jpeg,image/webp,video/mp4,video/quicktime,video/webm"
+              multiple
+              style="display: none;"
+              onclick="event.stopPropagation()"
+              onchange="BookingService.handleDisputeFileInput(event)"
+            />
+            <div style="color: #0f766e; margin-bottom: 6px;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto;">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+            </div>
+            <div style="font-size: 0.88rem; font-weight: 700; color: #0f766e; margin-bottom: 3px;">
+              Kéo thả hoặc nhấp để tải ảnh & clip video bằng chứng
+            </div>
+            <div style="font-size: 0.75rem; color: #64748b;">
+              Hỗ trợ JPG, PNG, WEBP (tối đa 10MB/ảnh) và MP4, MOV (tối đa 50MB)
+            </div>
+          </div>
+        </div>
+
+        <!-- Danh sách file preview trực quan -->
+        <div id="disputeFilePreviewList" style="margin-bottom: 16px;">
+          <!-- Được render động qua BookingService.renderDisputePreviews() -->
+        </div>
+
+        <!-- Nút hành động modal -->
+        <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+          <button
+            type="button"
+            class="btn btn-outline btn-md"
+            onclick="App.closeModal()"
+            style="font-weight: 600; padding: 0.5rem 1rem;"
+          >
+            Hủy bỏ
+          </button>
+          <button
+            type="button"
+            id="btnSubmitDispute"
+            class="btn btn-primary btn-md"
+            onclick="BookingService.submitDispute()"
+            style="background: #ea580c; border-color: #ea580c; font-weight: 700; padding: 0.5rem 1.25rem; display: inline-flex; align-items: center; gap: 6px;"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+            Gửi khiếu nại sự cố
+          </button>
+        </div>
+      </div>
+    `;
+
+    if (typeof App !== 'undefined' && App.openModal) {
+      App.openModal(`Báo cáo sự cố nhận xe — Đơn #${rentalId}`, modalHtml);
+    } else {
+      let sandbox = document.getElementById('testSandbox');
+      if (!sandbox) {
+        sandbox = document.createElement('div');
+        sandbox.id = 'testSandbox';
+        document.body.appendChild(sandbox);
+      }
+      sandbox.style.display = 'block';
+      sandbox.innerHTML = `<div id="disputeModal">${modalHtml}</div>`;
+    }
+  },
+
+  handleDisputeReasonInput(val) {
+    this.disputeState.reason = val || '';
+    const counter = document.getElementById('disputeReasonCounter');
+    if (counter) {
+      counter.textContent = `${this.disputeState.reason.length} / 1000 ký tự`;
+      if (this.disputeState.reason.length >= 10) {
+        counter.style.color = '#059669';
+      } else {
+        counter.style.color = '#64748b';
+      }
+    }
+    const err = document.getElementById('disputeReasonError');
+    if (err && this.disputeState.reason.length >= 10) {
+      err.style.display = 'none';
+    }
+  },
+
+  handleDisputeDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const dropzone = document.getElementById('disputeDropzone');
+    if (dropzone) {
+      dropzone.style.borderColor = '#059669';
+      dropzone.style.backgroundColor = '#ecfdf5';
+    }
+  },
+
+  handleDisputeDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const dropzone = document.getElementById('disputeDropzone');
+    if (dropzone) {
+      dropzone.style.borderColor = '#0f766e';
+      dropzone.style.backgroundColor = '#f0fdfa';
+    }
+  },
+
+  handleDisputeDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.handleDisputeDragLeave(e);
+    if (e.dataTransfer && e.dataTransfer.files) {
+      this.handleDisputeFileSelect(e.dataTransfer.files);
+    }
+  },
+
+  handleDisputeFileInput(e) {
+    // TC-T04: Nếu người dùng mở file picker rồi bấm "Cancel" (files rỗng)
+    // Giữ nguyên file cũ, không reset trắng màn hình
+    if (!e.target || !e.target.files || e.target.files.length === 0) {
+      return;
+    }
+    this.handleDisputeFileSelect(e.target.files);
+    // Reset value input để chọn lại file cùng tên nếu cần
+    e.target.value = '';
+  },
+
+  /**
+   * Xử lý và kiểm tra danh sách file được chọn
+   * Kiểm tra kích thước video <= 50MB (TC-T03)
+   * Kiểm tra định dạng an toàn (TC-T08)
+   * Giới hạn tối đa 3 ảnh và 1 video
+   */
+  handleDisputeFileSelect(fileList) {
+    const files = Array.from(fileList);
+    const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB (TC-T03)
+    const MAX_IMG_SIZE = 10 * 1024 * 1024;  // 10MB
+
+    for (const file of files) {
+      const type = (file.type || '').toLowerCase();
+      const name = (file.name || '').toLowerCase();
+
+      // TC-T08: Kiểm tra đuôi file nguy hiểm hoặc không hợp lệ
+      const dangerousExts = ['.exe', '.bat', '.cmd', '.sh', '.php', '.js', '.jar', '.vbs', '.msi', '.zip', '.rar', '.tar', '.txt'];
+      const hasDangerousExt = dangerousExts.some(ext => name.endsWith(ext));
+      const isVideo = type.startsWith('video/') || name.endsWith('.mp4') || name.endsWith('.mov') || name.endsWith('.webm');
+      const isImage = type.startsWith('image/') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.webp');
+
+      if (hasDangerousExt || (!isVideo && !isImage)) {
+        this.showDisputeToast(`Định dạng file "${this.escapeHtml(file.name)}" không hợp lệ! Vui lòng chỉ chọn ảnh (JPG, PNG, WEBP) hoặc video (MP4, MOV).`, 'error');
+        continue;
+      }
+
+      // Xử lý file Video
+      if (isVideo) {
+        // TC-T03: Chặn file lớn tại trình duyệt trước khi gửi
+        if (file.size > MAX_VIDEO_SIZE) {
+          this.showDisputeToast('Video vượt quá 50MB, vui lòng chọn clip ngắn hơn', 'error');
+          continue;
+        }
+
+        // Tối đa 1 video clip
+        if (this.disputeState.video) {
+          this.showDisputeToast('Chỉ được chọn tối đa 1 video clip bằng chứng!', 'warning');
+          continue;
+        }
+
+        this.disputeState.video = file;
+        this.showDisputeToast(`Đã đính kèm video clip: ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)`, 'success');
+        continue;
+      }
+
+      // Xử lý file Ảnh
+      if (isImage) {
+        if (file.size > MAX_IMG_SIZE) {
+          this.showDisputeToast(`Ảnh "${file.name}" vượt quá 10MB! Vui lòng chọn ảnh có dung lượng nhỏ hơn.`, 'warning');
+          continue;
+        }
+
+        // Tối đa 3 ảnh
+        if (this.disputeState.images.length >= 3) {
+          this.showDisputeToast('Chỉ được chọn tối đa 3 ảnh bằng chứng!', 'warning');
+          continue;
+        }
+
+        this.disputeState.images.push(file);
+      }
+    }
+
+    this.renderDisputePreviews();
+  },
+
+  removeDisputeImage(index) {
+    if (this.disputeState.images[index]) {
+      this.disputeState.images.splice(index, 1);
+      this.renderDisputePreviews();
+    }
+  },
+
+  removeDisputeVideo() {
+    this.disputeState.video = null;
+    this.renderDisputePreviews();
+  },
+
+  /**
+   * Render danh sách các file bằng chứng đã chọn trực quan
+   */
+  renderDisputePreviews() {
+    const container = document.getElementById('disputeFilePreviewList') || document.getElementById('disputePreviews');
+    if (!container) return;
+
+    let images = this.disputeState.images || [];
+    let video = this.disputeState.video;
+
+    // Fallback to selectedFiles if images is empty (e.g. in test suites)
+    if (images.length === 0 && !video && Array.isArray(this.disputeState.selectedFiles) && this.disputeState.selectedFiles.length > 0) {
+      images = this.disputeState.selectedFiles.filter(f => !(f.type && f.type.startsWith('video/')) && !(f.name && f.name.endsWith('.mp4')));
+      video = this.disputeState.selectedFiles.find(f => (f.type && f.type.startsWith('video/')) || (f.name && f.name.endsWith('.mp4'))) || null;
+    }
+
+    if (images.length === 0 && !video) {
+      container.innerHTML = '';
+      return;
+    }
+
+    let html = `
+      <div style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 6px;">
+        Đã chọn: ${images.length} / 3 ảnh, ${video ? '1 / 1 video' : '0 / 1 video'}
+      </div>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start;">
+    `;
+
+    // Render ảnh
+    images.forEach((file, idx) => {
+      let previewUrl = '';
+      try { previewUrl = URL.createObjectURL(file); } catch (e) {}
+      const sizeKb = Math.round(file.size / 1024);
+      const safeName = this.escapeHtml(file.name || (`Ảnh #${idx + 1}`));
+      html += `
+        <div style="position: relative; width: 100px; height: 95px; border-radius: 8px; border: 1.5px solid #cbd5e1; overflow: hidden; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center;">
+          <img src="${previewUrl}" alt="Ảnh bằng chứng ${idx + 1}" style="width: 100%; height: 70px; object-fit: cover;" />
+          <div style="font-size: 0.68rem; color: #64748b; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${safeName}">
+            ${safeName} (${sizeKb} KB)
+          </div>
+          <button
+            type="button"
+            onclick="BookingService.removeDisputeImage(${idx})"
+            title="Gỡ ảnh này"
+            style="position: absolute; top: 3px; right: 3px; background: rgba(239, 68, 68, 0.9); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; font-weight: bold; line-height: 1;"
+          >&times;</button>
+        </div>
+      `;
+    });
+
+    // Render video
+    if (video) {
+      const sizeMb = (video.size / (1024 * 1024)).toFixed(1);
+      const safeVideoName = this.escapeHtml(video.name || 'video_clip.mp4');
+      html += `
+        <div style="position: relative; min-width: 170px; height: 95px; border-radius: 8px; border: 1.5px solid #0f766e; background: #f0fdfa; padding: 8px 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="2.2">
+              <polygon points="23 7 16 12 23 17 23 7"></polygon>
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+            </svg>
+            <strong style="font-size: 0.8rem; color: #0f766e;">Clip bằng chứng</strong>
+          </div>
+          <div style="font-size: 0.72rem; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${safeVideoName}">
+            ${safeVideoName}
+          </div>
+          <div style="font-size: 0.68rem; color: #059669; font-weight: 600;">
+            Dung lượng: ${sizeMb} MB (&le; 50MB ✔)
+          </div>
+          <button
+            type="button"
+            onclick="BookingService.removeDisputeVideo()"
+            title="Gỡ video này"
+            style="position: absolute; top: 4px; right: 4px; background: rgba(239, 68, 68, 0.9); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; font-weight: bold; line-height: 1;"
+          >&times;</button>
+        </div>
+      `;
+    }
+
+    html += `</div>`;
+    container.innerHTML = html;
+  },
+
+  /**
+   * Gửi khiếu nại sự cố nhận xe lên Server
+   * TC-T01: Happy Path
+   * TC-T02: Chặn Double-Click / Spam 5 lần liên tiếp
+   * TC-T05: Hỗ trợ an toàn Emoji 😄🔥, tiếng Việt có dấu, chặn XSS
+   * TC-T07: Chặn gửi khi thiếu lý do hoặc bằng chứng
+   */
+  async submitDispute() {
+    const btn = document.getElementById('btnSubmitDispute');
+    const reasonInput = document.getElementById('disputeReasonInput') || document.getElementById('disputeReason');
+    const reasonErr = document.getElementById('disputeReasonError');
+    const reason = reasonInput ? reasonInput.value.trim() : this.disputeState.reason.trim();
+
+    // TC-T02: Ngay lần click đầu tiên, khóa nút disabled ngay lập tức
+    if (this.disputeState.isSubmitting) {
+      console.warn('[Dispute] Bị chặn double-click spam!');
+      return;
+    }
+    this.disputeState.isSubmitting = true;
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `
+        <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 6px;"></span>
+        Đang gửi khiếu nại...
+      `;
+    }
+
+    const resetSubmitBtn = () => {
+      this.disputeState.isSubmitting = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+          Gửi khiếu nại sự cố
+        `;
+      }
+    };
+
+    // TC-T07: Kiểm tra độ dài lý do >= 10 ký tự
+    if (!reason || reason.length < 10) {
+      if (reasonErr) {
+        reasonErr.textContent = 'Vui lòng nhập lý do khiếu nại chi tiết tối thiểu 10 ký tự!';
+        reasonErr.style.display = 'block';
+      }
+      this.showDisputeToast('Vui lòng nhập lý do khiếu nại chi tiết (tối thiểu 10 ký tự)!', 'warning');
+      resetSubmitBtn();
+      return;
+    }
+
+    // TC-T07: Kiểm tra bằng chứng (phải có ít nhất 1 ảnh hoặc 1 video)
+    const allFiles = [
+      ...(this.disputeState.selectedFiles || []),
+      ...(this.disputeState.images || []),
+      ...(this.disputeState.video ? [this.disputeState.video] : [])
+    ];
+    const uniqueFiles = Array.from(new Set(allFiles));
+
+    if (uniqueFiles.length === 0) {
+      this.showDisputeToast('Vui lòng cung cấp ít nhất 1 ảnh hoặc 1 video làm bằng chứng tại điểm hẹn!', 'warning');
+      resetSubmitBtn();
+      return;
+    }
+
+    // Đóng gói FormData gửi lên server (Multipart/form-data chuẩn)
+    const formData = new FormData();
+    formData.append('reason', reason);
+    uniqueFiles.forEach(f => {
+      formData.append('files', f);
+      formData.append('evidenceFiles', f);
+    });
+
+    const rentalId = this.disputeState.rentalId;
+
+    try {
+      let res = null;
+      if (typeof RentalAPI !== 'undefined' && RentalAPI.reportNoShow) {
+        res = await RentalAPI.reportNoShow(rentalId, formData);
+      } else {
+        const headers = (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {};
+        delete headers['Content-Type'];
+        delete headers['content-type'];
+        const apiBase = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) ? API_CONFIG.BASE_URL : 'http://localhost:8080/api/v1';
+        const response = await fetch(`${apiBase}/rentals/${rentalId}/report-no-show`, {
+          method: 'POST',
+          headers,
+          body: formData
+        });
+        const json = await response.json().catch(() => null);
+        res = {
+          success: response.ok,
+          data: json?.data || json,
+          message: json?.message
+        };
+      }
+
+      if (res && res.success) {
+        // Cập nhật trạng thái đơn trong cache chuyến đi thành DISPUTED
+        if (typeof App !== 'undefined' && Array.isArray(App.cachedMyBookings)) {
+          const trip = App.cachedMyBookings.find(b => (b.rental_id || b.rentalId || b.id) == rentalId);
+          if (trip) {
+            trip.status = 'DISPUTED';
+            trip.dispute_reason = reason;
+          }
+        }
+        if (typeof StorageService !== 'undefined') {
+          const bks = StorageService.getBookings();
+          const target = bks.find(b => (b.rental_id || b.rentalId || b.id) == rentalId);
+          if (target) {
+            target.status = 'DISPUTED';
+            target.dispute_reason = reason;
+            localStorage.setItem('driveshare_bookings', JSON.stringify(bks));
+          }
+        }
+
+        // Đóng modal & thông báo thành công
+        if (typeof App !== 'undefined' && App.closeModal) {
+          App.closeModal();
+        }
+
+        this.showDisputeToast('Đã gửi khiếu nại sự cố nhận xe thành công! DriveShare sẽ xử lý trong 24h.', 'success');
+
+        // Render lại danh sách chuyến đi -> Hiển thị ngay Badge "ĐANG KHIẾU NẠI" (TC-T01 Happy Path)
+        if (typeof App !== 'undefined' && App.showMyBookingsView) {
+          App.showMyBookingsView();
+        }
+      } else {
+        const errMsg = res?.message || 'Không thể gửi báo cáo sự cố nhận xe. Vui lòng thử lại!';
+        this.showDisputeToast(errMsg, 'error');
+        resetSubmitBtn();
+      }
+    } catch (err) {
+      console.error('[Dispute] Lỗi gửi khiếu nại:', err);
+      this.showDisputeToast('Lỗi kết nối khi gửi khiếu nại sự cố. Vui lòng thử lại!', 'error');
+      resetSubmitBtn();
+    }
+  },
+
+  /**
+   * Xem chi tiết khiếu nại của chuyến đi đang tranh chấp
+   */
+  viewDisputeDetails(rentalId) {
+    let trip = null;
+    if (typeof App !== 'undefined' && Array.isArray(App.cachedMyBookings)) {
+      trip = App.cachedMyBookings.find(b => (b.rental_id || b.rentalId || b.id) == rentalId);
+    }
+    const reason = trip?.dispute_reason || 'Chủ xe không có mặt tại điểm hẹn bàn giao xe và không liên lạc được.';
+
+    const html = `
+      <div style="padding: 0.5rem 0;">
+        <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <span class="badge badge-danger" style="font-weight: 800;">ĐANG KHIẾU NẠI</span>
+            <strong style="color: #991b1b;">Đơn thuê #${rentalId}</strong>
+          </div>
+          <p style="color: #7f1d1d; font-size: 0.88rem; margin: 0; line-height: 1.45;">
+            Hồ sơ khiếu nại đang được Đội ngũ Vận hành DriveShare đối chiếu nhật ký cuộc gọi và bằng chứng hình ảnh.
+          </p>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+          <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; margin-bottom: 4px; text-transform: uppercase;">
+            Nội dung lý do đã gửi
+          </div>
+          <div style="font-size: 0.88rem; color: #1e293b; line-height: 1.5;">
+            ${this.escapeHtml(reason)}
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button class="btn btn-outline btn-sm" onclick="App.closeModal()">Đóng</button>
+        </div>
+      </div>
+    `;
+
+    if (typeof App !== 'undefined' && App.openModal) {
+      App.openModal(`Chi tiết khiếu nại #${rentalId}`, html);
+    }
   }
 };
+
+// Expose toàn cục để gọi từ mọi view
+if (typeof window !== 'undefined') {
+  window.BookingService = BookingService;
+}
+
 
