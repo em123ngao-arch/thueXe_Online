@@ -270,6 +270,16 @@ erDiagram
 
 ---
 
+### 👤 6. PHÁT (Backend Developer — Google OAuth2 & Car Search API)
+- **Câu hỏi của Thầy:** *"Luồng đăng nhập Google OAuth2 xử lý như thế nào? Phân biệt tài khoản mới và tài khoản đã có ra sao? Bộ lọc xe động hoạt động thế nào?"*
+- **Trả lời chuẩn điểm 10:**
+  1. *Google OAuth2:* Dùng `spring-boot-starter-oauth2-client`. Khi người dùng bấm Đăng nhập Google, hệ thống chuyển hướng sang Google Authorization Server. Sau khi người dùng cấp quyền, Google gọi về `/login/oauth2/code/google`. Lớp `OAuth2SuccessHandler` chặn lại, trích xuất email, tên và Google ID:
+     - Nếu email chưa tồn tại: Tự động đăng ký người dùng mới với vai trò được chọn, kích hoạt cờ tạo tài khoản.
+     - Nếu email đã tồn tại: Cập nhật thông tin và cấp ngay cặp JWT Access/Refresh Token trả về cho Frontend qua query param an toàn.
+  2. *Tìm kiếm xe động (`/api/v1/public/cars/search`):* Dùng Spring Data JPA kết hợp `Specification` động cho phép lọc đa tiêu chí linh hoạt: Hãng xe (`brand`), số chỗ (`seat_count`), mức giá từ-đến (`minPrice`, `maxPrice`), và quan trọng nhất là loại trừ các xe đã có lịch đặt trùng thời gian thuê yêu cầu (tránh overbooking).
+
+---
+
 ## PHẦN 6: CHECKLIST 5 PHÚT TRƯỚC GIỜ BÁO CÁO
 
 - [ ] **1. Docker Database:** Chạy sẵn `docker-compose up -d` (Container `driveshare-postgres` port 5432 xanh).

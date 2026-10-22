@@ -81,3 +81,10 @@ Hệ thống **DriveShare** được thiết kế theo kiến trúc **Spring Boo
   - Cơ sở dữ liệu: **PostgreSQL 16** (quản lý bởi Docker), kết nối qua Spring Data JPA / Hibernate.
   - Lưu trữ Media: **Cloudinary Cloud Storage** (ảnh xe, ảnh CCCD 2 mặt, video bằng chứng sự cố).
 - **Quy trình triển khai:** Docker Compose, Flyway DB Migration, Hỗ trợ Production trên Render Cloud Platform.
+
+### 1.6 Tài Liệu Tham Khảo (References)
+1. **IEEE Std 830-1998**: IEEE Recommended Practice for Software Requirements Specifications.
+2. **Spring Boot Reference Documentation (v3.3.4)**: [https://docs.spring.io/spring-boot/docs/3.3.4/reference/html/](https://docs.spring.io/spring-boot/docs/3.3.4/reference/html/)
+3. **Spring Security 6 Architecture & JWT Authentication**: [https://docs.spring.io/spring-security/reference/](https://docs.spring.io/spring-security/reference/)
+4. **Tiêu chuẩn Kỹ thuật VietQR Napas 247**: Công ty Cổ phần Thanh toán Quốc gia Việt Nam (Napas).
+5. **Đặc tả nghiệp vụ & Nghiên cứu đối chuẩn 10 ứng dụng Car Rental toàn cầu (Mioto, Turo, Zoomcar, Getaround)**: [`docs/driveshare_workflow_and_10_product_benchmark.md`](file:///d:/MONHOCITC/K4/Spring_ThucTap_k4/docs/driveshare_workflow_and_10_product_benchmark.md).
