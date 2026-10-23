@@ -1,6 +1,7 @@
 package com.driveshare.modules.car.service.impl;
 
 import com.driveshare.common.dto.PageResponse;
+import com.driveshare.common.enums.BankVerificationStatus;
 import com.driveshare.common.enums.ECarStatus;
 import com.driveshare.common.enums.EVerificationStatus;
 import com.driveshare.common.exception.AppException;
@@ -13,6 +14,7 @@ import com.driveshare.modules.car.entity.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.car.service.CarService;
 import com.driveshare.modules.user.entity.OwnerProfile;
+import com.driveshare.modules.user.entity.User;
 import com.driveshare.modules.user.repository.OwnerProfileRepository;
 import com.driveshare.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -71,9 +73,22 @@ public class CarServiceImpl implements CarService {
                 .orElseThrow(() -> new AppException(ErrorCode.OWNER_NOT_APPROVED));
 
         if (ownerProfile.getVerificationStatus() != EVerificationStatus.VERIFIED) {
-            log.warn("Owner {} cố đăng xe nhưng chưa được duyệt (status: {})",
+            log.warn("Owner {} cố đăng xe nhưng chưa được duyệt CCCD (status: {})",
                     currentUserId, ownerProfile.getVerificationStatus());
             throw new AppException(ErrorCode.OWNER_NOT_APPROVED);
+        }
+
+        // 1b. Chốt chặn tài khoản ngân hàng (Sprint 3 - Duy Quân): Chủ xe phải được duyệt STK ngân hàng mới được đăng xe
+        User owner = ownerProfile.getUser();
+        if (owner == null) {
+            owner = userRepository.findById(currentUserId)
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        }
+
+        if (owner.getBankVerificationStatus() != BankVerificationStatus.VERIFIED) {
+            log.warn("Owner {} cố đăng xe nhưng chưa được duyệt tài khoản ngân hàng (bankStatus: {})",
+                    currentUserId, owner.getBankVerificationStatus());
+            throw new AppException(ErrorCode.OWNER_BANK_NOT_VERIFIED);
         }
 
         // 2. Kiểm tra trùng biển số (bỏ qua xe đã xóa mềm)

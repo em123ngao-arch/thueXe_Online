@@ -84,6 +84,7 @@ public enum ErrorCode {
     REVIEW_ALREADY_EXISTS("REVIEW_ALREADY_EXISTS", "Đơn thuê xe này đã được đánh giá trước đó", HttpStatus.CONFLICT),
     RENTAL_NOT_COMPLETED_FOR_REVIEW("RENTAL_NOT_COMPLETED_FOR_REVIEW", "Chuyến đi phải ở trạng thái hoàn tất (COMPLETED) mới có thể đánh giá", HttpStatus.BAD_REQUEST),
     KYC_NOT_VERIFIED("KYC_NOT_VERIFIED", "Hồ sơ giấy tờ (CCCD hoặc GPLX) của bạn chưa được phê duyệt. Vui lòng kiểm tra hồ sơ cá nhân trước khi thuê xe", HttpStatus.FORBIDDEN),
+    OWNER_BANK_NOT_VERIFIED("OWNER_BANK_NOT_VERIFIED", "Chủ xe chưa được duyệt thông tin tài khoản ngân hàng, không thể tạo xe mới", HttpStatus.FORBIDDEN),
 
     // Sprint 3 Fix: Dispute & No-Show (Lâm Chí Vĩ)
     DISPUTE_NOT_FOUND("DISPUTE_NOT_FOUND", "Không tìm thấy thông tin khiếu nại sự cố", HttpStatus.NOT_FOUND),

@@ -23,6 +23,8 @@ public class UserItemResponse {
     private String address;
     private String idCardNumber;
     private EUserStatus status;
+    private com.driveshare.common.enums.BankVerificationStatus bankVerificationStatus;
+    private String bankRejectionReason;
     private Set<String> roles;
     private Instant createdAt;
     private OwnerProfileSummaryResponse ownerProfile;

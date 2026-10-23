@@ -23,8 +23,10 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.driveshare.common.enums.BankVerificationStatus;
 import com.driveshare.common.enums.EUserStatus;
 import com.driveshare.common.enums.EVerificationStatus;
+import com.driveshare.modules.admin.dto.request.VerifyBankRequest;
 import com.driveshare.modules.admin.dto.request.ApproveLicenseRequest;
 import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
 import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
@@ -344,6 +346,8 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .avatarUrl(user.getAvatarUrl())
                 .address(user.getAddress())
                 .idCardNumber(user.getIdCardNumber())
+                .bankVerificationStatus(user.getBankVerificationStatus())
+                .bankRejectionReason(user.getBankRejectionReason())
                 .status(user.getStatus())
                 .roles(roles)
                 .createdAt(user.getCreatedAt())
@@ -451,6 +455,50 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .createdAt(Instant.now())
                 .build();
         auditLogRepository.save(logEntry);
+    }
+
+    @Override
+    @Transactional
+    public UserItemResponse verifyBank(Long userId, VerifyBankRequest request, Long actorId, String actorUsername) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (request == null || request.getStatus() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Trạng thái phê duyệt ngân hàng không được để trống");
+        }
+
+        BankVerificationStatus targetStatus = request.getStatus();
+        String effectiveReason = request.getEffectiveReason();
+
+        if (targetStatus == BankVerificationStatus.REJECTED && (effectiveReason == null || effectiveReason.isBlank())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Lý do từ chối là bắt buộc khi từ chối tài khoản ngân hàng");
+        }
+
+        user.setBankVerificationStatus(targetStatus);
+        if (targetStatus == BankVerificationStatus.VERIFIED) {
+            user.setBankRejectionReason(null);
+        } else if (targetStatus == BankVerificationStatus.REJECTED) {
+            user.setBankRejectionReason(effectiveReason);
+        }
+
+        userRepository.save(user);
+
+        boolean isVerified = targetStatus == BankVerificationStatus.VERIFIED;
+        AuditLog logEntry = AuditLog.builder()
+                .actorId(actorId)
+                .actorUsername(actorUsername)
+                .targetType("USER_BANK")
+                .targetId(userId)
+                .action(isVerified ? "APPROVE_BANK" : "REJECT_BANK")
+                .details(isVerified ? "Duyệt tài khoản ngân hàng chủ xe" : "Từ chối tài khoản ngân hàng: " + effectiveReason)
+                .createdAt(Instant.now())
+                .build();
+        auditLogRepository.save(logEntry);
+
+        log.info("🏦 [AUDIT] Admin '{}' updated bank verification status for user #{} to {}. Reason: {}",
+                actorUsername, userId, targetStatus, effectiveReason);
+
+        return mapToUserItemResponse(user);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.driveshare.modules.user.entity;
 
 import com.driveshare.common.entity.BaseEntity;
+import com.driveshare.common.enums.BankVerificationStatus;
 import com.driveshare.common.enums.EAuthProvider;
 import com.driveshare.common.enums.EUserStatus;
 import jakarta.persistence.*;
@@ -51,6 +52,18 @@ public class User extends BaseEntity {
     @Column(name = "status", length = 20)
     @Builder.Default
     private EUserStatus status = EUserStatus.PENDING;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "bank_verification_status", length = 30)
+    @Builder.Default
+    private BankVerificationStatus bankVerificationStatus = BankVerificationStatus.UNVERIFIED;
+
+    @Column(name = "bank_rejection_reason", columnDefinition = "TEXT")
+    private String bankRejectionReason;
+
+    public BankVerificationStatus getBankVerificationStatus() {
+        return bankVerificationStatus != null ? bankVerificationStatus : BankVerificationStatus.UNVERIFIED;
+    }
 
     @Column(name = "failed_login_attempts", nullable = false)
     @Builder.Default
