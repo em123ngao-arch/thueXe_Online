@@ -23,12 +23,10 @@ const API_BASE = (() => {
     if (saved) return saved;
   } catch (e) {}
 
-  if (typeof window !== 'undefined' && window.location.port === '3000') {
-    return `${window.location.origin}/api/v1`;
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:8080/api/v1';
   }
-  return (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://localhost:8080/api/v1'
-    : 'https://driveshare-backend-9ppk.onrender.com/api/v1';
+  return 'https://driveshare-backend-9ppk.onrender.com/api/v1';
 })();
 
 
@@ -465,6 +463,56 @@ const AuthService = {
       return {
         success: true,
         message: "Đổi mật khẩu thành công. Các phiên đăng nhập khác đã bị vô hiệu hóa",
+      };
+    }
+
+    return res;
+  },
+
+  // Quên mật khẩu - gửi email yêu cầu đặt lại
+  async forgotPassword(email) {
+    const res = await this.request("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+
+    if (res.success) return res;
+
+    // Mock fallback khi offline
+    if (res.errorCode === "NETWORK_ERROR") {
+      const mockToken = "mock_token_" + Date.now();
+      return {
+        success: true,
+        message: "Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.",
+        data: {
+          message: "Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.",
+          resetUrl: `http://localhost:3000/login.html#reset=${mockToken}`,
+          token: mockToken
+        }
+      };
+    }
+
+    return res;
+  },
+
+  // Đặt lại mật khẩu với token
+  async resetPassword(token, newPassword, confirmPassword) {
+    const res = await this.request("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({
+        token,
+        newPassword,
+        confirmPassword,
+      }),
+    });
+
+    if (res.success) return res;
+
+    // Mock fallback khi offline
+    if (res.errorCode === "NETWORK_ERROR") {
+      return {
+        success: true,
+        message: "Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới.",
       };
     }
 

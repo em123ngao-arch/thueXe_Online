@@ -28,12 +28,22 @@ public class CloudinaryService {
     private final boolean isConfigured;
     private final String uploadDir;
 
-    private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList(
+    private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList(
             "image/jpeg",
             "image/jpg",
             "image/png",
             "image/webp"
     );
+
+    private static final List<String> ALLOWED_VIDEO_TYPES = Arrays.asList(
+            "video/mp4",
+            "video/quicktime",
+            "video/webm",
+            "video/x-msvideo",
+            "video/mpeg"
+    );
+
+    private static final List<String> ALLOWED_CONTENT_TYPES = ALLOWED_IMAGE_TYPES;
 
     public CloudinaryService(
             @Value("${cloudinary.cloud-name:demo}") String cloudName,
@@ -133,6 +143,105 @@ public class CloudinaryService {
         } catch (IOException e) {
             log.error("Local file storage failed: {}", e.getMessage(), e);
             throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Không thể lưu trữ tập tin hình ảnh vào máy chủ");
+        }
+    }
+
+    /**
+     * Validate ảnh hoặc video (tối đa 50MB cho video, 10MB cho ảnh)
+     */
+    public boolean isVideoFile(MultipartFile file) {
+        if (file == null) return false;
+        String contentType = file.getContentType();
+        String originalFilename = file.getOriginalFilename();
+        boolean validContentType = contentType != null && ALLOWED_VIDEO_TYPES.contains(contentType.toLowerCase());
+        boolean validExtension = originalFilename != null && (
+                originalFilename.toLowerCase().endsWith(".mp4")
+                        || originalFilename.toLowerCase().endsWith(".mov")
+                        || originalFilename.toLowerCase().endsWith(".webm")
+                        || originalFilename.toLowerCase().endsWith(".avi")
+                        || originalFilename.toLowerCase().endsWith(".mkv")
+        );
+        return validContentType || validExtension;
+    }
+
+    public void validateMediaFile(MultipartFile file, long maxSizeBytes) {
+        if (file == null || file.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "File đính kèm không được để trống");
+        }
+
+        if (file.getSize() > maxSizeBytes) {
+            throw new AppException(ErrorCode.FILE_SIZE_EXCEEDED, "Kích thước file vượt quá giới hạn " + (maxSizeBytes / (1024 * 1024)) + "MB");
+        }
+
+        boolean isVideo = isVideoFile(file);
+        if (isVideo) {
+            return;
+        }
+
+        // Nếu không phải video thì kiểm tra ảnh
+        String contentType = file.getContentType();
+        String originalFilename = file.getOriginalFilename();
+        boolean validContentType = contentType != null && ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase());
+        boolean validExtension = originalFilename != null && (
+                originalFilename.toLowerCase().endsWith(".jpg")
+                        || originalFilename.toLowerCase().endsWith(".jpeg")
+                        || originalFilename.toLowerCase().endsWith(".png")
+                        || originalFilename.toLowerCase().endsWith(".webp")
+        );
+
+        if (!validContentType && !validExtension) {
+            throw new AppException(ErrorCode.INVALID_FILE_FORMAT, "Chỉ chấp nhận file ảnh (JPG, PNG, WEBP) hoặc video (MP4, MOV, WEBM)");
+        }
+    }
+
+    /**
+     * Upload ảnh hoặc video bằng chứng lên Cloudinary hoặc lưu cục bộ
+     */
+    public String uploadMedia(MultipartFile file, String folder) {
+        // Tối đa 50MB
+        long maxSizeBytes = 50L * 1024 * 1024;
+        validateMediaFile(file, maxSizeBytes);
+
+        boolean isVideo = isVideoFile(file);
+        String resourceType = isVideo ? "video" : "image";
+
+        String originalFilename = file.getOriginalFilename();
+        String cleanName = originalFilename != null ? originalFilename.replaceAll("[^a-zA-Z0-9.-]", "_") : (isVideo ? "video.mp4" : "image.jpg");
+        String uniqueId = UUID.randomUUID().toString().replace("-", "");
+        String publicId = folder + "/" + uniqueId + "_" + cleanName;
+
+        if (isConfigured) {
+            try {
+                @SuppressWarnings("rawtypes")
+                Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                        "public_id", publicId,
+                        "resource_type", resourceType,
+                        "overwrite", true
+                ));
+                return uploadResult.get("secure_url").toString();
+            } catch (IOException e) {
+                log.error("Cloudinary media upload failed: {}", e.getMessage(), e);
+                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Lỗi khi tải file lên Cloudinary");
+            }
+        }
+
+        // Lưu local
+        try {
+            Path targetDir = Paths.get(uploadDir, folder).toAbsolutePath().normalize();
+            if (!Files.exists(targetDir)) {
+                Files.createDirectories(targetDir);
+            }
+
+            String fileName = uniqueId + "_" + cleanName;
+            Path targetFile = targetDir.resolve(fileName);
+            Files.copy(file.getInputStream(), targetFile, StandardCopyOption.REPLACE_EXISTING);
+
+            String accessUrl = buildFileUrl(folder, fileName);
+            log.info("Saved media to local disk: {}, public access URL: {}", targetFile, accessUrl);
+            return accessUrl;
+        } catch (IOException e) {
+            log.error("Local media storage failed: {}", e.getMessage(), e);
+            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Không thể lưu trữ tập tin đa phương tiện vào máy chủ");
         }
     }
 

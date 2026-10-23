@@ -84,7 +84,15 @@ public enum ErrorCode {
     REVIEW_ALREADY_EXISTS("REVIEW_ALREADY_EXISTS", "Đơn thuê xe này đã được đánh giá trước đó", HttpStatus.CONFLICT),
     RENTAL_NOT_COMPLETED_FOR_REVIEW("RENTAL_NOT_COMPLETED_FOR_REVIEW", "Chuyến đi phải ở trạng thái hoàn tất (COMPLETED) mới có thể đánh giá", HttpStatus.BAD_REQUEST),
     KYC_NOT_VERIFIED("KYC_NOT_VERIFIED", "Hồ sơ giấy tờ (CCCD hoặc GPLX) của bạn chưa được phê duyệt. Vui lòng kiểm tra hồ sơ cá nhân trước khi thuê xe", HttpStatus.FORBIDDEN),
-    OWNER_BANK_NOT_VERIFIED("OWNER_BANK_NOT_VERIFIED", "Chủ xe chưa được duyệt thông tin tài khoản ngân hàng, không thể tạo xe mới", HttpStatus.FORBIDDEN);
+    OWNER_BANK_NOT_VERIFIED("OWNER_BANK_NOT_VERIFIED", "Chủ xe chưa được duyệt thông tin tài khoản ngân hàng, không thể tạo xe mới", HttpStatus.FORBIDDEN),
+
+    // Sprint 3 Fix: Dispute & No-Show (Lâm Chí Vĩ)
+    DISPUTE_NOT_FOUND("DISPUTE_NOT_FOUND", "Không tìm thấy thông tin khiếu nại sự cố", HttpStatus.NOT_FOUND),
+    DISPUTE_ALREADY_EXISTS("DISPUTE_ALREADY_EXISTS", "Đơn thuê xe này đã có khiếu nại đang chờ xử lý", HttpStatus.CONFLICT),
+    DISPUTE_ALREADY_RESOLVED("DISPUTE_ALREADY_RESOLVED", "Khiếu nại này đã được xử lý trước đó", HttpStatus.BAD_REQUEST),
+    RENTAL_NOT_ELIGIBLE_FOR_DISPUTE("RENTAL_NOT_ELIGIBLE_FOR_DISPUTE", "Đơn thuê xe không ở trạng thái hợp lệ để báo cáo sự cố không nhận xe", HttpStatus.BAD_REQUEST),
+    DISPUTE_INVALID_ACTION("DISPUTE_INVALID_ACTION", "Hành động xử lý khiếu nại không hợp lệ", HttpStatus.BAD_REQUEST),
+    DISPUTE_ACCESS_DENIED("DISPUTE_ACCESS_DENIED", "Bạn không có quyền khiếu nại trên đơn thuê của người khác", HttpStatus.FORBIDDEN);
 
     private final String code;
     private final String message;

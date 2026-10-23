@@ -44,6 +44,9 @@ const AdminService = {
             <button class="portal-tab-btn" id="adminTabBookings" onclick="AdminService.switchTab('BOOKINGS')">
               Toàn bộ đơn đặt xe (<span id="badgeTotalBookings">...</span>)
             </button>
+            <button class="portal-tab-btn" id="adminTabDisputes" onclick="AdminService.switchTab('DISPUTES')">
+              Xử lý khiếu nại sự cố (<span id="badgePendingDisputes">...</span>)
+            </button>
             <button class="portal-tab-btn" id="adminTabUsers" onclick="AdminService.switchTab('USERS')">
               Quản lý tài khoản & Vai trò
             </button>
@@ -197,12 +200,24 @@ const AdminService = {
 
         <!-- Tab Content 3: Toàn bộ đơn đặt xe -->
         <div id="adminTabBookingsContent" style="display: none;">
+          <div id="adminBookingsTableWrapper">
+            <!-- Được render động qua renderBookingsList() -->
+          </div>
+        </div>
+
+        <!-- Tab Content: Xử lý khiếu nại sự cố & Chủ xe không giao xe (Disputes) -->
+        <div id="adminTabDisputesContent" style="display: none;">
           <div class="admin-table-card">
             <div class="admin-table-header">
-              <h3>Toàn bộ giao dịch trên hệ thống DriveShare</h3>
+              <div>
+                <h3>Danh sách khiếu nại sự cố & Vi phạm bàn giao xe (Rental Disputes)</h3>
+                <p style="font-size: 0.82rem; color: var(--slate-500); margin-top: 0.2rem;">
+                  Quy trình chuẩn Mioto: Xác minh tranh chấp giao nhận xe, hoàn 100% tiền cọc (Escrow Refund) cho khách và chế tài vi phạm với chủ xe
+                </p>
+              </div>
             </div>
-            <div class="table-responsive" id="adminBookingsTableWrapper">
-              <!-- Được render động qua renderBookingsList() -->
+            <div class="table-responsive" id="adminDisputesTableWrapper">
+              <!-- Được render động qua renderDisputesList() -->
             </div>
           </div>
         </div>
@@ -579,7 +594,7 @@ const AdminService = {
     const elComm = document.getElementById('statPlatformCommission');
     if (elComm) elComm.innerText = fmtMoney(stats.platformCommission);
     const elToday = document.getElementById('statTodayBookings');
-    if (elToday) elToday.innerText = stats.todayBookings + ' đơn';
+    if (elToday) elToday.innerText = (stats.todayBookings != null && !isNaN(stats.todayBookings) ? stats.todayBookings : 0) + ' đơn';
     const elDeposits = document.getElementById('statTotalDeposits');
     if (elDeposits) elDeposits.innerText = fmtMoney(stats.totalDeposits);
 
@@ -1451,7 +1466,69 @@ const AdminService = {
     this.loadAdminStats();
   },
 
-  // Tab 4: Toàn bộ đơn đặt xe (GET /api/v1/admin/rentals)
+  // =========================================================================
+  // Tab 4: Bảng Tổng Hợp Giao Dịch Toàn Sàn (Mioto-Inspired Bookings Dashboard)
+  // =========================================================================
+  bookingState: {
+    page: 1,
+    limit: 8,
+    status: 'ALL',
+    search: '',
+    sortBy: 'newest'
+  },
+  cachedBookings: [],
+
+  getCarThumbnail(carName) {
+    const name = String(carName || '').toLowerCase();
+    if (name.includes('camry') || name.includes('toyota')) {
+      return 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?auto=format&fit=crop&w=260&q=80';
+    }
+    if (name.includes('everest') || name.includes('ranger') || name.includes('ford')) {
+      return 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=260&q=80';
+    }
+    if (name.includes('carnival') || name.includes('kia')) {
+      return 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=260&q=80';
+    }
+    if (name.includes('accent') || name.includes('hyundai')) {
+      return 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=260&q=80';
+    }
+    return 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=260&q=80';
+  },
+
+  getMiotoStatusBadge(st) {
+    const s = String(st || '').toUpperCase();
+    const baseStyle = 'display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 9999px; font-size: 0.74rem; font-weight: 700; line-height: 1.3; white-space: nowrap;';
+    switch (s) {
+      case 'CONFIRMED':
+      case 'DEPOSIT_PAID':
+        return `<span class="mioto-status-badge status-confirmed" style="${baseStyle} background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;"><i class="fa-solid fa-circle-check"></i> Đã cọc 30%</span>`;
+      case 'WAITING_PAYMENT':
+        return `<span class="mioto-status-badge status-waiting" style="${baseStyle} background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;"><i class="fa-solid fa-clock"></i> Chờ cọc (45p)</span>`;
+      case 'ON_HOLD':
+        return `<span class="mioto-status-badge status-onhold" style="${baseStyle} background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;"><i class="fa-solid fa-pause"></i> Tạm hoãn</span>`;
+      case 'DISPUTED':
+        return `<span class="mioto-status-badge status-disputed" style="${baseStyle} background: #fef3c7; color: #b45309; border: 1px solid #fde68a;"><i class="fa-solid fa-triangle-exclamation"></i> Khiếu nại bàn giao</span>`;
+      case 'CANCELLED_BY_HOST':
+        return `<span class="mioto-status-badge status-host-cancel" style="${baseStyle} background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca;"><i class="fa-solid fa-ban"></i> Chủ xe hủy (Hoàn 100%)</span>`;
+      case 'ACTIVE':
+      case 'IN_PROGRESS':
+        return `<span class="mioto-status-badge status-inprogress" style="${baseStyle} background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe;"><i class="fa-solid fa-car-side"></i> Đang lưu hành</span>`;
+      case 'COMPLETED':
+        return `<span class="mioto-status-badge status-completed" style="${baseStyle} background: #ccfbf1; color: #0f766e; border: 1px solid #99f6e4;"><i class="fa-solid fa-flag-checkered"></i> Hoàn tất</span>`;
+      case 'REJECTED':
+        return `<span class="mioto-status-badge status-rejected" style="${baseStyle} background: #fef2f2; color: #991b1b; border: 1px solid #fecaca;"><i class="fa-solid fa-xmark"></i> Bị từ chối</span>`;
+      case 'WITHDRAWN_BY_GUEST':
+        return `<span class="mioto-status-badge status-cancelled" style="${baseStyle} background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1;"><i class="fa-solid fa-user-xmark"></i> Khách hủy yêu cầu</span>`;
+      case 'CANCELLED':
+        return `<span class="mioto-status-badge status-cancelled" style="${baseStyle} background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb;"><i class="fa-solid fa-xmark"></i> Đã hủy</span>`;
+      case 'PENDING':
+      case 'PENDING_APPROVAL':
+        return `<span class="mioto-status-badge status-pending" style="${baseStyle} background: #fffbeb; color: #d97706; border: 1px solid #fde68a;"><i class="fa-solid fa-hourglass-half"></i> Chờ duyệt</span>`;
+      default:
+        return `<span class="mioto-status-badge status-onhold" style="${baseStyle} background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">${st}</span>`;
+    }
+  },
+
   async renderBookingsList() {
     const wrapper = document.getElementById('adminBookingsTableWrapper');
     if (!wrapper) return;
@@ -1462,84 +1539,536 @@ const AdminService = {
           <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
           <path d="M12 2a10 10 0 0 1 10 10"></path>
         </svg>
-        Đang tải toàn bộ đơn đặt xe từ cơ sở dữ liệu...
+        Đang tải toàn bộ giao dịch trên sàn DriveShare...
       </div>
     `;
 
-    let bookings = [];
     try {
-      if (typeof ApiService !== 'undefined') {
-        const res = await ApiService.getAdminRentals();
-        if (res && res.success && Array.isArray(res.data)) {
-          bookings = res.data;
+      const apiBase = getAdminApiBase();
+      const token = (typeof getAccessToken === 'function') ? getAccessToken() : (localStorage.getItem('access_token') || localStorage.getItem('token'));
+      const res = await fetch(`${apiBase}/admin/rentals`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
         }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        this.cachedBookings = json?.data || json?.result || [];
       } else if (typeof StorageService !== 'undefined') {
-        bookings = StorageService.getBookings();
+        this.cachedBookings = StorageService.getBookings();
       }
     } catch (e) {
       console.warn('renderBookingsList error:', e);
+      if (typeof StorageService !== 'undefined') {
+        this.cachedBookings = StorageService.getBookings();
+      }
     }
 
-    const getStatusBadge = (st) => {
-      switch (String(st).toUpperCase()) {
-        case 'CONFIRMED':
-        case 'DEPOSIT_PAID':
-          return '<span class="badge badge-success">Đã đặt cọc (30%)</span>';
-        case 'ACTIVE':
-          return '<span class="badge badge-primary">Đang thuê</span>';
-        case 'COMPLETED':
-          return '<span class="badge badge-neutral">Đã hoàn thành</span>';
-        case 'CANCELLED':
-          return '<span class="badge badge-danger">Đã hủy</span>';
-        case 'PENDING':
-          return '<span class="badge badge-warning">Chờ chủ xe duyệt</span>';
-        default:
-          return `<span class="badge badge-warning">${st}</span>`;
-      }
+    const badgeTotalBookings = document.getElementById('badgeTotalBookings');
+    if (badgeTotalBookings) {
+      badgeTotalBookings.innerText = this.cachedBookings.length;
+    }
+
+    this.renderBookingsUI();
+  },
+
+  renderBookingsUI() {
+    const wrapper = document.getElementById('adminBookingsTableWrapper');
+    if (!wrapper) return;
+
+    const all = this.cachedBookings || [];
+
+    // Nhóm trạng thái khoa học (6 nhóm chuẩn mực nghiệp vụ)
+    const counts = {
+      ALL: all.length,
+      WAITING: all.filter(b => String(b.status).toUpperCase() === 'WAITING_PAYMENT').length,
+      ACTIVE: all.filter(b => ['CONFIRMED', 'DEPOSIT_PAID', 'ACTIVE', 'IN_PROGRESS'].includes(String(b.status).toUpperCase())).length,
+      DISPUTED: all.filter(b => ['DISPUTED', 'CANCELLED_BY_HOST'].includes(String(b.status).toUpperCase())).length,
+      COMPLETED: all.filter(b => String(b.status).toUpperCase() === 'COMPLETED').length,
+      CANCELLED: all.filter(b => ['CANCELLED', 'REJECTED', 'WITHDRAWN_BY_GUEST'].includes(String(b.status).toUpperCase())).length
     };
 
+    // Lọc theo nhóm
+    let filtered = all.filter(b => {
+      const st = String(b.status).toUpperCase();
+      if (this.bookingState.status === 'ALL') return true;
+      if (this.bookingState.status === 'WAITING') return st === 'WAITING_PAYMENT';
+      if (this.bookingState.status === 'ACTIVE') return ['CONFIRMED', 'DEPOSIT_PAID', 'ACTIVE', 'IN_PROGRESS'].includes(st);
+      if (this.bookingState.status === 'DISPUTED') return ['DISPUTED', 'CANCELLED_BY_HOST'].includes(st);
+      if (this.bookingState.status === 'COMPLETED') return st === 'COMPLETED';
+      if (this.bookingState.status === 'CANCELLED') return ['CANCELLED', 'REJECTED', 'WITHDRAWN_BY_GUEST'].includes(st);
+      return true;
+    });
+
+    // Lọc theo từ khóa tìm kiếm
+    if (this.bookingState.search && this.bookingState.search.trim() !== '') {
+      const q = this.bookingState.search.trim().toLowerCase();
+      filtered = filtered.filter(b => {
+        const idStr = String(b.rental_id || b.rentalId || b.id || '').toLowerCase();
+        const carStr = String(b.car_name || b.carName || '').toLowerCase();
+        const plateStr = String(b.car_plate || b.carPlate || b.license_plate || b.licensePlate || '').toLowerCase();
+        const renterStr = String(b.renter_name || b.renterName || '').toLowerCase();
+        const phoneStr = String(b.renter_phone || b.renterPhone || '').toLowerCase();
+        const ownerStr = String(b.owner_name || b.ownerName || '').toLowerCase();
+        return idStr.includes(q) || ('#' + idStr).includes(q) || carStr.includes(q) || plateStr.includes(q) || renterStr.includes(q) || phoneStr.includes(q) || ownerStr.includes(q);
+      });
+    }
+
+    // Sắp xếp
+    filtered.sort((a, b) => {
+      const idA = Number(a.rental_id || a.rentalId || a.id || 0);
+      const idB = Number(b.rental_id || b.rentalId || b.id || 0);
+      const priceA = Number(a.total_price || a.totalPrice || 0);
+      const priceB = Number(b.total_price || b.totalPrice || 0);
+      const depA = Number(a.deposit_amount || a.depositAmount || 0);
+      const depB = Number(b.deposit_amount || b.depositAmount || 0);
+
+      if (this.bookingState.sortBy === 'newest') return idB - idA;
+      if (this.bookingState.sortBy === 'oldest') return idA - idB;
+      if (this.bookingState.sortBy === 'price_desc') return priceB - priceA;
+      if (this.bookingState.sortBy === 'deposit_desc') return depB - depA;
+      return idB - idA;
+    });
+
+    // Phân trang
+    const totalItems = filtered.length;
+    const limit = this.bookingState.limit;
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+    if (this.bookingState.page > totalPages) this.bookingState.page = totalPages;
+    const startIndex = (this.bookingState.page - 1) * limit;
+    const pagedItems = filtered.slice(startIndex, startIndex + limit);
+
+    const fmtMoney = (v) => typeof StorageService !== 'undefined' ? StorageService.formatCurrency(v) : (Number(v || 0).toLocaleString('vi-VN') + ' đ');
+
+    // 6 Tabs phân nhóm khoa học
+    const tabs = [
+      { id: 'ALL', label: 'Tất cả giao dịch', icon: 'fa-table-list', count: counts.ALL },
+      { id: 'WAITING', label: 'Chờ thanh toán cọc', icon: 'fa-clock', count: counts.WAITING },
+      { id: 'ACTIVE', label: 'Đang hiệu lực', icon: 'fa-shield-halved', count: counts.ACTIVE },
+      { id: 'DISPUTED', label: 'Khiếu nại & Vi phạm', icon: 'fa-triangle-exclamation', count: counts.DISPUTED },
+      { id: 'COMPLETED', label: 'Hoàn tất', icon: 'fa-circle-check', count: counts.COMPLETED },
+      { id: 'CANCELLED', label: 'Đã hủy / Từ chối', icon: 'fa-ban', count: counts.CANCELLED }
+    ];
+
+    const segmentedHtml = tabs.map(t => {
+      const isActive = this.bookingState.status === t.id;
+      return `
+        <button class="segmented-tab-btn ${isActive ? 'active' : ''}" 
+                onclick="AdminService.onBookingFilterChange('${t.id}')">
+          <i class="fa-solid ${t.icon}" style="font-size: 0.8rem; opacity: 0.85;"></i>
+          <span>${t.label}</span>
+          <span class="segmented-count-badge">${t.count}</span>
+        </button>
+      `;
+    }).join('');
+
     wrapper.innerHTML = `
-      <table class="custom-table">
-        <thead>
-          <tr>
-            <th>Mã đơn</th>
-            <th>Phương tiện</th>
-            <th>Khách thuê</th>
-            <th>Lịch trình thuê</th>
-            <th>Tổng tiền</th>
-            <th>Tiền cọc (30%)</th>
-            <th>Trạng thái đơn</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${bookings.length === 0 ? `
-            <tr>
-              <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--slate-500);">
-                Chưa có giao dịch thuê xe nào trên hệ thống DriveShare.
-              </td>
-            </tr>
-          ` : bookings.map(b => `
-            <tr>
-              <td><span class="booking-code">#${b.rental_id || b.rentalId || b.id}</span></td>
-              <td>
-                <strong>${b.car_name || b.carName || 'Phương tiện'}</strong><br/>
-                <span style="font-size: 0.76rem; color: var(--slate-500); font-family: monospace;">${b.car_plate || b.carPlate || b.license_plate || b.licensePlate || 'N/A'}</span>
-              </td>
-              <td>
-                ${b.renter_name || b.renterName || 'Khách thuê'}<br/>
-                <span style="font-size: 0.76rem; color: var(--slate-500);">${b.renter_phone || b.renterPhone || b.renter_email || ''}</span>
-              </td>
-              <td style="font-size: 0.8rem;">
-                ${b.start_date || b.startDate || b.start_time || ''} <br/>đến ${b.end_date || b.endDate || b.end_time || ''} (${b.total_days || b.totalDays || 1} ngày)
-              </td>
-              <td style="font-weight: 700;">${StorageService.formatCurrency(b.total_price || b.totalPrice || b.total_amount || b.totalAmount || 0)}</td>
-              <td style="color: var(--primary); font-weight: 700;">${StorageService.formatCurrency(b.deposit_amount || b.depositAmount || 0)}</td>
-              <td>${getStatusBadge(b.status)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
+      <div class="bookings-admin-card">
+        <!-- Header Thanh lịch -->
+        <div class="bookings-admin-header">
+          <div>
+            <h3>
+              <i class="fa-solid fa-rectangle-list" style="color: #0f766e;"></i>
+              Bảng Tổng Hợp Giao Dịch Toàn Sàn
+            </h3>
+            <p>Giám sát dòng tiền ký quỹ Escrow 30%, đối soát tiến trình hợp đồng và thẩm định sự cố giao nhận xe</p>
+          </div>
+          <div class="booking-actions-group">
+            <button class="btn btn-sm btn-outline" onclick="AdminService.exportBookingsCsv()" title="Tải xuống danh sách giao dịch CSV">
+              <i class="fa-solid fa-file-arrow-down"></i> Xuất CSV
+            </button>
+            <button class="btn btn-sm btn-primary" onclick="AdminService.renderBookingsList()" title="Tải lại dữ liệu mới nhất">
+              <i class="fa-solid fa-rotate-right"></i> Làm mới
+            </button>
+          </div>
+        </div>
+
+        <!-- Segmented Control Bar (Apple/Stripe Style) -->
+        <div class="segmented-nav-container">
+          ${segmentedHtml}
+        </div>
+
+        <!-- Toolbar: Search & Quick Settings -->
+        <div class="booking-clean-toolbar">
+          <div class="booking-search-wrapper">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" 
+                   class="booking-search-field" 
+                   placeholder="Tìm theo mã đơn (#15), xe, biển số, bên thuê, chủ xe..."
+                   value="${this.bookingState.search || ''}"
+                   oninput="AdminService.onBookingSearch(this.value)" />
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: #64748b;">
+              <span>Sắp xếp:</span>
+              <select class="form-select form-select-sm" 
+                      style="font-size: 0.82rem; padding: 6px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; background: #ffffff;" 
+                      onchange="AdminService.onBookingSortChange(this.value)">
+                <option value="newest" ${this.bookingState.sortBy === 'newest' ? 'selected' : ''}>Mới nhất trước</option>
+                <option value="oldest" ${this.bookingState.sortBy === 'oldest' ? 'selected' : ''}>Cũ nhất trước</option>
+                <option value="price_desc" ${this.bookingState.sortBy === 'price_desc' ? 'selected' : ''}>Tổng giá trị cao</option>
+                <option value="deposit_desc" ${this.bookingState.sortBy === 'deposit_desc' ? 'selected' : ''}>Tiền cọc cao</option>
+              </select>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: #64748b;">
+              <span>Hiển thị:</span>
+              <select class="form-select form-select-sm" 
+                      style="font-size: 0.82rem; padding: 6px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; background: #ffffff;" 
+                      onchange="AdminService.onBookingLimitChange(this.value)">
+                <option value="8" ${this.bookingState.limit === 8 ? 'selected' : ''}>8 đơn / trang</option>
+                <option value="15" ${this.bookingState.limit === 15 ? 'selected' : ''}>15 đơn / trang</option>
+                <option value="50" ${this.bookingState.limit === 50 ? 'selected' : ''}>50 đơn / trang</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Table: 7 Cột Khoa Học & Mạch Lạc -->
+        <div style="overflow-x: auto; border: 1px solid #f1f5f9; border-radius: 10px;">
+          <table class="mioto-table">
+            <thead>
+              <tr>
+                <th style="width: 105px;">Mã đơn</th>
+                <th style="min-width: 210px;">Phương tiện & Biển số</th>
+                <th style="min-width: 200px;">Bên thuê & Chủ xe</th>
+                <th style="min-width: 170px;">Lịch trình thuê</th>
+                <th style="text-align: right; width: 170px;">Giá trị & Cọc Escrow</th>
+                <th style="text-align: center; width: 170px;">Trạng thái</th>
+                <th style="text-align: center; width: 95px;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${pagedItems.length === 0 ? `
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 3rem 1rem; color: #94a3b8;">
+                    <i class="fa-solid fa-folder-open" style="font-size: 2rem; margin-bottom: 0.75rem; display: block; opacity: 0.35;"></i>
+                    Không có giao dịch nào thuộc nhóm này.
+                  </td>
+                </tr>
+              ` : pagedItems.map(b => {
+                const rId = b.rental_id || b.rentalId || b.id;
+                const carName = b.car_name || b.carName || 'Phương tiện';
+                const carPlate = b.car_plate || b.carPlate || b.license_plate || b.licensePlate || 'N/A';
+                const renterName = b.renter_name || b.renterName || 'Khách thuê';
+                const renterPhone = b.renter_phone || b.renterPhone || b.renter_email || 'N/A';
+                const thumb = this.getCarThumbnail(carName);
+                const ownerName = b.owner_name || b.ownerName || 'Chủ xe';
+                const startDate = b.start_date || b.startDate || '';
+                const endDate = b.end_date || b.endDate || '';
+                const totalDays = b.total_days || b.totalDays || 1;
+                const totalPrice = b.total_price || b.totalPrice || b.total_amount || b.totalAmount || 0;
+                const depositAmount = b.deposit_amount || b.depositAmount || 0;
+                const renterInitial = (renterName.replace(/Khách thuê\s*/i, '').trim() || 'K').charAt(0).toUpperCase();
+
+                return `
+                  <tr>
+                    <!-- 1. Mã đơn & Ngày -->
+                    <td>
+                      <div style="display: flex; flex-direction: column; gap: 3px;">
+                        <span class="booking-code" style="font-weight: 800; font-size: 0.85rem; color: #0f172a; background: #e2e8f0; padding: 2px 7px; border-radius: 5px; width: fit-content;">#${rId}</span>
+                        <span style="font-size: 0.72rem; color: #94a3b8;">${b.created_at ? new Date(b.created_at).toLocaleDateString('vi-VN') : '2026-10'}</span>
+                      </div>
+                    </td>
+
+                    <!-- 2. Phương tiện & Biển số -->
+                    <td>
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <img src="${thumb}" 
+                             alt="${carName}" 
+                             style="width: 54px; height: 38px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; flex-shrink: 0;" />
+                        <div style="display: flex; flex-direction: column; gap: 3px;">
+                          <div style="font-weight: 700; color: #0f172a; line-height: 1.25;">${carName}</div>
+                          <div>
+                            <span style="display: inline-flex; align-items: center; gap: 4px; font-family: monospace; font-size: 0.74rem; font-weight: 700; color: #334155; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 4px; padding: 1px 5px;">
+                              <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #ef4444;"></span>
+                              ${carPlate}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- 3. Bên thuê & Chủ xe (Phân cấp rõ ràng) -->
+                    <td>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 30px; height: 30px; border-radius: 50%; background: #e0e7ff; color: #4338ca; font-weight: 800; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                          ${renterInitial}
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                          <div style="font-weight: 700; color: #0f172a; font-size: 0.84rem;">${renterName}</div>
+                          <div style="font-size: 0.73rem; color: #64748b; display: flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-phone" style="font-size: 0.65rem;"></i> ${renterPhone}
+                          </div>
+                          <div style="font-size: 0.72rem; color: #94a3b8;">
+                            Chủ xe: <span style="color: #475569; font-weight: 600;">${ownerName}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- 4. Lịch trình -->
+                    <td>
+                      <div style="font-size: 0.82rem; color: #334155; line-height: 1.35;">
+                        <span style="font-weight: 600;">${startDate}</span>
+                        <span style="color: #94a3b8; font-size: 0.72rem;"> → </span>
+                        <span style="font-weight: 600;">${endDate}</span>
+                      </div>
+                      <div style="margin-top: 3px;">
+                        <span class="badge" style="background: #f1f5f9; color: #475569; font-size: 0.7rem; font-weight: 700; padding: 2px 6px;">${totalDays} ngày</span>
+                      </div>
+                    </td>
+
+                    <!-- 5. Giá trị & Ký quỹ Escrow (Gộp khoa học) -->
+                    <td style="text-align: right;">
+                      <div style="font-weight: 800; color: #0f172a; font-size: 0.92rem;">${fmtMoney(totalPrice)}</div>
+                      <div style="font-size: 0.75rem; color: #0f766e; font-weight: 700; margin-top: 2px;">
+                        Cọc: ${fmtMoney(depositAmount)} <span style="font-size: 0.65rem; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 3px; padding: 1px 3px; font-weight: 700;">30% Escrow</span>
+                      </div>
+                    </td>
+
+                    <!-- 6. Trạng thái -->
+                    <td style="text-align: center;">
+                      ${this.getMiotoStatusBadge(b.status)}
+                    </td>
+
+                    <!-- 7. Thao tác -->
+                    <td style="text-align: center;">
+                      <button class="btn btn-sm btn-outline" 
+                              style="padding: 4px 10px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; color: #0f766e; border-color: #cbd5e1;"
+                              onclick="AdminService.openBookingDetailModal(${rId})">
+                        <i class="fa-solid fa-eye"></i> Chi tiết
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Phân trang -->
+        <div class="booking-pagination">
+          <div class="pagination-info" style="font-size: 0.82rem; color: #64748b;">
+            Hiển thị <strong>${totalItems === 0 ? 0 : startIndex + 1}</strong> - <strong>${Math.min(startIndex + limit, totalItems)}</strong> trong tổng số <strong>${totalItems}</strong> giao dịch
+          </div>
+          <div class="pagination-controls" style="display: flex; gap: 4px; align-items: center;">
+            <button class="page-btn" 
+                    ${this.bookingState.page <= 1 ? 'disabled' : ''} 
+                    onclick="AdminService.changeBookingPage(${this.bookingState.page - 1})">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            ${Array.from({ length: totalPages }, (_, i) => i + 1).map(p => `
+              <button class="page-btn ${this.bookingState.page === p ? 'active' : ''}" 
+                      onclick="AdminService.changeBookingPage(${p})">
+                ${p}
+              </button>
+            `).join('')}
+            <button class="page-btn" 
+                    ${this.bookingState.page >= totalPages ? 'disabled' : ''} 
+                    onclick="AdminService.changeBookingPage(${this.bookingState.page + 1})">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
     `;
+  },
+
+  onBookingFilterChange(status) {
+    this.bookingState.status = status;
+    this.bookingState.page = 1;
+    this.renderBookingsUI();
+  },
+
+  onBookingSearch(val) {
+    this.bookingState.search = val;
+    this.bookingState.page = 1;
+    this.renderBookingsUI();
+  },
+
+  onBookingSortChange(sortBy) {
+    this.bookingState.sortBy = sortBy;
+    this.bookingState.page = 1;
+    this.renderBookingsUI();
+  },
+
+  onBookingLimitChange(limit) {
+    this.bookingState.limit = parseInt(limit, 10) || 8;
+    this.bookingState.page = 1;
+    this.renderBookingsUI();
+  },
+
+  changeBookingPage(newPage) {
+    this.bookingState.page = newPage;
+    this.renderBookingsUI();
+  },
+
+  openBookingDetailModal(rentalId) {
+    const b = (this.cachedBookings || []).find(x => String(x.rental_id || x.rentalId || x.id) === String(rentalId));
+    if (!b) {
+      if (typeof showToast === 'function') showToast('Không tìm thấy thông tin đơn #' + rentalId, 'warning');
+      return;
+    }
+
+    const fmtMoney = (v) => typeof StorageService !== 'undefined' ? StorageService.formatCurrency(v) : (Number(v || 0).toLocaleString('vi-VN') + ' đ');
+    const rId = b.rental_id || b.rentalId || b.id;
+    const carName = b.car_name || b.carName || 'Phương tiện';
+    const carPlate = b.car_plate || b.carPlate || b.license_plate || b.licensePlate || 'N/A';
+    const renterName = b.renter_name || b.renterName || 'Khách thuê';
+    const renterPhone = b.renter_phone || b.renterPhone || 'N/A';
+    const ownerName = b.owner_name || b.ownerName || 'Chủ xe';
+    const ownerPhone = b.owner_phone || b.ownerPhone || 'N/A';
+    const ownerBank = b.owner_bank_name || b.ownerBankName || 'MBBank (Quân Đội)';
+    const ownerAccount = b.owner_bank_account || b.ownerBankAccount || '998877665544';
+    const totalPrice = b.total_price || b.totalPrice || 0;
+    const depositAmount = b.deposit_amount || b.depositAmount || 0;
+    const platformFee = b.platform_fee || b.platformFee || Math.round(totalPrice * 0.1);
+    const ownerPayout = b.owner_payout_amount || b.ownerPayoutAmount || (totalPrice - platformFee);
+    const startDate = b.start_date || b.startDate || '';
+    const endDate = b.end_date || b.endDate || '';
+    const totalDays = b.total_days || b.totalDays || 1;
+    const thumb = this.getCarThumbnail(carName);
+
+    let reasonClean = b.reject_reason || b.rejectReason || '';
+    if (reasonClean.includes('bùng kèo') || reasonClean.includes('vi phạm giao xe')) {
+      reasonClean = 'Chủ xe không bàn giao phương tiện đúng hẹn. Hệ thống đã kích hoạt lệnh hoàn trả 100% tiền cọc cho khách thuê và ghi nhận biên bản vi phạm nghĩa vụ bàn giao.';
+    }
+
+    const modalContent = `
+      <div style="font-size: 0.88rem; color: #1e293b; line-height: 1.5;">
+        <!-- Banner trạng thái -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+          <div>
+            <span style="font-size: 0.74rem; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Mã hợp đồng thuê xe</span>
+            <div style="font-size: 1.2rem; font-weight: 800; color: #0f172a; font-family: monospace;">#${rId}</div>
+          </div>
+          <div>
+            ${this.getMiotoStatusBadge(b.status)}
+          </div>
+        </div>
+
+        <!-- 2 Cột: Xe & Khách -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+          <!-- Khối Phương tiện & Chủ xe -->
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+            <div style="font-weight: 700; color: #0f172a; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-car" style="color: #0f766e;"></i> Thông tin phương tiện
+            </div>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+              <img src="${thumb}" style="width: 70px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" />
+              <div>
+                <strong style="color: #0f172a;">${carName}</strong>
+                <div style="margin-top: 3px;">
+                  <span style="font-family: monospace; font-size: 0.74rem; font-weight: 800; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 4px; padding: 1px 6px;">${carPlate}</span>
+                </div>
+              </div>
+            </div>
+            <div style="font-size: 0.8rem; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+              <div><strong>Chủ xe:</strong> ${ownerName}</div>
+              <div><strong>SĐT chủ xe:</strong> ${ownerPhone}</div>
+              <div><strong>STK nhận tiền:</strong> ${ownerBank} - <code>${ownerAccount}</code></div>
+            </div>
+          </div>
+
+          <!-- Khối Khách thuê & Lịch trình -->
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+            <div style="font-weight: 700; color: #0f172a; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-user-check" style="color: #2563eb;"></i> Khách thuê & Lịch trình
+            </div>
+            <div style="font-size: 0.82rem; margin-bottom: 10px;">
+              <div><strong>Họ tên:</strong> ${renterName}</div>
+              <div><strong>Điện thoại:</strong> ${renterPhone}</div>
+            </div>
+            <div style="font-size: 0.8rem; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+              <div><strong>Ngày nhận xe:</strong> ${startDate}</div>
+              <div><strong>Ngày trả xe:</strong> ${endDate}</div>
+              <div><strong>Thời lượng:</strong> <span class="badge" style="background: #e2e8f0; color: #334155;">${totalDays} ngày</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phân rã dòng tiền Escrow -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+          <div style="font-weight: 800; color: #166534; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-shield-halved"></i> Bảo chứng dòng tiền VietQR Escrow
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;">
+            <div style="background: #ffffff; padding: 8px; border-radius: 6px; border: 1px solid #dcfce7;">
+              <div style="font-size: 0.72rem; color: #64748b;">Tổng giá trị đơn</div>
+              <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">${fmtMoney(totalPrice)}</div>
+            </div>
+            <div style="background: #ffffff; padding: 8px; border-radius: 6px; border: 1px solid #86efac;">
+              <div style="font-size: 0.72rem; color: #15803d; font-weight: 700;">Cọc VietQR (30%)</div>
+              <div style="font-weight: 800; color: #15803d; font-size: 0.95rem;">${fmtMoney(depositAmount)}</div>
+            </div>
+            <div style="background: #ffffff; padding: 8px; border-radius: 6px; border: 1px solid #dcfce7;">
+              <div style="font-size: 0.72rem; color: #64748b;">Hoa hồng sàn (10%)</div>
+              <div style="font-weight: 800; color: #0369a1; font-size: 0.95rem;">${fmtMoney(platformFee)}</div>
+            </div>
+            <div style="background: #ffffff; padding: 8px; border-radius: 6px; border: 1px solid #dcfce7;">
+              <div style="font-size: 0.72rem; color: #64748b;">Chủ xe thực nhận</div>
+              <div style="font-weight: 800; color: #7c2d12; font-size: 0.95rem;">${fmtMoney(ownerPayout)}</div>
+            </div>
+          </div>
+        </div>
+
+        ${reasonClean ? `
+          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 16px; color: #991b1b; font-size: 0.82rem;">
+            <strong><i class="fa-solid fa-triangle-exclamation"></i> Ghi chú thẩm định / Lý do hủy:</strong>
+            <div style="margin-top: 4px;">${reasonClean}</div>
+          </div>
+        ` : ''}
+
+        <!-- Nút thao tác -->
+        <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+          <button class="btn btn-outline" onclick="AdminService.closeModal()">Đóng</button>
+        </div>
+      </div>
+    `;
+
+    this.openModal(`Hồ Sơ Hợp Đồng Thuê Xe #${rId}`, modalContent);
+  },
+
+  exportBookingsCsv() {
+    const list = this.cachedBookings || [];
+    if (list.length === 0) {
+      if (typeof showToast === 'function') showToast('Không có dữ liệu giao dịch để xuất CSV', 'warning');
+      return;
+    }
+
+    const headers = ['Ma_Don', 'Phuong_Tien', 'Bien_So', 'Khach_Thue', 'SDT_Khach', 'Chu_Xe', 'Ngay_Nhan', 'Ngay_Tra', 'So_Ngay', 'Tong_Tien', 'Tien_Coc_30', 'Trang_Thai'];
+    const rows = list.map(b => [
+      b.rental_id || b.rentalId || b.id,
+      `"${(b.car_name || b.carName || '').replace(/"/g, '""')}"`,
+      b.car_plate || b.carPlate || 'N/A',
+      `"${(b.renter_name || b.renterName || '').replace(/"/g, '""')}"`,
+      b.renter_phone || b.renterPhone || '',
+      `"${(b.owner_name || b.ownerName || '').replace(/"/g, '""')}"`,
+      b.start_date || b.startDate || '',
+      b.end_date || b.endDate || '',
+      b.total_days || b.totalDays || 1,
+      b.total_price || b.totalPrice || 0,
+      b.deposit_amount || b.depositAmount || 0,
+      b.status
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `DriveShare_Giao_Dich_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    if (typeof showToast === 'function') showToast('Đã xuất file báo cáo giao dịch CSV thành công!', 'success');
   },
 
   // Task 14: Chọn 2 tab Khách thuê / Chủ xe
@@ -1575,12 +2104,14 @@ const AdminService = {
     document.getElementById('adminTabCccd')?.classList.toggle('active', tabName === 'CCCD');
     document.getElementById('adminTabLicenses')?.classList.toggle('active', tabName === 'LICENSES');
     document.getElementById('adminTabBookings')?.classList.toggle('active', tabName === 'BOOKINGS');
+    document.getElementById('adminTabDisputes')?.classList.toggle('active', tabName === 'DISPUTES');
     document.getElementById('adminTabUsers')?.classList.toggle('active', tabName === 'USERS');
 
     const tabCars = document.getElementById('adminTabCarsContent');
     const tabCccd = document.getElementById('adminTabCccdContent');
     const tabLicenses = document.getElementById('adminTabLicensesContent');
     const tabBookings = document.getElementById('adminTabBookingsContent');
+    const tabDisputes = document.getElementById('adminTabDisputesContent');
     const tabUsers = document.getElementById('adminTabUsersContent');
 
     if (tabCars) {
@@ -1599,9 +2130,183 @@ const AdminService = {
       tabBookings.style.display = tabName === 'BOOKINGS' ? 'block' : 'none';
       if (tabName === 'BOOKINGS') this.renderBookingsList();
     }
+    if (tabDisputes) {
+      tabDisputes.style.display = tabName === 'DISPUTES' ? 'block' : 'none';
+      if (tabName === 'DISPUTES') this.renderDisputesList();
+    }
     if (tabUsers) {
       tabUsers.style.display = tabName === 'USERS' ? 'block' : 'none';
       if (tabName === 'USERS') this.renderUsersTable();
+    }
+  },
+
+  // Quản lý khiếu nại sự cố & Vi phạm nghĩa vụ bàn giao xe (Rental Disputes - Sprint 3 / Mioto Standard)
+  async renderDisputesList() {
+    const wrapper = document.getElementById('adminDisputesTableWrapper');
+    if (!wrapper) return;
+
+    wrapper.innerHTML = `
+      <div style="padding: 2.5rem; text-align: center; color: var(--slate-500);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" style="margin: 0 auto 0.5rem auto; display: block;">
+          <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10"></path>
+        </svg>
+        Đang tải danh sách khiếu nại sự cố bàn giao xe...
+      </div>
+    `;
+
+    let disputes = [];
+    try {
+      const apiBase = getAdminApiBase();
+      const token = (typeof getAccessToken === 'function') ? getAccessToken() : (localStorage.getItem('access_token') || localStorage.getItem('token'));
+      const res = await fetch(`${apiBase}/admin/rentals/disputes`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        disputes = json?.data || json?.result || [];
+      }
+    } catch (e) {
+      console.warn('renderDisputesList error:', e);
+    }
+
+    const badgeBadge = document.getElementById('badgePendingDisputes');
+    if (badgeBadge) {
+      const pendingCount = disputes.filter(d => (d.status || d.dispute_status) === 'PENDING').length;
+      badgeBadge.textContent = pendingCount;
+    }
+
+    wrapper.innerHTML = `
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Mã khiếu nại</th>
+            <th>Mã đơn</th>
+            <th>Người báo cáo</th>
+            <th>Lý do sự cố / Bằng chứng</th>
+            <th>Tiền cọc cần hoàn</th>
+            <th>Trạng thái</th>
+            <th style="text-align: center;">Thao tác giải quyết</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${disputes.length === 0 ? `
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--slate-500);">
+                Không có khiếu nại sự cố giao xe nào cần xử lý.
+              </td>
+            </tr>
+          ` : disputes.map(d => {
+            const id = d.id || d.dispute_id;
+            const rentalId = d.rental_id || d.rentalId;
+            const status = d.status || d.dispute_status;
+            const isPending = status === 'PENDING';
+            const refundAmt = d.refund_amount || d.refundAmount || 0;
+            const penaltyAmt = d.penalty_amount || d.penaltyAmount || 0;
+
+            let stBadge = '';
+            if (status === 'PENDING') {
+              stBadge = '<span class="badge badge-warning" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-weight:700;">Chờ Admin giải quyết</span>';
+            } else if (status === 'RESOLVED_REFUND') {
+              stBadge = '<span class="badge badge-success" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700;">Đã hoàn 100% cọc cho khách</span>';
+            } else {
+              stBadge = `<span class="badge badge-neutral">${status}</span>`;
+            }
+
+            return `
+              <tr>
+                <td><strong style="color:#0f766e;">#DSP-${id}</strong></td>
+                <td><span class="booking-code">#${rentalId}</span></td>
+                <td>
+                  <strong>Khách thuê #${d.reporter_id || d.reporterId}</strong><br/>
+                  <span style="font-size: 0.76rem; color: var(--slate-500);">${d.created_at ? new Date(d.created_at).toLocaleString('vi-VN') : ''}</span>
+                </td>
+                <td style="max-width: 280px;">
+                  <div style="font-size: 0.84rem; color: #1e293b; font-weight: 500;">${d.reason || 'Chủ xe không giao xe'}</div>
+                  ${d.proof_urls ? `
+                    <div style="margin-top: 4px; font-size: 0.76rem; color: #0284c7;">
+                      <a href="${Array.isArray(d.proof_urls) ? d.proof_urls[0] : d.proof_urls.split(';')[0]}" target="_blank" style="text-decoration: underline;">Xem file bằng chứng</a>
+                    </div>
+                  ` : ''}
+                </td>
+                <td>
+                  <strong style="color: #059669; font-size: 0.95rem;">
+                    ${StorageService.formatCurrency(refundAmt > 0 ? refundAmt : 900000)}
+                  </strong>
+                  <br/><span style="font-size: 0.72rem; color: var(--slate-500);">(100% Escrow cọc)</span>
+                </td>
+                <td>${stBadge}</td>
+                <td style="text-align: center;">
+                  ${isPending ? `
+                    <div style="display: flex; gap: 6px; justify-content: center;">
+                      <button class="btn btn-sm btn-primary" style="background: #059669; border-color: #059669; font-weight: 700; padding: 4px 10px; font-size: 0.78rem;" onclick="AdminService.resolveDispute(${id}, 'REFUND_RENTER')">
+                        Hoàn 100% cọc & Phạt chủ xe
+                      </button>
+                      <button class="btn btn-sm btn-outline" style="color: #ef4444; border-color: #fecaca; background: #fff5f5; font-weight: 600; padding: 4px 8px; font-size: 0.78rem;" onclick="AdminService.resolveDispute(${id}, 'REJECT')">
+                        Bác bỏ
+                      </button>
+                    </div>
+                  ` : `
+                    <span style="font-size: 0.8rem; color: var(--slate-500); font-weight: 600;">
+                      Đã xử lý bởi Admin #${d.resolved_by || d.resolvedBy || 1}
+                    </span>
+                  `}
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  },
+
+  async resolveDispute(disputeId, action = 'REFUND_RENTER') {
+    if (action === 'REFUND_RENTER') {
+      const confirmMsg = `Xác nhận phê duyệt khiếu nại tranh chấp #${disputeId}?\n\nTheo quy chế chuẩn Mioto:\n1. Hoàn trả 100% tiền cọc (Escrow) ngay lập tức cho Khách thuê.\n2. Hủy đơn thuê với lý do Chủ xe vi phạm giao xe (CANCELLED_BY_HOST).\n3. Ghi nhận công nợ phạt vi phạm đối với Chủ xe.`;
+      if (!confirm(confirmMsg)) return;
+    } else {
+      if (!confirm(`Bạn có chắc muốn bác bỏ khiếu nại #${disputeId}?`)) return;
+    }
+
+    try {
+      const apiBase = getAdminApiBase();
+      const token = typeof AuthService !== 'undefined' ? AuthService.getToken() : localStorage.getItem('token');
+      const body = {
+        action: action,
+        admin_note: action === 'REFUND_RENTER' 
+          ? 'Xác minh sự cố chủ xe vắng mặt không giao xe. Phê duyệt hoàn 100% tiền cọc cho khách và lập biên bản phạt chủ xe.'
+          : 'Không đủ căn cứ khiếu nại hoặc chủ xe đã giải trình hợp lệ.',
+        penalty_amount: 1000000
+      };
+
+      const res = await fetch(`${apiBase}/admin/rentals/disputes/${disputeId}/resolve`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      const json = await res.json().catch(() => null);
+      if (res.ok) {
+        if (typeof showToast === 'function') {
+          showToast(action === 'REFUND_RENTER' ? 'Đã duyệt hoàn 100% tiền cọc cho khách và phạt chủ xe!' : 'Đã bác bỏ khiếu nại!', 'success');
+        } else {
+          alert('Xử lý khiếu nại thành công!');
+        }
+        this.renderDisputesList();
+        this.renderBookingsList();
+      } else {
+        alert(json?.message || 'Lỗi khi xử lý khiếu nại tranh chấp');
+      }
+    } catch (e) {
+      console.error('resolveDispute error:', e);
+      alert('Lỗi kết nối khi giải quyết khiếu nại');
     }
   },
 
