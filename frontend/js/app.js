@@ -1174,6 +1174,23 @@ const App = {
       toast.style.transition = 'all 0.3s ease';
       setTimeout(() => toast.remove(), 300);
     }, 3200);
+  },
+
+  // Sprint 4: Modal Điều khoản an toàn & Chế tài hình sự (Tech Lead Bảo)
+  openLegalTermsModal() {
+    const el = document.getElementById('legalTermsModalOverlay');
+    if (el) {
+      el.style.display = 'flex';
+      el.classList.add('open');
+    }
+  },
+
+  closeLegalTermsModal() {
+    const el = document.getElementById('legalTermsModalOverlay');
+    if (el) {
+      el.classList.remove('open');
+      el.style.display = 'none';
+    }
   }
 };
 

@@ -753,20 +753,6 @@ const RenderService = {
               </button>
             `;
             activeStep = 4;
-          } else if (bk.status === 'OVERDUE') {
-            statusBadge = '<span class="badge badge-danger" style="background:#fee2e2; color:#991b1b; border:1.5px solid #f87171; font-weight:800;">ĐÃ QUÁ HẠN TRẢ XE</span>';
-            alertBanner = `
-              <div class="trip-alert-banner danger" style="background:#fff1f2; border:1px solid #fecdd3; color:#9f1239; border-radius:8px; padding:10px 14px; margin-bottom:12px; display:flex; align-items:flex-start; gap:8px; font-size:0.86rem;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0; margin-top:1px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                <div><strong>CẢNH BÁO QUÁ HẠN:</strong> Đơn thuê đã quá thời hạn trả xe. Phụ phí phạt trễ hạn (150% đơn giá thuê theo giờ) đang được hệ thống tính tự động. Vui lòng liên hệ chủ xe ngay để hoàn tất thủ tục bàn giao.</div>
-              </div>
-            `;
-            actionButtons = `
-              <button class="btn btn-primary btn-sm" style="background:#dc2626; border-color:#dc2626;" onclick="App.showContactOwner('${id}')">
-                Liên hệ chủ xe gấp
-              </button>
-            `;
-            activeStep = 4;
           } else if (bk.status === 'COMPLETED') {
             statusBadge = '<span class="badge badge-neutral" style="font-weight:700;">Đã hoàn thành</span>';
             actionButtons = `
@@ -797,14 +783,6 @@ const RenderService = {
           } else {
             statusBadge = `<span class="badge badge-info">${bk.status}</span>`;
           }
-
-          // Nút Theo dõi hành trình Shopee-Style luôn luôn xuất hiện trên mọi đơn (trong & sau hành trình)
-          const tripTrackerBtn = `
-            <button class="btn btn-sm btn-trip-tracker" onclick="TripTrackerService.openTrackerModal('${id}')" title="Xem toàn bộ tiến trình & trạng thái xe phong cách Shopee">
-              📍 Theo dõi hành trình
-            </button>
-          `;
-          actionButtons = tripTrackerBtn + actionButtons;
 
           // Tính toán % tiến trình Stepper
           const stepperPercent = Math.min(100, Math.max(0, (activeStep - 1) * 25));

@@ -501,9 +501,6 @@ const OwnerService = {
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                               Check-in Bàn giao
                             </button>
-                            <button class="btn btn-outline btn-xs btn-trip-tracker" style="font-size: 0.72rem; padding: 2px 8px;" onclick="TripTrackerService.openTrackerModal(${id})">
-                              📍 Theo dõi đơn
-                            </button>
                           </div>
                         `;
                       } else if (b.status === 'IN_PROGRESS') {
@@ -514,37 +511,17 @@ const OwnerService = {
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
                               Check-out Nghiệm thu
                             </button>
-                            <button class="btn btn-outline btn-xs btn-trip-tracker" style="font-size: 0.72rem; padding: 2px 8px;" onclick="TripTrackerService.openTrackerModal(${id})">
-                              📍 Theo dõi xe & hành trình
-                            </button>
                             <button class="btn btn-ghost btn-xs" style="color: #0f766e; font-size: 0.72rem; text-decoration: underline;" onclick="OwnerService.viewInspections(${id})">
                               Xem biên bản giao
-                            </button>
-                          </div>
-                        `;
-                      } else if (b.status === 'OVERDUE') {
-                        badge = '<span class="badge badge-danger" style="background:#fee2e2; color:#991b1b; border:1.5px solid #f87171; font-weight:800;">ĐÃ QUÁ HẠN</span>';
-                        action = `
-                          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
-                            <button class="btn btn-primary btn-sm" style="padding: 4px 12px; font-size: 0.78rem; background: #dc2626; border-color: #dc2626; font-weight:700;" onclick="OwnerService.openCheckOutModal(${id})">
-                              Nghiệm thu trễ hạn
-                            </button>
-                            <button class="btn btn-outline btn-xs btn-trip-tracker" style="font-size: 0.72rem; padding: 2px 8px;" onclick="TripTrackerService.openTrackerModal(${id})">
-                              📍 Theo dõi xe vi phạm
                             </button>
                           </div>
                         `;
                       } else if (b.status === 'COMPLETED') {
                         badge = '<span class="badge badge-neutral">Đã hoàn thành</span>';
                         action = `
-                          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
-                            <button class="btn btn-outline btn-xs btn-trip-tracker" style="font-size: 0.72rem; padding: 2px 8px;" onclick="TripTrackerService.openTrackerModal(${id})">
-                              📍 Theo dõi hành trình
-                            </button>
-                            <button class="btn btn-outline btn-xs" style="color: #0f766e; border-color: #99f6e4; font-size: 0.73rem; font-weight: 600;" onclick="OwnerService.viewInspections(${id})">
-                              Xem biên bản xe
-                            </button>
-                          </div>
+                          <button class="btn btn-outline btn-xs" style="color: #0f766e; border-color: #99f6e4; font-size: 0.73rem; font-weight: 600;" onclick="OwnerService.viewInspections(${id})">
+                            Xem biên bản xe
+                          </button>
                         `;
                       } else if (b.status === 'REJECTED') {
                         badge = '<span class="badge badge-danger">Đã từ chối</span>';
