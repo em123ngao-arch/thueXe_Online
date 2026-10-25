@@ -12,7 +12,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
@@ -126,6 +128,10 @@ class RentalExpirationSchedulerTest {
         verify(rentalRepository, never()).saveAll(any());
     }
 
+    // =========================================================================
+    // SPRINT 4 (ISSUE #50 - NGUYỄN DUY QUÂN): BLACKLIST VÀ KHÓA TÀI KHOẢN
+    // =========================================================================
+
     @Test
     @DisplayName("TC-Q03: Khách có đơn OVERDUE quá 24h -> Trạng thái user đổi thành BLOCKED")
     void autoDetectOverdueRentals_OverdueOver24Hours_BlocksUserAndTriggersBlacklist() {
@@ -164,4 +170,91 @@ class RentalExpirationSchedulerTest {
         verify(userRepository).save(user);
         verify(rentalRepository).saveAll(List.of(rental));
     }
+
+    // =========================================================================
+    // SPRINT 4 (ISSUE #49 - LÂM CHÍ VĨ): BỘ TEST OVERDUE & TÍNH PHÍ PHẠT
+    // =========================================================================
+
+    @Test
+    @DisplayName("TC-V01: Tạo đơn có endDate trước hôm nay -> Scheduler quét -> Đơn đổi sang status = OVERDUE")
+    void autoCheckOverdueRentals_WhenOverdue_UpdatesStatusToOverdue() {
+        Rental overdueRental = Rental.builder()
+                .rentalId(50L)
+                .carId(1L)
+                .startDate(LocalDate.now().minusDays(3))
+                .endDate(LocalDate.now().minusDays(1))
+                .pricePerDay(BigDecimal.valueOf(1000000))
+                .status(ERentalStatus.IN_PROGRESS)
+                .build();
+
+        when(rentalRepository.findOverdueRentals(eq(ERentalStatus.IN_PROGRESS), any(LocalDate.class)))
+                .thenReturn(List.of(overdueRental));
+
+        scheduler.autoCheckOverdueRentals();
+
+        assertThat(overdueRental.getStatus()).isEqualTo(ERentalStatus.OVERDUE);
+        assertThat(overdueRental.getOverdueHours()).isEqualTo(24);
+        assertThat(overdueRental.getPenaltyFee()).isGreaterThan(BigDecimal.ZERO);
+        assertThat(overdueRental.getRejectReason()).contains("quá thời hạn kết thúc chuyến đi");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Rental>> captor = ArgumentCaptor.forClass(List.class);
+        verify(rentalRepository).saveAll(captor.capture());
+        assertThat(captor.getValue()).contains(overdueRental);
+    }
+
+    @Test
+    @DisplayName("TC-V02: Kiểm tra công thức tính penalty_fee: trễ 3 giờ với đơn giá 100k/h -> Phí phạt đúng 450.000 đ")
+    void calculatePenaltyFee_Within24Hours_ThreeHoursLateWith100kRate_Penalty450k() {
+        // Đơn giá ngày 1.000.000 đ/ngày -> đơn giá giờ = 1.000.000 / 10 = 100.000 đ/h
+        BigDecimal pricePerDay = BigDecimal.valueOf(1000000);
+        int overdueHours = 3;
+
+        // Phạt = 3 * (100.000 * 1.5) = 450.000 đ
+        BigDecimal penalty = scheduler.calculatePenaltyFee(pricePerDay, overdueHours);
+
+        assertThat(penalty).isEqualByComparingTo(BigDecimal.valueOf(450000));
+    }
+
+    @Test
+    @DisplayName("TC-V03: Trễ trên 24 giờ -> Phạt lũy tiến gấp đôi đơn giá ngày thuê")
+    void calculatePenaltyFee_Over24Hours_ProgressiveDoubleDailyRate() {
+        BigDecimal pricePerDay = BigDecimal.valueOf(1000000);
+
+        // Trễ 48 giờ (2 ngày) -> Phạt = 1.000.000 * 2 * 2 = 4.000.000 đ
+        BigDecimal penalty48h = scheduler.calculatePenaltyFee(pricePerDay, 48);
+        assertThat(penalty48h).isEqualByComparingTo(BigDecimal.valueOf(4000000));
+
+        // Trễ 25 giờ (bước sang ngày thứ 2 lũy tiến) -> Phạt = 1.000.000 * 2 * 2 = 4.000.000 đ
+        BigDecimal penalty25h = scheduler.calculatePenaltyFee(pricePerDay, 25);
+        assertThat(penalty25h).isEqualByComparingTo(BigDecimal.valueOf(4000000));
+    }
+
+    @Test
+    @DisplayName("TC-V06: Trễ 0 giờ hoặc số âm -> Phí phạt bằng 0")
+    void calculatePenaltyFee_ZeroOrNegativeHours_ReturnsZero() {
+        BigDecimal pricePerDay = BigDecimal.valueOf(1000000);
+
+        assertThat(scheduler.calculatePenaltyFee(pricePerDay, 0)).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(scheduler.calculatePenaltyFee(pricePerDay, -5)).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    @DisplayName("TC-V07: Đơn giá null hoặc xe không có giá -> Phí phạt bằng 0")
+    void calculatePenaltyFee_NullPrice_ReturnsZero() {
+        assertThat(scheduler.calculatePenaltyFee((BigDecimal) null, 5)).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(scheduler.calculatePenaltyFee((Rental) null, 5)).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    @DisplayName("TC-V08: Không có đơn quá hạn -> Không thực hiện cập nhật DB")
+    void autoCheckOverdueRentals_NoOverdueRentals_DoesNothing() {
+        when(rentalRepository.findOverdueRentals(eq(ERentalStatus.IN_PROGRESS), any(LocalDate.class)))
+                .thenReturn(Collections.emptyList());
+
+        scheduler.autoCheckOverdueRentals();
+
+        verify(rentalRepository, never()).saveAll(any());
+    }
 }
+

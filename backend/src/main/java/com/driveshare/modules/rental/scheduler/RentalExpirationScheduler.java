@@ -81,11 +81,16 @@ public class RentalExpirationScheduler {
     }
 
     /**
-     * Sprint 4: Quét định kỳ các đơn IN_PROGRESS quá hạn kết thúc hợp đồng (endDate < hôm nay)
+     * Sprint 4 (Issue #49 - Vĩ): Quét định kỳ các đơn IN_PROGRESS quá hạn kết thúc hợp đồng (endDate < hôm nay)
      * mà khách chưa làm thủ tục check-out trả xe.
      * Tự động chuyển sang OVERDUE và tính phí phạt trễ hạn.
      */
-    @Scheduled(cron = "${app.rental.overdue-cron:0 0 * * * *}")
+    @Scheduled(cron = "${app.rental.overdue-check-cron:${app.rental.overdue-cron:0 0 * * * *}}")
+    @Transactional
+    public void autoCheckOverdueRentals() {
+        autoDetectOverdueRentals();
+    }
+
     @Transactional
     public void autoDetectOverdueRentals() {
         java.time.LocalDate today = java.time.LocalDate.now();
@@ -94,14 +99,13 @@ public class RentalExpirationScheduler {
         if (!overdueList.isEmpty()) {
             for (Rental rental : overdueList) {
                 rental.setStatus(ERentalStatus.OVERDUE);
-                long daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(rental.getEndDate(), today);
+                long daysOverdue = ChronoUnit.DAYS.between(rental.getEndDate(), today);
                 if (daysOverdue <= 0) daysOverdue = 1;
                 int hoursOverdue = (int) (daysOverdue * 24);
                 rental.setOverdueHours(hoursOverdue);
 
-                // Phí phạt = Đơn giá ngày * 1.5 * số ngày trễ
-                java.math.BigDecimal dailyPrice = rental.getPricePerDay() != null ? rental.getPricePerDay() : java.math.BigDecimal.ZERO;
-                java.math.BigDecimal penalty = dailyPrice.multiply(java.math.BigDecimal.valueOf(1.5)).multiply(java.math.BigDecimal.valueOf(daysOverdue));
+                // Tính tiền phạt: penaltyFee = overdueHours * (đơn giá giờ * 1.5). Quá 24 giờ phạt gấp đôi ngày thuê.
+                java.math.BigDecimal penalty = calculatePenaltyFee(rental.getPricePerDay(), hoursOverdue);
                 rental.setPenaltyFee(penalty);
 
                 // Sprint 4 (Duy Quân): Tự động kích hoạt Blacklist nếu trễ trên 24 giờ
@@ -148,5 +152,44 @@ public class RentalExpirationScheduler {
         if (!existingOverdue.isEmpty()) {
             rentalRepository.saveAll(existingOverdue);
         }
+    }
+
+    /**
+     * Tính phí phạt trễ hạn theo nghiệp vụ (Issue #49):
+     * - Đơn giá giờ = Đơn giá ngày / 10
+     * - Trễ <= 24 giờ: Phạt = overdueHours * (đơn giá giờ * 1.5) (Ví dụ: trễ 3h với đơn giá 100k/h -> 450.000 đ)
+     * - Trễ > 24 giờ: Phạt lũy tiến gấp đôi đơn giá ngày thuê (2 * pricePerDay * số ngày trễ)
+     *
+     * @param pricePerDay  Đơn giá thuê ngày của xe
+     * @param overdueHours Số giờ khách trễ hạn trả xe
+     * @return Số tiền phạt trễ hạn tương ứng
+     */
+    public java.math.BigDecimal calculatePenaltyFee(java.math.BigDecimal pricePerDay, int overdueHours) {
+        if (pricePerDay == null || overdueHours <= 0) {
+            return java.math.BigDecimal.ZERO.setScale(2, java.math.RoundingMode.HALF_UP);
+        }
+
+        // Đơn giá giờ = Đơn giá ngày / 10
+        java.math.BigDecimal hourlyRate = pricePerDay.divide(java.math.BigDecimal.valueOf(10), 2, java.math.RoundingMode.HALF_UP);
+
+        if (overdueHours <= 24) {
+            // Trễ <= 24 giờ: overdueHours * (đơn giá giờ * 1.5)
+            return java.math.BigDecimal.valueOf(overdueHours)
+                    .multiply(hourlyRate.multiply(java.math.BigDecimal.valueOf(1.5)))
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+        } else {
+            // Trễ trên 24 giờ: Phạt lũy tiến gấp đôi đơn giá ngày thuê
+            long overdueDays = (long) Math.ceil((double) overdueHours / 24.0);
+            return pricePerDay.multiply(java.math.BigDecimal.valueOf(2))
+                    .multiply(java.math.BigDecimal.valueOf(overdueDays))
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+        }
+    }
+
+    public java.math.BigDecimal calculatePenaltyFee(Rental rental, int overdueHours) {
+        if (rental == null) {
+            return java.math.BigDecimal.ZERO.setScale(2, java.math.RoundingMode.HALF_UP);
+        }
+        return calculatePenaltyFee(rental.getPricePerDay(), overdueHours);
     }
 }
