@@ -129,6 +129,10 @@ class ReviewServiceTest {
 
         verify(reviewRepository).save(any(Review.class));
         verify(carRepository).save(sampleCar);
+
+        // Khép kín vòng đời đơn sau đánh giá (TC-V04 - Issue #49)
+        assertEquals(ERentalStatus.COMPLETED, sampleRental.getStatus());
+        verify(rentalRepository).save(sampleRental);
     }
 
     @Test

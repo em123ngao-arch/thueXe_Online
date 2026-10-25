@@ -72,7 +72,11 @@ public class ReviewServiceImpl implements ReviewService {
 
         Review savedReview = reviewRepository.save(review);
 
-        // 5. TỰ ĐỘNG CẬP NHẬT RATING CHO XE:
+        // 5. Khép kín vòng đời sau đánh giá (Sprint 4 - Issue #49 - Vĩ)
+        rental.setStatus(ERentalStatus.COMPLETED);
+        rentalRepository.save(rental);
+
+        // 6. TỰ ĐỘNG CẬP NHẬT RATING CHO XE:
         Double avgRating = reviewRepository.calculateAverageRatingByCarId(rental.getCarId());
         long totalReviews = reviewRepository.countByCarId(rental.getCarId());
 
