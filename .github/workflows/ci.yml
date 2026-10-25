@@ -1,0 +1,135 @@
+name: DriveShare Enterprise CI/CD Pipeline
+
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
+    branches: [ develop, main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # Phân hệ 1: Kiểm định cú pháp & tính toàn vẹn Giao diện Frontend
+  # ============================================================================
+  frontend-quality:
+    name: Frontend Verification & Syntax Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate JavaScript Files Syntax
+        run: |
+          echo "=========================================================="
+          echo "Đang kiểm tra tính hợp lệ cú pháp toàn bộ file JavaScript..."
+          echo "=========================================================="
+          has_error=0
+          for file in frontend/js/*.js; do
+            if [ -f "$file" ]; then
+              if node -c "$file"; then
+                echo "✔ Syntax OK: $file"
+              else
+                echo "✖ Syntax ERROR: $file"
+                has_error=1
+              fi
+            fi
+          done
+          if [ $has_error -ne 0 ]; then
+            echo "Lỗi cú pháp JavaScript trong thư mục frontend/js!"
+            exit 1
+          fi
+
+      - name: Verify Core Web HTML Pages
+        run: |
+          echo "Kiểm tra các trang giao diện chủ đạo:"
+          for page in index.html login.html profile.html admin.html owner-cars.html payment.html; do
+            if [ -f "frontend/$page" ]; then
+              echo "✔ Found: frontend/$page"
+            else
+              echo "✖ Missing critical page: frontend/$page"
+              exit 1
+            fi
+          done
+
+  # ============================================================================
+  # Phân hệ 2: Kiểm thử tự động Backend (188 Tests: Unit, MockMvc & Concurrency)
+  # ============================================================================
+  backend-quality:
+    name: Backend Test Suite & Concurrency Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21 (Temurin JDK)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Make Maven Wrapper Executable
+        run: chmod +x backend/mvnw
+
+      - name: Compile & Run Full Test Suite (188 Tests + Concurrency)
+        working-directory: backend
+        run: |
+          echo "=========================================================="
+          echo "Chạy toàn bộ 188 tests (Unit, Security, Controller & Concurrency)..."
+          echo "=========================================================="
+          ./mvnw clean test --no-transfer-progress
+
+      - name: Archive Surefire Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-test-reports
+          path: backend/target/surefire-reports/
+          retention-days: 7
+
+      - name: Archive JaCoCo Code Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-coverage-report
+          path: backend/target/site/jacoco/
+          retention-days: 7
+
+  # ============================================================================
+  # Phân hệ 3: Đóng gói ứng dụng Spring Boot JAR hoàn chỉnh
+  # ============================================================================
+  build-package:
+    name: Package Spring Boot Executable Artifact
+    needs: [frontend-quality, backend-quality]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Package Executable JAR
+        working-directory: backend
+        run: |
+          chmod +x mvnw
+          ./mvnw package -DskipTests --no-transfer-progress
+          ls -la target/*.jar
+
+      - name: Quality Gate Status
+        run: |
+          echo "=========================================================="
+          echo "✔ TOÀN BỘ CHỈ TIÊU CHẤT LƯỢNG (QUALITY GATE) ĐÃ VƯỢT QUA!"
+          echo "=========================================================="

@@ -83,4 +83,12 @@ public interface CarRepository extends JpaRepository<Car, Long>, JpaSpecificatio
      * Đếm số xe theo trạng thái toàn sàn (bỏ qua xe xóa mềm).
      */
     long countByStatusAndDeletedAtIsNull(ECarStatus status);
+
+    /**
+     * Khóa bi quan hàng dữ liệu xe (PESSIMISTIC_WRITE) để ngăn chặn đặt trùng xe (Overbooking)
+     * khi nhiều giao dịch duyệt đơn hoặc giữ chỗ diễn ra đồng thời.
+     */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM Car c WHERE c.carId = :carId AND c.deletedAt IS NULL")
+    Optional<Car> findCarForUpdate(@Param("carId") Long carId);
 }
