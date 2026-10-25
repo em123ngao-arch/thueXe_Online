@@ -78,4 +78,37 @@ public class RentalExpirationScheduler {
             log.info("Giai đoạn 3: Đã giải phóng Soft Lock cho {} đơn WAITING_PAYMENT quá hạn và phục hồi các đơn ON_HOLD", expiredList.size());
         }
     }
+
+    /**
+     * Sprint 4: Quét định kỳ các đơn IN_PROGRESS quá hạn kết thúc hợp đồng (endDate < hôm nay)
+     * mà khách chưa làm thủ tục check-out trả xe.
+     * Tự động chuyển sang OVERDUE và tính phí phạt trễ hạn.
+     */
+    @Scheduled(cron = "${app.rental.overdue-cron:0 0 * * * *}")
+    @Transactional
+    public void autoDetectOverdueRentals() {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        List<Rental> overdueList = rentalRepository.findOverdueRentals(ERentalStatus.IN_PROGRESS, today);
+
+        if (!overdueList.isEmpty()) {
+            for (Rental rental : overdueList) {
+                rental.setStatus(ERentalStatus.OVERDUE);
+                long daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(rental.getEndDate(), today);
+                if (daysOverdue <= 0) daysOverdue = 1;
+                int hoursOverdue = (int) (daysOverdue * 24);
+                rental.setOverdueHours(hoursOverdue);
+
+                // Phí phạt = Đơn giá ngày * 1.5 * số ngày trễ
+                java.math.BigDecimal dailyPrice = rental.getPricePerDay() != null ? rental.getPricePerDay() : java.math.BigDecimal.ZERO;
+                java.math.BigDecimal penalty = dailyPrice.multiply(java.math.BigDecimal.valueOf(1.5)).multiply(java.math.BigDecimal.valueOf(daysOverdue));
+                rental.setPenaltyFee(penalty);
+
+                rental.setRejectReason("Đã quá thời hạn kết thúc chuyến đi (" + rental.getEndDate() + ") nhưng khách hàng chưa hoàn tất thủ tục bàn giao trả xe. Phí phạt tích lũy: " + penalty + " đ.");
+                log.warn("CẢNH BÁO VI PHẠM: Đơn thuê rentalId={} của xe carId={} đã quá hạn trả xe (Hạn: {}). Chuyển sang OVERDUE, phạt: {} đ",
+                        rental.getRentalId(), rental.getCarId(), rental.getEndDate(), penalty);
+            }
+            rentalRepository.saveAll(overdueList);
+            log.info("Sprint 4: Đã tự động chuyển {} đơn thuê quá hạn sang OVERDUE và tính phí phạt", overdueList.size());
+        }
+    }
 }

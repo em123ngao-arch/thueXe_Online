@@ -1,4 +1,5 @@
 ## 📌 Thông Tin Pull Request
+- **Liên kết Issue:** Closes #... (Điền mã Issue được giao: #48, #49, #50, #51)
 - **Mã Task / User Story:** US-XX / CRP-XX
 - **Người thực hiện:** @username
 - **Nhánh xuất phát (Head branch):** `feature/...` hoặc `fix/...`
@@ -23,8 +24,9 @@
 
 ## 🧪 Kết Quả Kiểm Thử (Testing & Verification)
 <!-- Đánh dấu hoàn thành sau khi đã kiểm tra tại máy local -->
-- [ ] **Backend Unit Tests:** Đã chạy `cd backend; .\mvnw.cmd test` và đạt **BUILD SUCCESS (150/150 tests PASS)**.
+- [ ] **Backend Unit Tests:** Đã chạy `cd backend; .\mvnw.cmd test` và đạt **BUILD SUCCESS (188/188 tests PASS 100%)**.
 - [ ] **Frontend Syntax Check:** Đã kiểm tra không có lỗi cú pháp JavaScript trên Console trình duyệt (`node -c frontend/js/*.js`).
+- [ ] **Responsive Check:** Đã kiểm tra giao diện trên màn hình điện thoại (F12 Mobile 375px/430px) không vỡ khung.
 - [ ] **Manual E2E Test:** Đã test thực tế trên giao diện (`http://localhost:3000`) và API hoạt động đúng kịch bản.
 
 ### 📸 Bằng Chứng Hoạt Động (Screenshots / Evidence)

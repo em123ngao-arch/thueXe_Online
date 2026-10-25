@@ -144,4 +144,11 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
             @Param("endDate") LocalDate endDate,
             @Param("statuses") List<ERentalStatus> statuses
     );
+
+    // Sprint 4: Quét các đơn IN_PROGRESS quá hạn trả xe (endDate < currentDate)
+    @Query("SELECT r FROM Rental r WHERE r.status = :status AND r.endDate < :currentDate")
+    List<Rental> findOverdueRentals(
+            @Param("status") ERentalStatus status,
+            @Param("currentDate") LocalDate currentDate
+    );
 }
