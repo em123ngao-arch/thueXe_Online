@@ -78,4 +78,27 @@ public class RentalExpirationScheduler {
             log.info("Giai đoạn 3: Đã giải phóng Soft Lock cho {} đơn WAITING_PAYMENT quá hạn và phục hồi các đơn ON_HOLD", expiredList.size());
         }
     }
+
+    /**
+     * Tự động quét định kỳ các đơn IN_PROGRESS đã quá hạn kết thúc hợp đồng (endDate < hôm nay)
+     * mà khách chưa làm thủ tục bàn giao trả xe.
+     * Tự động chuyển trạng thái sang OVERDUE và ghi nhận vi phạm hợp đồng thuê xe.
+     */
+    @Scheduled(cron = "${app.rental.overdue-cron:0 0 * * * *}")
+    @Transactional
+    public void autoDetectOverdueRentals() {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        List<Rental> overdueList = rentalRepository.findOverdueRentals(ERentalStatus.IN_PROGRESS, today);
+
+        if (!overdueList.isEmpty()) {
+            for (Rental rental : overdueList) {
+                rental.setStatus(ERentalStatus.OVERDUE);
+                rental.setRejectReason("Đã quá thời hạn kết thúc chuyến đi (" + rental.getEndDate() + ") nhưng khách hàng chưa hoàn tất thủ tục bàn giao trả xe.");
+                log.warn("CẢNH BÁO VI PHẠM: Đơn thuê rentalId={} của xe carId={} đã quá hạn trả xe (Hạn: {}). Chuyển sang OVERDUE",
+                        rental.getRentalId(), rental.getCarId(), rental.getEndDate());
+            }
+            rentalRepository.saveAll(overdueList);
+            log.info("Hệ thống đã tự động chuyển {} đơn thuê quá hạn sang OVERDUE", overdueList.size());
+        }
+    }
 }
