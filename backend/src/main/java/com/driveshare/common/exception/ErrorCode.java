@@ -91,7 +91,8 @@ public enum ErrorCode {
     DISPUTE_ALREADY_RESOLVED("DISPUTE_ALREADY_RESOLVED", "Khiếu nại này đã được xử lý trước đó", HttpStatus.BAD_REQUEST),
     RENTAL_NOT_ELIGIBLE_FOR_DISPUTE("RENTAL_NOT_ELIGIBLE_FOR_DISPUTE", "Đơn thuê xe không ở trạng thái hợp lệ để báo cáo sự cố không nhận xe", HttpStatus.BAD_REQUEST),
     DISPUTE_INVALID_ACTION("DISPUTE_INVALID_ACTION", "Hành động xử lý khiếu nại không hợp lệ", HttpStatus.BAD_REQUEST),
-    DISPUTE_ACCESS_DENIED("DISPUTE_ACCESS_DENIED", "Bạn không có quyền khiếu nại trên đơn thuê của người khác", HttpStatus.FORBIDDEN);
+    DISPUTE_ACCESS_DENIED("DISPUTE_ACCESS_DENIED", "Bạn không có quyền khiếu nại trên đơn thuê của người khác", HttpStatus.FORBIDDEN),
+    USER_BLOCKED_OVERDUE_VIOLATION("USER_BLOCKED_OVERDUE_VIOLATION", "Tài khoản của bạn đã bị đưa vào danh sách đen do vi phạm chiếm dụng xe quá hạn hoặc đang có đơn chưa hoàn trả. Vui lòng liên hệ Admin", HttpStatus.FORBIDDEN);
 
     private final String code;
     private final String message;

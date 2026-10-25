@@ -36,6 +36,7 @@ public class AdminRentalController {
     private final CarRepository carRepository;
     private final UserRepository userRepository;
     private final com.driveshare.modules.rental.service.RentalDisputeService rentalDisputeService;
+    private final com.driveshare.modules.admin.service.AdminRentalService adminRentalService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
@@ -181,5 +182,29 @@ public class AdminRentalController {
     ) {
         List<com.driveshare.modules.rental.dto.response.RentalDisputeResponse> result = rentalDisputeService.getAllDisputes(status);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách khiếu nại thành công", result));
+    }
+
+    /**
+     * Sprint 4 (Nguyễn Duy Quân): Admin xem danh sách các đơn quá hạn toàn hệ thống.
+     */
+    @GetMapping("/overdue")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Admin xem danh sách các đơn thuê quá hạn (Sprint 4)")
+    public ResponseEntity<ApiResponse<List<com.driveshare.modules.admin.dto.response.OverdueRentalResponse>>> getOverdueRentals() {
+        List<com.driveshare.modules.admin.dto.response.OverdueRentalResponse> result = adminRentalService.getOverdueRentals();
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách đơn quá hạn thành công", result));
+    }
+
+    /**
+     * Sprint 4 (Nguyễn Duy Quân): Admin xuất hồ sơ pháp lý 1-click (Violation Dossier) chuyển công an/bảo hiểm.
+     */
+    @GetMapping("/{id}/dossier")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Admin xuất hồ sơ pháp lý 1-click (Violation Dossier) (Sprint 4)")
+    public ResponseEntity<ApiResponse<com.driveshare.modules.admin.dto.response.ViolationDossierResponse>> getViolationDossier(
+            @PathVariable("id") Long id
+    ) {
+        com.driveshare.modules.admin.dto.response.ViolationDossierResponse response = adminRentalService.getViolationDossier(id);
+        return ResponseEntity.ok(ApiResponse.success("Xuất hồ sơ pháp lý vi phạm thành công", response));
     }
 }

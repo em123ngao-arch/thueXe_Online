@@ -29,6 +29,9 @@ class RentalExpirationSchedulerTest {
     @Mock
     private RentalRepository rentalRepository;
 
+    @Mock
+    private com.driveshare.modules.user.repository.UserRepository userRepository;
+
     @InjectMocks
     private RentalExpirationScheduler scheduler;
 
@@ -126,6 +129,49 @@ class RentalExpirationSchedulerTest {
     }
 
     // =========================================================================
+    // SPRINT 4 (ISSUE #50 - NGUYỄN DUY QUÂN): BLACKLIST VÀ KHÓA TÀI KHOẢN
+    // =========================================================================
+
+    @Test
+    @DisplayName("TC-Q03: Khách có đơn OVERDUE quá 24h -> Trạng thái user đổi thành BLOCKED")
+    void autoDetectOverdueRentals_OverdueOver24Hours_BlocksUserAndTriggersBlacklist() {
+        java.time.LocalDate twoDaysAgo = java.time.LocalDate.now().minusDays(2);
+        Rental rental = Rental.builder()
+                .rentalId(101L)
+                .carId(5L)
+                .renterId(77L)
+                .startDate(twoDaysAgo.minusDays(3))
+                .endDate(twoDaysAgo)
+                .pricePerDay(java.math.BigDecimal.valueOf(500_000))
+                .status(ERentalStatus.IN_PROGRESS)
+                .isBlacklistedTriggered(false)
+                .build();
+
+        com.driveshare.modules.user.entity.User user = com.driveshare.modules.user.entity.User.builder()
+                .userId(77L)
+                .username("violating_renter")
+                .status(com.driveshare.common.enums.EUserStatus.ACTIVE)
+                .build();
+
+        when(rentalRepository.findOverdueRentals(eq(ERentalStatus.IN_PROGRESS), any()))
+                .thenReturn(List.of(rental));
+        when(rentalRepository.findByStatusOrderByCreatedAtDesc(ERentalStatus.OVERDUE))
+                .thenReturn(Collections.emptyList());
+        when(userRepository.findById(77L)).thenReturn(java.util.Optional.of(user));
+
+        scheduler.autoDetectOverdueRentals();
+
+        assertThat(rental.getStatus()).isEqualTo(ERentalStatus.OVERDUE);
+        assertThat(rental.getOverdueHours()).isGreaterThanOrEqualTo(24);
+        assertThat(rental.getIsBlacklistedTriggered()).isTrue();
+        assertThat(rental.getPenaltyFee()).isGreaterThan(java.math.BigDecimal.ZERO);
+        assertThat(user.getStatus()).isEqualTo(com.driveshare.common.enums.EUserStatus.BLOCKED);
+
+        verify(userRepository).save(user);
+        verify(rentalRepository).saveAll(List.of(rental));
+    }
+
+    // =========================================================================
     // SPRINT 4 (ISSUE #49 - LÂM CHÍ VĨ): BỘ TEST OVERDUE & TÍNH PHÍ PHẠT
     // =========================================================================
 
@@ -211,3 +257,4 @@ class RentalExpirationSchedulerTest {
         verify(rentalRepository, never()).saveAll(any());
     }
 }
+

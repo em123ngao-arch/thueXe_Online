@@ -63,6 +63,62 @@ def get_fresh_db():
             "ownerPhone": "0987654321",
             "deliveryAddress": "456 Lê Lợi, Quận 1, TP.HCM",
             "createdAt": "2026-10-18T11:00:00"
+        },
+        {
+            "id": 103,
+            "status": "IN_PROGRESS",
+            "carId": 3,
+            "carName": "VinFast VF8 Plus 2024",
+            "carImage": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800&q=80",
+            "licensePlate": "51L-777.66",
+            "startDate": "2026-10-24T08:00:00",
+            "endDate": "2026-10-28T20:00:00",
+            "pricePerDay": 1200000,
+            "depositAmount": 1440000,
+            "totalAmount": 4800000,
+            "remainingAmount": 3360000,
+            "ownerName": "Lê Hoàng Long",
+            "ownerPhone": "0912888999",
+            "deliveryAddress": "88 Hàm Nghi, Quận 1, TP.HCM",
+            "createdAt": "2026-10-22T09:00:00"
+        },
+        {
+            "id": 104,
+            "status": "OVERDUE",
+            "carId": 4,
+            "carName": "Toyota Camry 2.5Q 2023",
+            "carImage": "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=800&q=80",
+            "licensePlate": "51H-333.22",
+            "startDate": "2026-10-20T07:00:00",
+            "endDate": "2026-10-24T20:00:00",
+            "pricePerDay": 1500000,
+            "depositAmount": 1800000,
+            "totalAmount": 6000000,
+            "remainingAmount": 4200000,
+            "overdueHours": 5,
+            "penaltyFee": 468750,
+            "ownerName": "Phạm Quốc Tuấn",
+            "ownerPhone": "0903444555",
+            "deliveryAddress": "200 Pasteur, Quận 3, TP.HCM",
+            "createdAt": "2026-10-18T14:00:00"
+        },
+        {
+            "id": 105,
+            "status": "COMPLETED",
+            "carId": 1,
+            "carName": "Mazda 3 Luxury 2022",
+            "carImage": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800&q=80",
+            "licensePlate": "51G-888.99",
+            "startDate": "2026-10-10T08:00:00",
+            "endDate": "2026-10-12T18:00:00",
+            "pricePerDay": 900000,
+            "depositAmount": 540000,
+            "totalAmount": 1800000,
+            "remainingAmount": 1260000,
+            "ownerName": "Nguyễn Văn Chủ Xe",
+            "ownerPhone": "0901234567",
+            "deliveryAddress": "123 Nguyễn Huệ, Quận 1, TP.HCM",
+            "createdAt": "2026-10-08T10:00:00"
         }
     ],
     "pending_users": [
@@ -99,6 +155,38 @@ def get_fresh_db():
             "bankVerificationStatus": "PENDING",
             "role": "ROLE_CAR_OWNER",
             "createdAt": "2026-10-16T14:20:00"
+        }
+    ],
+    "cars": [
+        {
+            "car_id": 1,
+            "carId": 1,
+            "id": 1,
+            "brand": "VinFast",
+            "model": "VF8 Plus",
+            "plate_number": "51K-889.99",
+            "price_per_day": 1200000,
+            "address": "120 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
+            "status": "ACTIVE",
+            "thumbnail_url": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=400&q=80",
+            "year": 2024,
+            "seats": 5,
+            "transmission": "AUTOMATIC"
+        },
+        {
+            "car_id": 2,
+            "carId": 2,
+            "id": 2,
+            "brand": "Hyundai",
+            "model": "Tucson 2.0 Turbo",
+            "plate_number": "51H-333.22",
+            "price_per_day": 1100000,
+            "address": "200 Pasteur, Quận 3, TP. Hồ Chí Minh",
+            "status": "ACTIVE",
+            "thumbnail_url": "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=400&q=80",
+            "year": 2023,
+            "seats": 5,
+            "transmission": "AUTOMATIC"
         }
     ]
 }
@@ -181,11 +269,53 @@ class QAHttpHandler(http.server.SimpleHTTPRequestHandler):
                 qa_db = get_fresh_db()
                 return self._send_json(200, {"code": 200, "success": True, "message": "Database reset successfully"})
             
-            if path in ["/api/v1/rentals/me", "/api/v1/rentals/my-rentals"]:
+            if path in ["/api/v1/rentals/me", "/api/v1/rentals/my", "/api/v1/rentals/my-rentals", "/api/v1/owner/rentals", "/api/v1/rentals/owner", "/api/v1/rentals"]:
                 return self._send_json(200, {
                     "code": 200,
                     "success": True,
                     "data": qa_db["rentals"]
+                })
+
+            if path in ["/api/v1/cars/my-cars", "/api/v1/owner/cars", "/api/v1/cars"]:
+                return self._send_json(200, {
+                    "code": 200,
+                    "success": True,
+                    "data": {
+                        "items": qa_db["cars"],
+                        "total": len(qa_db["cars"])
+                    }
+                })
+
+            # Match: GET /api/v1/rentals/{id}/inspections
+            insp_match = re.match(r"^/api/v1/rentals/(\d+)/inspections$", path)
+            if insp_match:
+                rental_id = int(insp_match.group(1))
+                return self._send_json(200, {
+                    "code": 200,
+                    "success": True,
+                    "data": [
+                        {
+                            "inspection_id": 1,
+                            "rental_id": rental_id,
+                            "inspection_type": "CHECK_IN",
+                            "odo_meter": 12450,
+                            "fuel_level": 90,
+                            "images": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=400&q=80,https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=400&q=80,https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=400&q=80,https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=400&q=80",
+                            "notes": "Xe sạch sẽ, đầy đủ giấy tờ bảo hiểm và 2 chìa smartkey.",
+                            "created_at": "2026-10-24T08:00:00"
+                        }
+                    ]
+                })
+
+            # Match: GET /api/v1/rentals/{id}/reviews
+            review_match = re.match(r"^/api/v1/rentals/(\d+)/reviews$", path)
+            if review_match:
+                rental_id = int(review_match.group(1))
+                review = qa_db.get("reviews", {}).get(rental_id)
+                return self._send_json(200, {
+                    "code": 200,
+                    "success": True,
+                    "data": review
                 })
             
             if path == "/api/v1/admin/users/pending-cccd":
@@ -286,6 +416,48 @@ class QAHttpHandler(http.server.SimpleHTTPRequestHandler):
                         "disputeReason": reason,
                         "filesCount": len(uploaded_files),
                         "files": uploaded_files
+                    }
+                })
+
+            # Match: POST /api/v1/rentals/{id}/reviews
+            review_post_match = re.match(r"^/api/v1/rentals/(\d+)/reviews$", path)
+            if review_post_match:
+                rental_id = int(review_post_match.group(1))
+                req_data = {}
+                try:
+                    req_data = json.loads(body_bytes.decode("utf-8"))
+                except Exception:
+                    pass
+                rating = req_data.get("rating", 5)
+                comment = req_data.get("comment", "")
+                
+                # Update rental in db to COMPLETED
+                for rental in qa_db["rentals"]:
+                    if rental["id"] == rental_id:
+                        rental["status"] = "COMPLETED"
+                        rental["reviewRating"] = rating
+                        rental["reviewComment"] = comment
+
+                if "reviews" not in qa_db:
+                    qa_db["reviews"] = {}
+                qa_db["reviews"][rental_id] = {
+                    "reviewId": 999,
+                    "rentalId": rental_id,
+                    "rating": rating,
+                    "comment": comment,
+                    "createdAt": "2026-10-25T15:00:00"
+                }
+
+                print(f"--> [Review Created] Rental #{rental_id}: rating={rating}, status -> COMPLETED")
+                return self._send_json(200, {
+                    "code": 200,
+                    "success": True,
+                    "message": "Gửi đánh giá chuyến đi thành công. Đơn hàng đã chuyển sang trạng thái ĐÃ HOÀN TẤT.",
+                    "data": {
+                        "rentalId": rental_id,
+                        "rating": rating,
+                        "comment": comment,
+                        "status": "COMPLETED"
                     }
                 })
 

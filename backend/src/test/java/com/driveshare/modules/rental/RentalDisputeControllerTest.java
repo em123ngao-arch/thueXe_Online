@@ -66,6 +66,9 @@ class RentalDisputeControllerTest {
     private UserRepository userRepository;
 
     @MockBean
+    private com.driveshare.modules.admin.service.AdminRentalService adminRentalService;
+
+    @MockBean
     private com.driveshare.security.JwtTokenProvider jwtTokenProvider;
 
     @MockBean
