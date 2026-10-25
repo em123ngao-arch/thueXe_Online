@@ -101,7 +101,7 @@ const OwnerService = {
     const currentRentalCarId = this.rentalFilterCarId || 'ALL';
 
     const isPending = (s) => s === 'PENDING' || s === 'PENDING_APPROVAL';
-    const isActiveRental = (s) => ['WAITING_PAYMENT', 'APPROVED', 'ON_HOLD', 'CONFIRMED', 'DEPOSIT_PAID', 'IN_PROGRESS'].includes(s);
+    const isActiveRental = (s) => ['WAITING_PAYMENT', 'APPROVED', 'ON_HOLD', 'CONFIRMED', 'DEPOSIT_PAID', 'IN_PROGRESS', 'OVERDUE'].includes(s);
     const isHistory = (s) => ['COMPLETED', 'REJECTED', 'WITHDRAWN_BY_GUEST', 'EXPIRED', 'AUTO_EXPIRED_NO_HOST_ACTION'].includes(s);
 
     const pendingCount = ownerBookings.filter(b => isPending(b.status)).length;
@@ -276,7 +276,7 @@ const OwnerService = {
                     <tr><td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--slate-500);">Bạn chưa có xe nào. Hãy đăng ký chiếc xe đầu tiên của bạn!</td></tr>
                   ` : ownerCars.map(c => `
                     <tr>
-                      <td>
+                      <td data-label="Phương tiện">
                         <div class="table-car-cell">
                           <img class="table-car-thumb" src="${c.image_url}" alt="${c.brand}" style="cursor: zoom-in;" title="Bấm để phóng to xem ảnh" onclick="OwnerService.zoomImage('${c.image_url}', '${c.brand} ${c.model} (${c.license_plate})')" />
                           <div>
@@ -285,12 +285,12 @@ const OwnerService = {
                           </div>
                         </div>
                       </td>
-                      <td style="text-align: center;">
+                      <td data-label="Biển số" style="text-align: center;">
                         <span class="vn-license-plate" title="Biển số đăng ký">${c.license_plate}</span>
                       </td>
-                      <td style="color: var(--primary); font-weight: 700; white-space: nowrap;">${formatMoney(c.price_per_day)}</td>
-                      <td style="font-size: 0.84rem;">${c.pickup_address}</td>
-                      <td style="text-align: center; white-space: nowrap;">
+                      <td data-label="Giá thuê/ngày" style="color: var(--primary); font-weight: 700; white-space: nowrap;">${formatMoney(c.price_per_day)}</td>
+                      <td data-label="Địa điểm giao xe" style="font-size: 0.84rem;">${c.pickup_address}</td>
+                      <td data-label="Trạng thái" style="text-align: center; white-space: nowrap;">
                         ${c.status === 'ACTIVE' || c.status === 'INACTIVE' ? `
                           <div class="bmw-gear-selector ${c.status === 'ACTIVE' ? 'gear-drive' : 'gear-park'}"
                                onclick="OwnerService.toggleCarStatus(${c.id}, '${c.status}', '${c.brand} ${c.model}')"
@@ -348,7 +348,7 @@ const OwnerService = {
                               ? '<span class="badge badge-danger">Từ chối duyệt</span>' 
                               : '<span class="badge badge-warning">Chờ Admin duyệt</span>')}
                       </td>
-                      <td style="text-align: center;">
+                      <td data-label="Thao tác" style="text-align: center;">
                         <div class="table-actions" style="justify-content: center; gap: 8px;">
                           <!-- 1. Nút Lịch xe: Thao tác thường nhật chính -->
                           <button class="btn btn-outline btn-sm" style="color: #7c3aed; border-color: #c4b5fd; background: #faf5ff; font-weight: 600; padding: 5px 12px; border-radius: 6px;" title="Quản lý lịch xe & chặn ngày bận" onclick="OwnerService.openCalendarModal(${c.id})">
@@ -516,6 +516,19 @@ const OwnerService = {
                             </button>
                           </div>
                         `;
+                      } else if (b.status === 'OVERDUE') {
+                        badge = '<span class="badge" style="background:#fef2f2; color:#dc2626; border:1.5px solid #fecaca; font-weight:800; animation: pulseOverdue 1.2s infinite;">⚠️ QUÁ HẠN TRẢ XE</span>';
+                        action = `
+                          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                            <button class="btn btn-primary btn-sm" style="padding: 4px 12px; font-size: 0.78rem; background: #dc2626; border-color: #dc2626; font-weight:700; display: inline-flex; align-items: center; gap: 4px;" onclick="OwnerService.openCheckOutModal(${id})">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                              Nghiệm thu trễ hạn
+                            </button>
+                            <button class="btn btn-outline btn-xs" style="color: #dc2626; border-color: #fca5a5; font-size: 0.72rem;" onclick="alert('Liên hệ khách thuê: ' + '${renterPhone}')">
+                              Gọi giục trả xe
+                            </button>
+                          </div>
+                        `;
                       } else if (b.status === 'COMPLETED') {
                         badge = '<span class="badge badge-neutral">Đã hoàn thành</span>';
                         action = `
@@ -533,8 +546,8 @@ const OwnerService = {
 
                       return `
                       <tr ${hasConflict ? 'style="background: #fffdf5;"' : ''}>
-                        <td><span class="booking-code" style="font-weight: 800;">#${id}</span></td>
-                        <td>
+                        <td data-label="Mã đơn"><span class="booking-code" style="font-weight: 800;">#${id}</span></td>
+                        <td data-label="Khách thuê">
                           <div class="renter-cell">
                             <div class="renter-avatar-circle">${initial}</div>
                             <div>
@@ -544,7 +557,7 @@ const OwnerService = {
                             </div>
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Thời gian thuê">
                           <div class="rental-date-badge">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                             <span>${formatDateVN(startDate)} &rarr; ${formatDateVN(endDate)}</span>
@@ -557,11 +570,20 @@ const OwnerService = {
                             </div>
                           ` : ''}
                         </td>
-                        <td style="color: #047857; font-weight: 800; font-size: 0.9rem; white-space: nowrap;">
+                        <td data-label="Tiền cọc (30%)" style="color: #047857; font-weight: 800; font-size: 0.9rem; white-space: nowrap;">
                           ${formatMoney(deposit)}
                         </td>
-                        <td style="text-align: center; white-space: nowrap;">${badge}</td>
-                        <td style="text-align: center; white-space: nowrap;">${action}</td>
+                        <td data-label="Trạng thái" style="text-align: center; white-space: nowrap;">${badge}</td>
+                        <td data-label="Hành động" style="text-align: center; white-space: nowrap;">
+                          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                            <!-- Nút Cố Định [📍 Theo dõi hành trình] Shopee-Style theo yêu cầu Sprint 4 -->
+                            <button class="btn btn-trip-tracker btn-xs" style="padding: 3px 8px; font-size: 0.74rem;" onclick="TripTrackerService.openTrackerModal(${id})" title="Xem hành trình xe chuẩn Shopee">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                              Theo dõi hành trình
+                            </button>
+                            ${action}
+                          </div>
+                        </td>
                       </tr>
                       `;
                     }).join('')}
