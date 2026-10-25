@@ -311,6 +311,9 @@ public class AuthService {
         if (user.getStatus() == EUserStatus.LOCKED) {
             throw new AppException(ErrorCode.ACCOUNT_LOCKED);
         }
+        if (user.getStatus() == EUserStatus.BLOCKED) {
+            throw new AppException(ErrorCode.USER_BLOCKED_OVERDUE_VIOLATION);
+        }
         if (user.getStatus() == EUserStatus.PENDING) {
             throw new AppException(ErrorCode.ACCOUNT_PENDING);
         }

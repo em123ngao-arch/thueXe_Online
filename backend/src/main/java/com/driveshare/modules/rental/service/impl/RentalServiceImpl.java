@@ -32,6 +32,7 @@ public class RentalServiceImpl implements RentalService {
     private final RentalRepository rentalRepository;
     private final CarRepository carRepository;
     private final com.driveshare.modules.user.repository.RenterProfileRepository renterProfileRepository;
+    private final com.driveshare.modules.user.repository.UserRepository userRepository;
 
     private static final int MAX_PENDING_RENTALS = 3;
     private static final BigDecimal DEPOSIT_PERCENTAGE = BigDecimal.valueOf(0.30);
@@ -40,6 +41,20 @@ public class RentalServiceImpl implements RentalService {
     @Transactional
     public RentalResponse createRentalRequest(CreateRentalRequest request) {
         Long renterId = getCurrentUserId();
+
+        // 0. Sprint 4 (Duy Quân): Kiểm tra Blacklist & Khóa đặt xe
+        if (userRepository != null) {
+            userRepository.findById(renterId).ifPresent(user -> {
+                if (user.getStatus() == com.driveshare.common.enums.EUserStatus.BLOCKED) {
+                    log.warn("User {} bị chặn đặt xe do nằm trong danh sách đen (BLOCKED)", renterId);
+                    throw new AppException(ErrorCode.USER_BLOCKED_OVERDUE_VIOLATION);
+                }
+            });
+        }
+        if (rentalRepository.existsByRenterIdAndStatus(renterId, ERentalStatus.OVERDUE)) {
+            log.warn("User {} bị chặn đặt xe do đang có đơn thuê OVERDUE chưa hoàn trả", renterId);
+            throw new AppException(ErrorCode.USER_BLOCKED_OVERDUE_VIOLATION);
+        }
 
         // 1. CRP-42 & Giai đoạn 1: Kiểm tra số lượng đơn chờ duyệt hiện tại của khách thuê
         long pendingCount = rentalRepository.countByRenterIdAndStatus(renterId, ERentalStatus.PENDING)

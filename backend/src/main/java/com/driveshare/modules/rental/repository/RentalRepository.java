@@ -151,4 +151,9 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
             @Param("status") ERentalStatus status,
             @Param("currentDate") LocalDate currentDate
     );
+
+    // Sprint 4 (Duy Quân): Quản lý đơn quá hạn cho Admin & Kiểm tra Blacklist chặn đặt xe
+    List<Rental> findByStatusOrderByCreatedAtDesc(ERentalStatus status);
+
+    boolean existsByRenterIdAndStatus(Long renterId, ERentalStatus status);
 }
