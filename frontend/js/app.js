@@ -31,6 +31,9 @@ const App = {
     // 2.2. Ẩn/hiện các pill role theo quyền của tài khoản đang đăng nhập
     this.updateNavByRole();
 
+    // 2.3. Khởi tạo Bottom Navigation Bar cho điện thoại (Sprint 4 - Issue #48)
+    this.initBottomNav();
+
     // 3. Lắng nghe sự kiện modal đóng
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -300,9 +303,28 @@ const App = {
   },
 
   zoomImage(src, caption = '') {
-    const overlay = document.getElementById('imagePreviewModalOverlay');
-    const img = document.getElementById('imagePreviewModalImg');
-    const cap = document.getElementById('imagePreviewModalCaption');
+    let overlay = document.getElementById('imagePreviewModalOverlay');
+    let img = document.getElementById('imagePreviewModalImg');
+    let cap = document.getElementById('imagePreviewModalCaption');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'imagePreviewModalOverlay';
+      overlay.className = 'modal-overlay';
+      overlay.style.zIndex = '100000';
+      overlay.innerHTML = `
+        <div class="modal-dialog" style="max-width: 720px; background: transparent; box-shadow: none; border: none; text-align: center;" onclick="event.stopPropagation()">
+          <div style="position: relative; display: inline-block; max-width: 100%;">
+            <button class="modal-close-btn" style="position: absolute; top: -14px; right: -14px; background: #0f172a; color: #fff; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff; font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="document.getElementById('imagePreviewModalOverlay').classList.remove('open')">&times;</button>
+            <img id="imagePreviewModalImg" src="" alt="Ảnh phóng to" style="max-width: 100%; max-height: 82vh; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); object-fit: contain; background: #fff;" />
+            <div id="imagePreviewModalCaption" style="margin-top: 10px; color: #fff; font-weight: 700; font-size: 15px; text-shadow: 0 2px 4px rgba(0,0,0,0.9);"></div>
+          </div>
+        </div>
+      `;
+      overlay.onclick = () => overlay.classList.remove('open');
+      document.body.appendChild(overlay);
+      img = document.getElementById('imagePreviewModalImg');
+      cap = document.getElementById('imagePreviewModalCaption');
+    }
     if (overlay && img) {
       img.src = src;
       if (cap) cap.textContent = caption;
@@ -1113,20 +1135,47 @@ const App = {
         const res = await ReviewAPI.createReview(bookingId, { rating, comment });
         if (res && (res.success || res.code === 200)) {
           this.showToast(`Cảm ơn bạn đã gửi đánh giá ${rating} sao cho chuyến đi #${bookingId}!`, 'success');
+          // Chuyển đơn sang COMPLETED (ĐÃ HOÀN TẤT)
+          if (Array.isArray(this.cachedMyBookings)) {
+            const b = this.cachedMyBookings.find(x => String(x.rental_id || x.rentalId || x.id) === String(bookingId));
+            if (b) b.status = 'COMPLETED';
+          }
+          if (typeof StorageService !== 'undefined') {
+            const allBks = StorageService.getBookings();
+            const b = allBks.find(x => String(x.rental_id || x.rentalId || x.id) === String(bookingId));
+            if (b) {
+              b.status = 'COMPLETED';
+              StorageService.saveBookings(allBks);
+            }
+          }
           if (typeof NotificationAPI !== 'undefined' && NotificationAPI.addNotification) {
-            NotificationAPI.addNotification('Đánh giá thành công ⭐', `Bạn đã gửi đánh giá ${rating} sao cho đơn thuê #${bookingId}.`, 'REVIEW_SENT', bookingId);
+            NotificationAPI.addNotification('Đánh giá thành công ⭐', `Bạn đã gửi đánh giá ${rating} sao cho đơn thuê #${bookingId}. Trạng thái đổi sang ĐÃ HOÀN TẤT.`, 'REVIEW_SENT', bookingId);
           }
           this.closeModal();
-          // Cập nhật lại view chuyến đi
+          // Cập nhật lại view chuyến đi để hiện ngay badge ĐÃ HOÀN TẤT
           this.showMyBookingsView();
           return;
         } else {
           alert(res.message || 'Không thể gửi đánh giá. Vui lòng thử lại!');
         }
       } else {
-        this.showToast(`Cảm ơn bạn đã gửi đánh giá ${rating} sao!`, 'success');
+        // Fallback local: Cập nhật sang COMPLETED
+        if (Array.isArray(this.cachedMyBookings)) {
+          const b = this.cachedMyBookings.find(x => String(x.rental_id || x.rentalId || x.id) === String(bookingId));
+          if (b) b.status = 'COMPLETED';
+        }
+        if (typeof StorageService !== 'undefined') {
+          const allBks = StorageService.getBookings();
+          const b = allBks.find(x => String(x.rental_id || x.rentalId || x.id) === String(bookingId));
+          if (b) {
+            b.status = 'COMPLETED';
+            StorageService.saveBookings(allBks);
+          }
+        }
+        this.showToast(`Cảm ơn bạn đã gửi đánh giá ${rating} sao! Đơn đã hoàn tất.`, 'success');
         this.closeModal();
         this.showMyBookingsView();
+        return;
       }
     } catch (err) {
       console.error('Lỗi khi submit review:', err);
@@ -1136,6 +1185,62 @@ const App = {
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = '<span>⭐</span><span>Gửi Đánh Giá</span>';
+    }
+  },
+
+  // ==============================================================================
+  // SPRINT 4 (ISSUE #48): BOTTOM NAVIGATION BAR CHO MOBILE (360px - 430px)
+  // ==============================================================================
+  initBottomNav() {
+    let nav = document.getElementById('appBottomNavBar');
+    if (!nav) {
+      nav = document.createElement('nav');
+      nav.id = 'appBottomNavBar';
+      nav.className = 'bottom-nav-bar';
+      nav.innerHTML = `
+        <a href="javascript:void(0)" class="bottom-nav-item active" id="bnavHome" onclick="App.onBottomNavClick('home')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          <span class="bottom-nav-label">Trang chủ</span>
+        </a>
+        <a href="javascript:void(0)" class="bottom-nav-item" id="bnavTrips" onclick="App.onBottomNavClick('trips')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <span class="bottom-nav-label">Chuyến đi</span>
+          <span class="bottom-nav-badge" id="bnavTripsBadge" style="display:none;">0</span>
+        </a>
+        <a href="javascript:void(0)" class="bottom-nav-item" id="bnavOwner" onclick="App.onBottomNavClick('owner')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>
+          <span class="bottom-nav-label">Quản lý xe</span>
+        </a>
+        <a href="javascript:void(0)" class="bottom-nav-item" id="bnavProfile" onclick="App.onBottomNavClick('profile')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <span class="bottom-nav-label">Hồ sơ</span>
+        </a>
+      `;
+      document.body.appendChild(nav);
+    }
+  },
+
+  onBottomNavClick(tab) {
+    document.querySelectorAll('.bottom-nav-item').forEach(el => el.classList.remove('active'));
+    const item = document.getElementById('bnav' + tab.charAt(0).toUpperCase() + tab.slice(1));
+    if (item) item.classList.add('active');
+
+    if (tab === 'home') {
+      if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/') || window.location.pathname === '') {
+        this.showCatalogView();
+      } else {
+        window.location.href = 'index.html';
+      }
+    } else if (tab === 'trips') {
+      if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/') || window.location.pathname === '') {
+        this.showMyBookingsView();
+      } else {
+        window.location.href = 'index.html#my-bookings';
+      }
+    } else if (tab === 'owner') {
+      window.location.href = 'owner-cars.html';
+    } else if (tab === 'profile') {
+      window.location.href = 'profile.html';
     }
   },
 

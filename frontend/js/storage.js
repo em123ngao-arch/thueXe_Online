@@ -124,13 +124,21 @@ const StorageService = {
 
   updateBookingStatus(bookingId, status) {
     const bookings = this.getBookings();
-    const index = bookings.findIndex(b => b.id === bookingId);
+    const index = bookings.findIndex(b => String(b.id || b.rental_id || b.rentalId) === String(bookingId));
     if (index !== -1) {
       bookings[index].status = status;
       localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(bookings));
       return bookings[index];
     }
     return null;
+  },
+
+  saveBookings(bookings) {
+    if (Array.isArray(bookings)) {
+      localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(bookings));
+      return bookings;
+    }
+    return [];
   },
 
   // Khách thuê & GPLX
