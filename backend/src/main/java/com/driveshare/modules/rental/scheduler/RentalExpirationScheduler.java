@@ -23,6 +23,7 @@ import java.util.List;
 public class RentalExpirationScheduler {
 
     private final RentalRepository rentalRepository;
+    private final com.driveshare.modules.user.repository.UserRepository userRepository;
 
     private static final long EXPIRATION_MINUTES = 60;
 
@@ -103,12 +104,49 @@ public class RentalExpirationScheduler {
                 java.math.BigDecimal penalty = dailyPrice.multiply(java.math.BigDecimal.valueOf(1.5)).multiply(java.math.BigDecimal.valueOf(daysOverdue));
                 rental.setPenaltyFee(penalty);
 
+                // Sprint 4 (Duy Quân): Tự động kích hoạt Blacklist nếu trễ trên 24 giờ
+                if (hoursOverdue >= 24 && !Boolean.TRUE.equals(rental.getIsBlacklistedTriggered())) {
+                    rental.setIsBlacklistedTriggered(true);
+                    userRepository.findById(rental.getRenterId()).ifPresent(user -> {
+                        user.setStatus(com.driveshare.common.enums.EUserStatus.BLOCKED);
+                        userRepository.save(user);
+                        log.warn("BLACKLIST: Khách hàng userId={} bị đưa vào danh sách đen (BLOCKED) do chiếm dụng xe quá hạn {} giờ (đơn #{})",
+                                user.getUserId(), hoursOverdue, rental.getRentalId());
+                    });
+                }
+
                 rental.setRejectReason("Đã quá thời hạn kết thúc chuyến đi (" + rental.getEndDate() + ") nhưng khách hàng chưa hoàn tất thủ tục bàn giao trả xe. Phí phạt tích lũy: " + penalty + " đ.");
                 log.warn("CẢNH BÁO VI PHẠM: Đơn thuê rentalId={} của xe carId={} đã quá hạn trả xe (Hạn: {}). Chuyển sang OVERDUE, phạt: {} đ",
                         rental.getRentalId(), rental.getCarId(), rental.getEndDate(), penalty);
             }
             rentalRepository.saveAll(overdueList);
             log.info("Sprint 4: Đã tự động chuyển {} đơn thuê quá hạn sang OVERDUE và tính phí phạt", overdueList.size());
+        }
+
+        // Quét thêm các đơn đang ở OVERDUE mà chưa kích hoạt Blacklist nếu đã chạm ngưỡng 24h
+        List<Rental> existingOverdue = rentalRepository.findByStatusOrderByCreatedAtDesc(ERentalStatus.OVERDUE);
+        for (Rental rental : existingOverdue) {
+            long daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(rental.getEndDate(), today);
+            if (daysOverdue <= 0) daysOverdue = 1;
+            int hoursOverdue = (int) (daysOverdue * 24);
+            rental.setOverdueHours(hoursOverdue);
+
+            java.math.BigDecimal dailyPrice = rental.getPricePerDay() != null ? rental.getPricePerDay() : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal penalty = dailyPrice.multiply(java.math.BigDecimal.valueOf(1.5)).multiply(java.math.BigDecimal.valueOf(daysOverdue));
+            rental.setPenaltyFee(penalty);
+
+            if (hoursOverdue >= 24 && !Boolean.TRUE.equals(rental.getIsBlacklistedTriggered())) {
+                rental.setIsBlacklistedTriggered(true);
+                userRepository.findById(rental.getRenterId()).ifPresent(user -> {
+                    user.setStatus(com.driveshare.common.enums.EUserStatus.BLOCKED);
+                    userRepository.save(user);
+                    log.warn("BLACKLIST: Khách hàng userId={} bị đưa vào danh sách đen (BLOCKED) do chiếm dụng xe quá hạn {} giờ (đơn #{})",
+                            user.getUserId(), hoursOverdue, rental.getRentalId());
+                });
+            }
+        }
+        if (!existingOverdue.isEmpty()) {
+            rentalRepository.saveAll(existingOverdue);
         }
     }
 }
