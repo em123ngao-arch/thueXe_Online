@@ -156,6 +156,38 @@ def get_fresh_db():
             "role": "ROLE_CAR_OWNER",
             "createdAt": "2026-10-16T14:20:00"
         }
+    ],
+    "cars": [
+        {
+            "car_id": 1,
+            "carId": 1,
+            "id": 1,
+            "brand": "VinFast",
+            "model": "VF8 Plus",
+            "plate_number": "51K-889.99",
+            "price_per_day": 1200000,
+            "address": "120 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
+            "status": "ACTIVE",
+            "thumbnail_url": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=400&q=80",
+            "year": 2024,
+            "seats": 5,
+            "transmission": "AUTOMATIC"
+        },
+        {
+            "car_id": 2,
+            "carId": 2,
+            "id": 2,
+            "brand": "Hyundai",
+            "model": "Tucson 2.0 Turbo",
+            "plate_number": "51H-333.22",
+            "price_per_day": 1100000,
+            "address": "200 Pasteur, Quận 3, TP. Hồ Chí Minh",
+            "status": "ACTIVE",
+            "thumbnail_url": "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=400&q=80",
+            "year": 2023,
+            "seats": 5,
+            "transmission": "AUTOMATIC"
+        }
     ]
 }
 qa_db = get_fresh_db()
@@ -237,11 +269,21 @@ class QAHttpHandler(http.server.SimpleHTTPRequestHandler):
                 qa_db = get_fresh_db()
                 return self._send_json(200, {"code": 200, "success": True, "message": "Database reset successfully"})
             
-            if path in ["/api/v1/rentals/me", "/api/v1/rentals/my-rentals", "/api/v1/owner/rentals", "/api/v1/rentals/owner"]:
+            if path in ["/api/v1/rentals/me", "/api/v1/rentals/my", "/api/v1/rentals/my-rentals", "/api/v1/owner/rentals", "/api/v1/rentals/owner", "/api/v1/rentals"]:
                 return self._send_json(200, {
                     "code": 200,
                     "success": True,
                     "data": qa_db["rentals"]
+                })
+
+            if path in ["/api/v1/cars/my-cars", "/api/v1/owner/cars", "/api/v1/cars"]:
+                return self._send_json(200, {
+                    "code": 200,
+                    "success": True,
+                    "data": {
+                        "items": qa_db["cars"],
+                        "total": len(qa_db["cars"])
+                    }
                 })
 
             # Match: GET /api/v1/rentals/{id}/inspections

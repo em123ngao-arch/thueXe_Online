@@ -313,20 +313,29 @@
     async function test_TC_T04() {
       log('Running TC-T04: Luồng Đánh giá và đổi trạng thái ĐÃ HOÀN TẤT...');
       const testRentalId = 7773;
-      App.cachedMyBookings = App.cachedMyBookings || [];
-      App.cachedMyBookings.push({
+      const testRental = {
+        id: testRentalId,
         rental_id: testRentalId,
+        rentalId: testRentalId,
         car_brand: 'Mazda',
         car_model: '3 Luxury',
         car_plate_number: '51G-888.99',
         total_price: 1800000,
         deposit_amount: 540000,
-        status: 'COMPLETED'
-      });
+        status: 'IN_PROGRESS'
+      };
+
+      App.cachedMyBookings = App.cachedMyBookings || [];
+      App.cachedMyBookings.push(testRental);
+      if (typeof StorageService !== 'undefined') {
+        const bks = StorageService.getBookings();
+        bks.push(testRental);
+        StorageService.saveBookings(bks);
+      }
 
       // Mở modal review
       await App.showReviewPrompt(testRentalId);
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise(r => setTimeout(r, 200));
 
       // Điền nội dung và submit
       const commentInput = document.getElementById('reviewCommentText');
@@ -334,13 +343,20 @@
       App.setReviewStar(5);
 
       await App.submitReview(testRentalId);
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 400));
 
       // Kiểm tra đơn đã hoàn tất
-      const updated = App.cachedMyBookings.find(b => b.rental_id === testRentalId);
-      const isCompleted = updated && updated.status === 'COMPLETED';
+      let isCompleted = false;
+      if (Array.isArray(App.cachedMyBookings)) {
+        const updated = App.cachedMyBookings.find(b => String(b.rental_id || b.rentalId || b.id) === String(testRentalId));
+        if (updated && updated.status === 'COMPLETED') isCompleted = true;
+      }
+      if (!isCompleted && typeof StorageService !== 'undefined') {
+        const updated = StorageService.getBookings().find(b => String(b.rental_id || b.rentalId || b.id) === String(testRentalId));
+        if (updated && updated.status === 'COMPLETED') isCompleted = true;
+      }
 
-      return { pass: isCompleted, msg: 'Gửi đánh giá 5 sao thành công, đơn thuê giữ vững/đổi sang trạng thái ĐÃ HOÀN TẤT.' };
+      return { pass: isCompleted, msg: 'Gửi đánh giá 5 sao thành công, đơn thuê tự động cập nhật sang trạng thái ĐÃ HOÀN TẤT.' };
     }
 
     // TC-T05: Mở F12 Console kiểm tra sạch sẽ 0 lỗi đỏ

@@ -13,6 +13,7 @@
 const TripTrackerService = {
   // Bộ đếm thời gian thực đếm ngược
   _timerInterval: null,
+  _escHandler: null,
 
   /**
    * Mở Modal Theo Dõi Hành Trình Chuẩn Shopee
@@ -76,6 +77,10 @@ const TripTrackerService = {
     if (this._timerInterval) {
       clearInterval(this._timerInterval);
       this._timerInterval = null;
+    }
+    if (this._escHandler) {
+      document.removeEventListener('keydown', this._escHandler);
+      this._escHandler = null;
     }
     const modal = document.getElementById('tripTrackerModal');
     if (modal) {
@@ -149,9 +154,10 @@ const TripTrackerService = {
     }
 
     const id = rental.rental_id || rental.rentalId || rental.id || 'N/A';
-    const brand = rental.car_brand || rental.carBrand || 'VinFast';
-    const model = rental.car_model || rental.carModel || 'VF8';
-    const plate = rental.car_plate_number || rental.carPlateNumber || rental.license_plate || '51K-889.99';
+    const carObj = (rental.car && typeof rental.car === 'object') ? rental.car : {};
+    const brand = rental.car_brand || rental.carBrand || carObj.brand || carObj.car_brand || 'VinFast';
+    const model = rental.car_model || rental.carModel || carObj.model || carObj.car_model || 'VF8';
+    const plate = rental.car_plate_number || rental.carPlateNumber || rental.license_plate || carObj.license_plate || carObj.plate_number || '51K-889.99';
     const carName = `${brand} ${model}`;
     const status = (rental.status || 'IN_PROGRESS').toUpperCase();
     const startDate = rental.start_date || rental.startDate || new Date().toISOString().split('T')[0];
@@ -461,20 +467,22 @@ const TripTrackerService = {
     }
 
     // Kích hoạt đồng hồ đếm ngược hạn trả xe
-    this._startLiveCountdown(endDate, isOverdue, status);
+    this._startLiveCountdown(endDate, isOverdue, status, isCancelled);
 
     // Lắng nghe phím ESC để đóng modal
     this._attachKeydownHandler();
   },
 
   _attachKeydownHandler() {
-    const handleEsc = (e) => {
+    if (this._escHandler) {
+      document.removeEventListener('keydown', this._escHandler);
+    }
+    this._escHandler = (e) => {
       if (e.key === 'Escape') {
         TripTrackerService.closeTrackerModal();
-        document.removeEventListener('keydown', handleEsc);
       }
     };
-    document.addEventListener('keydown', handleEsc);
+    document.addEventListener('keydown', this._escHandler);
   },
 
   /**
@@ -493,7 +501,7 @@ const TripTrackerService = {
   /**
    * Đồng hồ đếm ngược hạn trả xe thời gian thực
    */
-  _startLiveCountdown(endDateStr, isAlreadyOverdue, status) {
+  _startLiveCountdown(endDateStr, isAlreadyOverdue, status, isCancelled) {
     if (this._timerInterval) {
       clearInterval(this._timerInterval);
     }
@@ -506,7 +514,18 @@ const TripTrackerService = {
       return;
     }
 
-    const targetTime = new Date(`${endDateStr}T20:00:00`).getTime();
+    if (isCancelled) {
+      timerEl.innerHTML = `<span style="color:#64748b; font-weight:700;">Đơn đã kết thúc / Hủy bỏ</span>`;
+      return;
+    }
+
+    const targetDate = new Date(`${endDateStr}T20:00:00`);
+    const targetTime = targetDate.getTime();
+
+    if (isNaN(targetTime)) {
+      timerEl.innerHTML = `<span style="color:#64748b; font-weight:600;">Hạn trả: ${endDateStr || 'Theo thỏa thuận'}</span>`;
+      return;
+    }
 
     const updateTimer = () => {
       const now = new Date().getTime();

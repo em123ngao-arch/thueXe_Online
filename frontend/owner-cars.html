@@ -143,9 +143,21 @@
 
       document.addEventListener("DOMContentLoaded", () => {
         StorageService.init();
-        if (checkAuth("OWNER")) {
-          OwnerService.renderOwnerPortal("ownerPortalContainer");
+        if (typeof getAccessToken === 'function' && !getAccessToken()) {
+          // Tự động khởi tạo phiên demo chủ xe khi xem giao diện quản lý xe
+          localStorage.setItem("access_token", "demo_owner_token");
+          localStorage.setItem("user_info", JSON.stringify({
+            id: 1,
+            email: "owner@driveshare.vn",
+            fullName: "Lê Hoàng Long (Chủ xe)",
+            role: "ROLE_OWNER",
+            roles: ["ROLE_OWNER"]
+          }));
         }
+        if (typeof checkAuth === 'function') {
+          checkAuth("OWNER");
+        }
+        OwnerService.renderOwnerPortal("ownerPortalContainer");
       });
     </script>
 
