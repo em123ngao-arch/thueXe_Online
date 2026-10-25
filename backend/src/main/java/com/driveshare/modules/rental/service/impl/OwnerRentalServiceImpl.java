@@ -42,7 +42,9 @@ public class OwnerRentalServiceImpl implements OwnerRentalService {
         Rental rental = rentalRepository.findById(rentalId)
                 .orElseThrow(() -> new AppException(ErrorCode.RENTAL_NOT_FOUND));
 
-        Car car = carRepository.findById(rental.getCarId())
+        final Long carId = rental.getCarId();
+        Car car = carRepository.findCarForUpdate(carId)
+                .or(() -> carRepository.findById(carId))
                 .orElseThrow(() -> new AppException(ErrorCode.CAR_NOT_FOUND));
 
         // Kiểm tra quyền sở hữu xe

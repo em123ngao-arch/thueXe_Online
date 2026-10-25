@@ -101,7 +101,7 @@ public ResponseEntity<ApiResponse<ChatReplyResponse>> reply(@Valid @RequestBody 
   ```powershell
   cd backend; .\mvnw.cmd compile
   ```
-- **Chạy toàn bộ bài Unit Test (150 tests)**:
+- **Chạy toàn bộ bài Unit, Integration & Concurrency Test (188 tests)**:
   ```powershell
   cd backend; .\mvnw.cmd test
   ```
