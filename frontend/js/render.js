@@ -484,8 +484,8 @@ const RenderService = {
     };
 
     // Phân loại trạng thái
-    const isUrgent = (s) => s === 'PENDING' || s === 'PENDING_APPROVAL' || s === 'WAITING_PAYMENT' || s === 'APPROVED' || s === 'DISPUTED';
-    const isActive = (s) => ['CONFIRMED', 'DEPOSIT_PAID', 'IN_PROGRESS', 'ON_HOLD', 'DISPUTED'].includes(s);
+    const isUrgent = (s) => s === 'PENDING' || s === 'PENDING_APPROVAL' || s === 'WAITING_PAYMENT' || s === 'APPROVED' || s === 'DISPUTED' || s === 'OVERDUE';
+    const isActive = (s) => ['CONFIRMED', 'DEPOSIT_PAID', 'IN_PROGRESS', 'OVERDUE', 'ON_HOLD', 'DISPUTED'].includes(s);
     const isHistory = (s) => ['COMPLETED', 'REJECTED', 'WITHDRAWN_BY_GUEST', 'EXPIRED', 'AUTO_EXPIRED_NO_HOST_ACTION', 'CANCELLED', 'CANCELLED_BY_GUEST', 'CANCELLED_BY_HOST'].includes(s);
 
     const totalCount = allBookings.length;
@@ -753,11 +753,28 @@ const RenderService = {
               </button>
             `;
             activeStep = 4;
-          } else if (bk.status === 'COMPLETED') {
-            statusBadge = '<span class="badge badge-neutral" style="font-weight:700;">Đã hoàn thành</span>';
+          } else if (bk.status === 'OVERDUE') {
+            statusBadge = '<span class="badge" style="background:#fef2f2; color:#dc2626; border:1.5px solid #fecaca; font-weight:800; padding:4px 10px; border-radius:6px; letter-spacing:0.02em; animation: pulseOverdue 1.2s infinite;">⚠️ QUÁ HẠN TRẢ XE</span>';
+            alertBanner = `
+              <div class="trip-alert-banner danger" style="background:#fff1f2; border:1px solid #fecdd3; color:#9f1239; border-radius:8px; padding:10px 14px; margin-bottom:12px; display:flex; align-items:flex-start; gap:8px; font-size:0.86rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0; margin-top:1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <div><strong>Đơn thuê đã quá hạn trả xe!</strong> Bạn đang bị tính phụ phí phạt trễ hạn 150%. Vui lòng liên hệ Chủ xe hoặc mang xe đến hoàn trả ngay lập tức để tránh bị khóa tài khoản Blacklist theo Điều 175 Bộ luật Hình sự.</div>
+              </div>
+            `;
             actionButtons = `
-              <button class="btn btn-outline btn-sm" style="color:#0f766e; border-color:#0f766e; font-weight:700;" onclick="App.showReviewPrompt('${id}')">
-                Đánh giá chuyến đi
+              <button class="btn btn-outline btn-sm" style="color:#ef4444; border-color:#fca5a5; font-weight:700;" onclick="App.showContactOwner('${id}')">
+                Liên hệ chủ xe gấp
+              </button>
+            `;
+            activeStep = 4;
+          } else if (bk.status === 'COMPLETED') {
+            statusBadge = '<span class="badge badge-success" style="background:#ecfdf5; color:#065f46; border:1.5px solid #a7f3d0; font-weight:800; padding:4px 10px; border-radius:6px;">ĐÃ HOÀN TẤT</span>';
+            actionButtons = `
+              <button class="btn btn-outline btn-sm" style="color:#d97706; border-color:#fcd34d; background:#fffbeb; font-weight:700;" onclick="App.showReviewPrompt('${id}')">
+                ⭐ Đánh giá chuyến đi
+              </button>
+              <button class="btn btn-ghost btn-sm" style="color:#0f766e;" onclick="App.showHandoverInfo('${id}')">
+                Biên bản bàn giao
               </button>
             `;
             activeStep = 5;
@@ -894,6 +911,11 @@ const RenderService = {
                 </div>
 
                 <div class="trip-actions-container">
+                  <!-- Nút Cố Định [📍 Theo dõi hành trình] Shopee-Style theo yêu cầu Sprint 4 -->
+                  <button class="btn btn-trip-tracker btn-sm" onclick="TripTrackerService.openTrackerModal('${id}')" title="Xem hành trình xe chuẩn Shopee">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    Theo dõi hành trình
+                  </button>
                   ${actionButtons}
                 </div>
               </div>

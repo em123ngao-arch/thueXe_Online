@@ -103,9 +103,9 @@ public class RentalInspectionServiceImpl implements RentalInspectionService {
             throw new AppException(ErrorCode.CAR_ACCESS_DENIED);
         }
 
-        // Chuyến đi phải ở trạng thái IN_PROGRESS
-        if (rental.getStatus() != ERentalStatus.IN_PROGRESS) {
-            log.warn("Đơn rentalId={} ở trạng thái {} không thể check-out (cần IN_PROGRESS)", rentalId, rental.getStatus());
+        // Chuyến đi phải ở trạng thái IN_PROGRESS hoặc OVERDUE (để chủ xe làm thủ tục nhận lại xe khi khách mang xe về muộn)
+        if (rental.getStatus() != ERentalStatus.IN_PROGRESS && rental.getStatus() != ERentalStatus.OVERDUE) {
+            log.warn("Đơn rentalId={} ở trạng thái {} không thể check-out (cần IN_PROGRESS hoặc OVERDUE)", rentalId, rental.getStatus());
             throw new AppException(ErrorCode.RENTAL_CANNOT_BE_COMPLETED);
         }
 

@@ -46,6 +46,10 @@ public class RentalSummaryResponse {
     private String note;
     private Instant createdAt;
 
+    // Sprint 4: Quá hạn & Phạt trễ hạn
+    private Integer overdueHours;
+    private BigDecimal penaltyFee;
+
     public static RentalSummaryResponse fromEntity(Rental rental) {
         if (rental == null) {
             return null;
@@ -80,6 +84,8 @@ public class RentalSummaryResponse {
                 .rejectReason(rental.getRejectReason())
                 .note(rental.getNote())
                 .createdAt(rental.getCreatedAt())
+                .overdueHours(rental.getOverdueHours())
+                .penaltyFee(rental.getPenaltyFee())
                 .build();
     }
 }

@@ -8,6 +8,7 @@ public enum ERentalStatus {
     ON_HOLD,                    // Đặc tả v2.0.0: Đơn của các khách khác bị tạm hoãn do xe đang trong Soft Lock
     CONFIRMED,                  // Khách đã đặt cọc 30% thành công, kích hoạt Hard Lock
     IN_PROGRESS,                // Đã giao nhận xe, đang trong chuyến đi
+    OVERDUE,                    // Sprint 4: Quá hạn trả xe (chưa làm thủ tục check-out trả xe)
     COMPLETED,                  // Đã trả xe và hoàn tất chuyến đi
     EXPIRED,                    // Hết hạn 45 phút giữ chỗ
     AUTO_EXPIRED_NO_HOST_ACTION,// Đặc tả v2.0.0: Quá hạn chủ xe không phản hồi

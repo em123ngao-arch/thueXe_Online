@@ -88,4 +88,22 @@ public class Rental extends BaseEntity {
     @Column(name = "driver_fee", precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal driverFee = BigDecimal.ZERO;
+
+    // -----------------------------------------------------------------
+    // Sprint 4: Kiểm soát quá hạn & phạt trễ hạn (Tech Lead Bảo)
+    // -----------------------------------------------------------------
+    @Column(name = "overdue_hours")
+    @Builder.Default
+    private Integer overdueHours = 0;
+
+    @Column(name = "penalty_fee", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal penaltyFee = BigDecimal.ZERO;
+
+    @Column(name = "actual_return_time")
+    private Instant actualReturnTime;
+
+    @Column(name = "is_blacklisted_triggered")
+    @Builder.Default
+    private Boolean isBlacklistedTriggered = false;
 }
