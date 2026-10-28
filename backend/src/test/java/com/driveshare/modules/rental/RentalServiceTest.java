@@ -47,6 +47,9 @@ class RentalServiceTest {
     @Mock
     private com.driveshare.modules.user.repository.RenterProfileRepository renterProfileRepository;
 
+    @Mock
+    private com.driveshare.modules.user.repository.UserRepository userRepository;
+
     @InjectMocks
     private RentalServiceImpl rentalService;
 
@@ -63,6 +66,13 @@ class RentalServiceTest {
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(auth);
+
+        org.mockito.Mockito.lenient().when(userRepository.findById(RENTER_ID))
+                .thenReturn(Optional.of(com.driveshare.modules.user.entity.User.builder()
+                        .userId(RENTER_ID)
+                        .username("renter_test")
+                        .status(EUserStatus.ACTIVE)
+                        .build()));
     }
 
     @AfterEach
@@ -362,5 +372,45 @@ class RentalServiceTest {
         assertThatThrownBy(() -> rentalService.createRentalRequest(request))
                 .isInstanceOf(AppException.class)
                 .satisfies(ex -> assertThat(((AppException) ex).getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST));
+    }
+
+    @Test
+    @DisplayName("TC-Q04: User bị BLOCKED gửi request tạo đơn mới -> Nhận lỗi 403 USER_BLOCKED_OVERDUE_VIOLATION")
+    void createRentalRequest_BlockedUser_ThrowsUSER_BLOCKED_OVERDUE_VIOLATION() {
+        when(userRepository.findById(RENTER_ID)).thenReturn(Optional.of(
+                com.driveshare.modules.user.entity.User.builder()
+                        .userId(RENTER_ID)
+                        .username("blocked_renter")
+                        .status(EUserStatus.BLOCKED)
+                        .build()
+        ));
+
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(LocalDate.now().plusDays(1))
+                .endDate(LocalDate.now().plusDays(3))
+                .build();
+
+        assertThatThrownBy(() -> rentalService.createRentalRequest(request))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.USER_BLOCKED_OVERDUE_VIOLATION));
+    }
+
+    @Test
+    @DisplayName("TC-Q04 (bổ sung): User có đơn OVERDUE chưa hoàn trả gửi request tạo đơn mới -> Nhận lỗi 403 USER_BLOCKED_OVERDUE_VIOLATION")
+    void createRentalRequest_HasOverdueRental_ThrowsUSER_BLOCKED_OVERDUE_VIOLATION() {
+        when(rentalRepository.existsByRenterIdAndStatus(RENTER_ID, ERentalStatus.OVERDUE)).thenReturn(true);
+
+        CreateRentalRequest request = CreateRentalRequest.builder()
+                .carId(CAR_ID)
+                .startDate(LocalDate.now().plusDays(1))
+                .endDate(LocalDate.now().plusDays(3))
+                .build();
+
+        assertThatThrownBy(() -> rentalService.createRentalRequest(request))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.USER_BLOCKED_OVERDUE_VIOLATION));
     }
 }

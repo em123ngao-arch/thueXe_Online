@@ -83,6 +83,9 @@ class AdminRentalSecurityTest {
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
 
+    @MockBean
+    private com.driveshare.modules.admin.service.AdminRentalService adminRentalService;
+
     private CustomUserDetails adminUserDetails;
     private CustomUserDetails staffUserDetails;
     private CustomUserDetails renterUserDetails;
@@ -266,5 +269,42 @@ class AdminRentalSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.status").value("REJECTED"));
+    }
+
+    @Test
+    @DisplayName("TC-Q01: User thường (ROLE_RENTER) gọi API dossier -> Nhận HTTP 403 Forbidden")
+    void getDossier_RenterRole_Returns403() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/rentals/1/dossier")
+                        .with(user(renterUserDetails)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error_code").value("FORBIDDEN"));
+    }
+
+    @Test
+    @DisplayName("TC-Q01 (bổ sung): User thường (ROLE_RENTER) gọi GET overdue -> Nhận HTTP 403 Forbidden")
+    void getOverdueRentals_RenterRole_Returns403() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/rentals/overdue")
+                        .with(user(renterUserDetails)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error_code").value("FORBIDDEN"));
+    }
+
+    @Test
+    @DisplayName("Admin (ROLE_ADMIN) gọi GET /api/v1/admin/rentals/overdue -> Nhận HTTP 200 OK")
+    void getOverdueRentals_AdminRole_Returns200() throws Exception {
+        when(adminRentalService.getOverdueRentals()).thenReturn(List.of(
+                com.driveshare.modules.admin.dto.response.OverdueRentalResponse.builder()
+                        .rentalId(1L)
+                        .overdueHours(24)
+                        .build()
+        ));
+
+        mockMvc.perform(get("/api/v1/admin/rentals/overdue")
+                        .with(user(adminUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 }
