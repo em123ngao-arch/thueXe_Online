@@ -1002,7 +1002,7 @@ const App = {
           </div>
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px;">
             ${images.length > 0 ? images.map((url, idx) => `
-              <div style="position: relative; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; height: 75px; background: #000; cursor: pointer;" onclick="App.zoomInspectionPhoto('${url}')">
+              <div style="position: relative; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; height: 75px; background: #000; cursor: pointer;" onclick="App.zoomInspectionPhoto(this.querySelector('img').src)">
                 <img src="${url}" alt="Ảnh góc ${idx+1}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.95; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" />
                 <span style="position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px;">#${idx+1}</span>
               </div>
