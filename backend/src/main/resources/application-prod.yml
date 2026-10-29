@@ -14,6 +14,21 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USER:dongocphat007@gmail.com}
+    password: ${MAIL_APP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl.trust: smtp.gmail.com
+          localhost: localhost
+
   security:
     oauth2:
       client:
