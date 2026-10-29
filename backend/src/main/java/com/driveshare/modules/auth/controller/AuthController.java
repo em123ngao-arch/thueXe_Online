@@ -95,6 +95,22 @@ public class AuthController {
         return ApiResponse.success("Đặt lại mật khẩu thành công", null);
     }
 
+    @PostMapping("/verify-reset-otp")
+    public ApiResponse<ResetTokenResponse> verifyResetOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        return ApiResponse.success("Xác thực OTP thành công", authService.verifyResetOtp(request));
+    }
+
+    @PostMapping("/verify-email")
+    public ApiResponse<Map<String, Object>> verifyEmail(@Valid @RequestBody VerifyOtpRequest request) {
+        return ApiResponse.success(authService.verifyRegistrationOtp(request));
+    }
+
+    @PostMapping("/resend-otp")
+    public ApiResponse<Void> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
+        authService.resendRegistrationOtp(request);
+        return ApiResponse.success("Nếu tài khoản đang chờ xác thực, mã OTP mới đã được gửi tới email.", null);
+    }
+
     @GetMapping("/me")
     public ApiResponse<Map<String, Object>> me(Authentication authentication) {
         CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();

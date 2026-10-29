@@ -146,6 +146,7 @@ function setSession(authData) {
     localStorage.setItem(KEY_ACCESS_TOKEN, token);
     localStorage.setItem("ds_access_token", token);
     localStorage.setItem("driveshare_access_token", token);
+    localStorage.setItem("token", token);
   }
 
   const refreshToken = authData.refreshToken || authData.refresh_token;
@@ -197,12 +198,20 @@ function setSession(authData) {
   if (typeof AuthService !== "undefined" && AuthService.updateAuthUI) {
     AuthService.updateAuthUI();
   }
+
+  // Tự động phân tách và làm mới phiên chat AI theo tài khoản mới đăng nhập
+  if (typeof AiChatWidget !== "undefined" && typeof AiChatWidget.syncUserSession === "function") {
+    try {
+      AiChatWidget.syncUserSession(true);
+    } catch (_) {}
+  }
 }
 
 function clearSession() {
   localStorage.removeItem(KEY_ACCESS_TOKEN);
   localStorage.removeItem("ds_access_token");
   localStorage.removeItem("driveshare_access_token");
+  localStorage.removeItem("token");
   localStorage.removeItem(KEY_REFRESH_TOKEN);
   localStorage.removeItem("ds_refresh_token");
   localStorage.removeItem(KEY_USER);
@@ -213,6 +222,13 @@ function clearSession() {
 
   if (typeof AuthService !== "undefined" && AuthService.updateAuthUI) {
     AuthService.updateAuthUI();
+  }
+
+  // Tự động giải phóng giao diện chat của tài khoản cũ khi đăng xuất
+  if (typeof AiChatWidget !== "undefined" && typeof AiChatWidget.syncUserSession === "function") {
+    try {
+      AiChatWidget.syncUserSession(true);
+    } catch (_) {}
   }
 }
 
@@ -469,54 +485,68 @@ const AuthService = {
     return res;
   },
 
-  // Quên mật khẩu - gửi email yêu cầu đặt lại
-  async forgotPassword(email) {
-    const res = await this.request("/auth/forgot-password", {
+  // ── OTP qua email ───────────────────────────────────────────
+  // Xác thực email sau khi đăng ký (nhập đúng OTP mới được chuyển cho Admin duyệt)
+  async verifyEmail(email, otp) {
+    return this.request("/auth/verify-email", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim().toLowerCase(), otp: String(otp).trim() }),
+    });
+  },
+
+  // Đăng ký kiểu Travel – bước 1: gửi OTP tới email (chưa tạo tài khoản)
+  async sendRegisterPreOtp(email) {
+    return this.request("/auth/register/otp/send", {
       method: "POST",
       body: JSON.stringify({ email: email.trim().toLowerCase() }),
     });
-
-    if (res.success) return res;
-
-    // Mock fallback khi offline
-    if (res.errorCode === "NETWORK_ERROR") {
-      const mockToken = "mock_token_" + Date.now();
-      return {
-        success: true,
-        message: "Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.",
-        data: {
-          message: "Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.",
-          resetUrl: `http://localhost:3000/login.html#reset=${mockToken}`,
-          token: mockToken
-        }
-      };
-    }
-
-    return res;
   },
 
-  // Đặt lại mật khẩu với token
-  async resetPassword(token, newPassword, confirmPassword) {
-    const res = await this.request("/auth/reset-password", {
+  // Đăng ký kiểu Travel – bước 2: nhập OTP -> nhận otpTicket (gửi kèm khi đăng ký)
+  async verifyRegisterPreOtp(email, otp) {
+    return this.request("/auth/register/otp/verify", {
       method: "POST",
+      body: JSON.stringify({ email: email.trim().toLowerCase(), otp: String(otp).trim() }),
+    });
+  },
+
+  // Gửi lại OTP đăng ký
+  async resendRegisterOtp(email) {
+    return this.request("/auth/resend-otp", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+  },
+
+  // Quên mật khẩu - bước 1: gửi OTP về email
+  async forgotPassword(email) {
+    return this.request("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+  },
+
+  // Quên mật khẩu - bước 2: nhập OTP -> nhận resetToken
+  async verifyResetOtp(email, otp) {
+    return this.request("/auth/verify-reset-otp", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim().toLowerCase(), otp: String(otp).trim() }),
+    });
+  },
+
+  // Quên mật khẩu - bước 3: đặt mật khẩu mới bằng resetToken (chỉ có sau khi nhập đúng OTP)
+  async resetPassword(token, newPassword, confirmPassword) {
+    return this.request("/auth/reset-password", {
+      method: "POST",
+      // Backend dùng SNAKE_CASE nên gửi cả 2 kiểu tên trường
       body: JSON.stringify({
         token,
         newPassword,
+        new_password: newPassword,
         confirmPassword,
+        confirm_password: confirmPassword,
       }),
     });
-
-    if (res.success) return res;
-
-    // Mock fallback khi offline
-    if (res.errorCode === "NETWORK_ERROR") {
-      return {
-        success: true,
-        message: "Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới.",
-      };
-    }
-
-    return res;
   },
 
   // Đổi email (BR-07)

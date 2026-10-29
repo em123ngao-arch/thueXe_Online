@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/driveshare_db
+    url: jdbc:postgresql://localhost:${DB_PORT:5433}/driveshare_db
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgrespassword}
     driver-class-name: org.postgresql.Driver
@@ -26,6 +26,21 @@ spring:
               - profile
               - email
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USER:dongocphat007@gmail.com}
+    password: ${MAIL_APP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl.protocols: TLSv1.2 TLSv1.3
+          ssl.trust: smtp.gmail.com
+          localhost: localhost
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:ajutfp98}
   api-key: ${CLOUDINARY_API_KEY:264588314216624}
@@ -41,6 +56,13 @@ driveshare:
 gemini:
   api-key: ${GEMINI_API_KEY:}
   model: ${GEMINI_MODEL:gemini-2.5-flash}
+  embedding-model: ${GEMINI_EMBEDDING_MODEL:text-embedding-004}
+
+langfuse:
+  enabled: ${LANGFUSE_ENABLED:true}
+  host: ${LANGFUSE_HOST:https://cloud.langfuse.com}
+  public-key: ${LANGFUSE_PUBLIC_KEY:pk-lf-a2bdde2f-b2bf-4e66-99e3-371dee55bb0b}
+  secret-key: ${LANGFUSE_SECRET_KEY:sk-lf-f5728999-6cb0-483d-92ae-5a8281f768cf}
 
 logging:
   level:

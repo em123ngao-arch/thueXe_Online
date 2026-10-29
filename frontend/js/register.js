@@ -243,7 +243,7 @@ const RegisterController = {
   },
 
   async handleRegister(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const btnSubmit = document.getElementById("btnSubmitRegister");
     const emailInput = document.getElementById("regEmail");
     const emailError = document.getElementById("regEmailError");
@@ -311,6 +311,18 @@ const RegisterController = {
       }
     }
 
+    // 3b. Xác thực email bằng OTP TRƯỚC (giống Travel) -> nhập đúng mới tạo tài khoản
+    if (this._otpTicketEmail !== email.toLowerCase() || !this._otpTicket) {
+      if (typeof openRegisterOtpModal === "function") {
+        openRegisterOtpModal(email, (ticket) => {
+          this._otpTicket = ticket;
+          this._otpTicketEmail = email.toLowerCase();
+          this.handleRegister();
+        });
+        return;
+      }
+    }
+
     if (btnSubmit) {
       btnSubmit.disabled = true;
       btnSubmit.innerHTML = `<span class="spinner"></span> Đang tải hồ sơ &amp; đăng ký...`;
@@ -324,6 +336,7 @@ const RegisterController = {
     formData.append("fullName", fullName);
     formData.append("phone", phone);
     formData.append("role", role);
+    if (this._otpTicket) formData.append("otpTicket", this._otpTicket);
     formData.append("idCardNumber", idCardNumber);
     formData.append("cccdFront", this.files.cccdFront);
     formData.append("cccdBack", this.files.cccdBack);
@@ -346,21 +359,32 @@ const RegisterController = {
     }
 
     if (res.success) {
-      if (typeof showToast === "function") {
-        showToast("Đăng ký thành công! Hồ sơ giấy tờ (CCCD & GPLX) đang chờ Admin xét duyệt.", "success", 4000);
-      }
+      const usedTicket = !!this._otpTicket;
+      this._otpTicket = null;
+      this._otpTicketEmail = null;
 
       // Điền sẵn email vào form login
       const loginIdentifier = document.getElementById("loginIdentifier");
       if (loginIdentifier) loginIdentifier.value = email;
 
-      // Sau 2.5s tự động chuyển sang tab Đăng nhập
-      setTimeout(() => {
+      if (usedTicket && res.data && res.data.requiresEmailVerification === false) {
+        // Email đã xác thực bằng OTP từ trước -> không cần nhập OTP lần nữa
+        if (typeof showToast === "function") {
+          showToast(res.message || "Đăng ký thành công!", "success", 5000);
+        }
         this.switchTab("login");
-        const loginPassword = document.getElementById("loginPassword");
-        if (loginPassword) loginPassword.focus();
-      }, 2500);
+      } else {
+        if (typeof showToast === "function") {
+          showToast("Đăng ký thành công! Mã OTP đã được gửi tới email của bạn.", "success", 4000);
+        }
+        // Bắt buộc nhập đúng OTP email -> mới chuyển hồ sơ cho Admin duyệt
+        if (typeof openVerifyEmailModal === "function") {
+          openVerifyEmailModal(email, true);
+        }
+      }
     } else {
+      // Vé OTP hết hạn / đã dùng -> bắt xác thực lại ở lần gửi sau
+      if (res.errorCode === "OTP_EXPIRED") { this._otpTicket = null; this._otpTicketEmail = null; }
       if (res.errorCode === "EMAIL_EXISTED" || res.message?.includes("EMAIL_EXISTED") || res.details?.includes("Email")) {
         if (emailError) {
           emailError.innerText = "Email này đã được sử dụng. Vui lòng chọn email khác!";
@@ -496,6 +520,15 @@ const RegisterController = {
           window.location.href = "index.html";
         }
       }, 700);
+    } else if (res.errorCode === "EMAIL_NOT_VERIFIED" && typeof openVerifyEmailModal === "function") {
+      if (typeof showToast === "function") {
+        showToast("Email chưa được xác thực bằng mã OTP.", "warning", 3500);
+      }
+      if (identifier.includes("@")) {
+        openVerifyEmailModal(identifier, false);
+      } else if (typeof showToast === "function") {
+        showToast("Vui lòng đăng nhập bằng địa chỉ email để nhận lại mã xác thực.", "info", 4000);
+      }
     } else {
       if (typeof showToast === "function") {
         showToast(res.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản hoặc mật khẩu!", "error", 2500);

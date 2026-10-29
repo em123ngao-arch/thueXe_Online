@@ -1,3 +1,4 @@
+
 package com.driveshare.modules.ai.service;
 
 import com.driveshare.modules.ai.dto.ChatMessageDto;
@@ -11,14 +12,25 @@ import java.util.Optional;
 public interface GeminiService {
 
     /**
-     * Gửi yêu cầu sinh nội dung tới Gemini kèm System Instruction (RAG) và lịch sử chat.
+     * Gửi yêu cầu sinh nội dung tới Gemini kèm System Instruction (RAG) và lịch sử
+     * chat.
      *
      * @param systemInstruction Ngữ cảnh hệ thống & danh sách xe thật từ DB
      * @param history           Lịch sử hội thoại trước đó
      * @param userMessage       Câu hỏi hiện tại của khách
-     * @return Phản hồi văn bản từ Gemini nếu thành công, hoặc Optional.empty() nếu không cấu hình key hoặc có lỗi
+     * @return Phản hồi văn bản từ Gemini nếu thành công, hoặc Optional.empty() nếu
+     *         không cấu hình key hoặc có lỗi
      */
     Optional<String> generateContent(String systemInstruction, List<ChatMessageDto> history, String userMessage);
+
+    /**
+     * Gửi yêu cầu sinh nội dung kèm theo thông tin phiên và người dùng để theo dõi
+     * trên Langfuse Tracing.
+     */
+    default Optional<String> generateContent(String systemInstruction, List<ChatMessageDto> history, String userMessage,
+            String sessionId, String userId) {
+        return generateContent(systemInstruction, history, userMessage);
+    }
 
     /**
      * Kiểm tra xem Gemini API có sẵn sàng hoạt động (đã cấu hình api-key).

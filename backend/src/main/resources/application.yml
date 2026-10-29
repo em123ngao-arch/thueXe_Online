@@ -25,6 +25,13 @@ driveshare:
 gemini:
   api-key: ${GEMINI_API_KEY:}
   model: ${GEMINI_MODEL:gemini-2.5-flash}
+  embedding-model: ${GEMINI_EMBEDDING_MODEL:text-embedding-004}
+
+langfuse:
+  enabled: ${LANGFUSE_ENABLED:true}
+  host: ${LANGFUSE_HOST:https://cloud.langfuse.com}
+  public-key: ${LANGFUSE_PUBLIC_KEY:pk-lf-a2bdde2f-b2bf-4e66-99e3-371dee55bb0b}
+  secret-key: ${LANGFUSE_SECRET_KEY:sk-lf-f5728999-6cb0-483d-92ae-5a8281f768cf}
 
 
 server:

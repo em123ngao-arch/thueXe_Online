@@ -37,13 +37,42 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AiChatServiceImpl implements AiChatService {
 
     private final ChatMemoryRepository chatMemoryRepository;
     private final CarRepository carRepository;
     private final ObjectMapper objectMapper;
     private final GeminiService geminiService;
+    private final com.driveshare.modules.user.repository.UserRepository userRepository;
+
+    public AiChatServiceImpl(ChatMemoryRepository chatMemoryRepository,
+                             CarRepository carRepository,
+                             ObjectMapper objectMapper,
+                             GeminiService geminiService) {
+        this(chatMemoryRepository, carRepository, objectMapper, geminiService, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AiChatServiceImpl(ChatMemoryRepository chatMemoryRepository,
+                             CarRepository carRepository,
+                             ObjectMapper objectMapper,
+                             GeminiService geminiService,
+                             com.driveshare.modules.user.repository.UserRepository userRepository) {
+        this.chatMemoryRepository = chatMemoryRepository;
+        this.carRepository = carRepository;
+        this.objectMapper = objectMapper;
+        this.geminiService = geminiService;
+        this.userRepository = userRepository;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.driveshare.modules.rag.service.RamVectorStore ramVectorStore;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.driveshare.modules.rag.service.GeminiEmbeddingService geminiEmbeddingService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.driveshare.modules.ai.service.LangfuseService langfuseService;
 
     private String cachedSystemPrompt;
 
@@ -75,6 +104,7 @@ public class AiChatServiceImpl implements AiChatService {
     @Override
     @Transactional
     public ChatReplyResponse chat(ChatRequest request, Long userId) {
+        long startTime = System.currentTimeMillis();
         String sessionId = request.getSessionId();
         String userMessage = request.getMessage().trim();
 
@@ -86,9 +116,13 @@ public class AiChatServiceImpl implements AiChatService {
 
         // 3. Phân tích ý định và tạo phản hồi thông minh (Ưu tiên Google Gemini LLM + RAG nếu có cấu hình)
         ChatReplyResponse response = null;
+        boolean fromGemini = false;
         if (geminiService != null && geminiService.isEnabled()) {
             try {
-                response = generateGeminiResponse(userMessage, sessionId, history);
+                response = generateGeminiResponse(userMessage, sessionId, userId, history);
+                if (response != null) {
+                    fromGemini = true;
+                }
             } catch (Exception e) {
                 log.warn("[AI Chat] Lỗi khi xử lý qua Gemini: {}. Tự động fallback sang bộ xử lý nội bộ.", e.getMessage());
             }
@@ -104,11 +138,31 @@ public class AiChatServiceImpl implements AiChatService {
         // 5. Lưu lại lịch sử hội thoại vào PostgreSQL
         saveHistory(userId, sessionId, history);
 
+        // 6. Ghi vết giám sát lên Langfuse Observability Dashboard
+        if (!fromGemini && langfuseService != null && langfuseService.isEnabled()) {
+            long latencyMs = System.currentTimeMillis() - startTime;
+            String traceId = UUID.randomUUID().toString().replace("-", "");
+            String uId = userId != null ? String.valueOf(userId) : "guest";
+            langfuseService.recordGeneration(
+                    traceId,
+                    "driveshare-chat-advisor",
+                    sessionId != null ? sessionId : "default-session",
+                    uId,
+                    "driveshare-smart-engine",
+                    getSystemPrompt(),
+                    userMessage,
+                    response.getMessage(),
+                    latencyMs,
+                    true,
+                    null
+            );
+        }
+
         return response;
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ChatMessageDto> getHistory(String sessionId, Long userId) {
         return loadHistory(userId, sessionId);
     }
@@ -116,15 +170,35 @@ public class AiChatServiceImpl implements AiChatService {
     @Override
     @Transactional
     public void clearHistory(String sessionId, Long userId) {
-        chatMemoryRepository.findByUserIdAndSessionId(userId, sessionId)
-                .ifPresent(chatMemoryRepository::delete);
+        Long effectiveUserId = userId != null ? userId : 0L;
+        chatMemoryRepository.deleteByUserIdAndSessionId(effectiveUserId, sessionId);
+        chatMemoryRepository.deleteBySessionId(sessionId);
     }
 
     // =========================================================================
     // GOOGLE GEMINI GENERATIVE AI + RAG INTEGRATION
     // =========================================================================
 
+    @Override
+    public void reloadSystemPrompt() {
+        this.cachedSystemPrompt = null;
+        log.info("[AI Chat] Đã làm mới cache kịch bản System Prompt.");
+    }
+
     private String getSystemPrompt() {
+        // 1. Kiểm tra trực tiếp file nguồn trên ổ cứng (ưu tiên môi trường dev để sửa file là có tác dụng ngay)
+        try {
+            java.nio.file.Path localPromptPath = java.nio.file.Paths.get("backend/src/main/resources/prompts/car-advisor-system.txt");
+            if (java.nio.file.Files.exists(localPromptPath)) {
+                return java.nio.file.Files.readString(localPromptPath, StandardCharsets.UTF_8);
+            }
+            java.nio.file.Path altPath = java.nio.file.Paths.get("src/main/resources/prompts/car-advisor-system.txt");
+            if (java.nio.file.Files.exists(altPath)) {
+                return java.nio.file.Files.readString(altPath, StandardCharsets.UTF_8);
+            }
+        } catch (Exception ignored) {}
+
+        // 2. Classpath Fallback
         if (cachedSystemPrompt != null) {
             return cachedSystemPrompt;
         }
@@ -141,7 +215,7 @@ public class AiChatServiceImpl implements AiChatService {
     /**
      * Sinh phản hồi qua Google Gemini kết hợp nhồi dữ liệu xe thật (RAG) từ Database.
      */
-    private ChatReplyResponse generateGeminiResponse(String query, String sessionId, List<ChatMessageDto> history) {
+    private ChatReplyResponse generateGeminiResponse(String query, String sessionId, Long userId, List<ChatMessageDto> history) {
         String lower = query.toLowerCase();
         boolean isSearchingCars = isCarSearchIntent(lower);
 
@@ -200,6 +274,26 @@ public class AiChatServiceImpl implements AiChatService {
             carsRag.append("[/DỮ LIỆU XE KHẢ DỤNG]\n");
         }
 
+        // 2. Trích xuất kiến thức tài liệu/chính sách từ Document RAG nếu đã nạp trong RAM
+        if (ramVectorStore != null && !ramVectorStore.getChunks().isEmpty() && geminiEmbeddingService != null) {
+            try {
+                float[] queryVector = geminiEmbeddingService.embedText(query);
+                List<com.driveshare.modules.rag.service.RamVectorStore.ScoredChunk> topDocs = ramVectorStore.searchTopK(queryVector, 2);
+                if (!topDocs.isEmpty() && topDocs.get(0).score() > 0.40) {
+                    carsRag.append("\n\n[TRÍCH DẪN QUY CHẾ & CHÍNH SÁCH TỪ TÀI LIỆU DRIVESHARE ĐÃ NẠP]\n");
+                    for (var sc : topDocs) {
+                        carsRag.append(String.format("• Tài liệu '%s' (Trang %d): %s\n",
+                                sc.chunk().getDocumentName(),
+                                sc.chunk().getPageNumber(),
+                                sc.chunk().getContent()));
+                    }
+                    carsRag.append("[/TRÍCH DẪN QUY CHẾ & CHÍNH SÁCH TỪ TÀI LIỆU DRIVESHARE ĐÃ NẠP]\n");
+                }
+            } catch (Exception e) {
+                log.debug("[AI Chat - Document RAG] Không thể nạp embedding: {}", e.getMessage());
+            }
+        }
+
         String fullSystemInstruction = getSystemPrompt() + carsRag.toString();
         Optional<String> geminiText = geminiService.generateContent(fullSystemInstruction, history, query);
 
@@ -221,6 +315,36 @@ public class AiChatServiceImpl implements AiChatService {
 
     private ChatReplyResponse generateSmartResponse(String query, String sessionId) {
         String lower = query.toLowerCase();
+
+        // ── Ý ĐỊNH BẢO MẬT: Chống bẻ khóa prompt (Prompt Injection / Jailbreak) ──
+        if (matchesPromptInjection(lower)) {
+            return buildPromptInjectionResponse(sessionId);
+        }
+
+        // ── Ý ĐỊNH KHẨN CẤP 1: Hỏi sai quy định biên độ giờ (đến trễ báo bùng kèo) ──
+        if (matchesLateArrivalRule(lower)) {
+            return buildLateArrivalRuleResponse(sessionId);
+        }
+
+        // ── Ý ĐỊNH KHẨN CẤP 2: Khách hoang mang / nghi ngờ lừa đảo tiền cọc ──
+        if (matchesScamOrPanic(lower)) {
+            return buildScamOrPanicResponse(sessionId);
+        }
+
+        // ── Ý ĐỊNH KHẨN CẤP 3 (Tự nghĩ 1 - TC-P05): Chủ xe đòi thêm tiền ngoài hợp đồng / ép nhận xe khác ──
+        if (matchesExtortionOrWrongCar(lower)) {
+            return buildExtortionOrWrongCarResponse(sessionId);
+        }
+
+        // ── Ý ĐỊNH KHẨN CẤP 4 (Tự nghĩ 2 - TC-P06): Xe bàn giao bị xước xát, hư hỏng không an toàn ──
+        if (matchesDamagedCar(lower)) {
+            return buildDamagedCarResponse(sessionId);
+        }
+
+        // ── Ý ĐỊNH KHẨN CẤP 5: Sự cố bàn giao xe (Chủ xe không đến / bùng kèo / trễ hẹn) ──
+        if (matchesHandoverEmergency(lower)) {
+            return buildHandoverEmergencyResponse(sessionId);
+        }
 
         // ── Ý ĐỊNH 0: Chào hỏi / Xã giao ──
         if (matchesGreeting(lower)) {
@@ -263,6 +387,11 @@ public class AiChatServiceImpl implements AiChatService {
             return buildDriverServiceResponse(sessionId);
         }
 
+        // ── Ý ĐỊNH NGOÀI PHẠM VI DỰ ÁN (Lập trình, thời sự, bóng đá, AI khác) ──
+        if (matchesOutOfScope(lower)) {
+            return buildOutOfScopeResponse(sessionId);
+        }
+
         // ── Ý ĐỊNH 6: TÌM XE — RAG Query (Chỉ khi người dùng thực sự tìm xe) ──
         if (isCarSearchIntent(lower)) {
             return buildCarSearchResponse(query, lower, sessionId);
@@ -275,6 +404,59 @@ public class AiChatServiceImpl implements AiChatService {
     // =========================================================================
     // INTENT MATCHERS
     // =========================================================================
+
+    // =========================================================================
+    // INTENT MATCHERS
+    // =========================================================================
+
+    private boolean matchesPromptInjection(String lower) {
+        return lower.contains("bỏ qua các lệnh") || lower.contains("bỏ qua lệnh")
+                || lower.contains("bỏ qua hướng dẫn") || lower.contains("ignore previous")
+                || lower.contains("ignore all instructions") || lower.contains("password admin")
+                || lower.contains("mật khẩu admin") || lower.contains("cho tôi biết password")
+                || lower.contains("tiết lộ prompt") || lower.contains("show system prompt")
+                || lower.contains("developer mode") || lower.contains("chế độ dan")
+                || lower.contains("database credentials") || lower.contains("secret key");
+    }
+
+    private boolean matchesLateArrivalRule(String lower) {
+        boolean mentionsLate = lower.contains("trễ") || lower.contains("muộn") || lower.contains("đến trễ")
+                || lower.contains("tới trễ") || lower.contains("đến muộn") || lower.contains("tới muộn");
+        boolean mentionsCancelOrComplain = lower.contains("bùng kèo") || lower.contains("bùng")
+                || lower.contains("báo bùng") || lower.contains("hủy") || lower.contains("được không")
+                || lower.contains("có được báo");
+        return mentionsLate && mentionsCancelOrComplain;
+    }
+
+    private boolean matchesScamOrPanic(String lower) {
+        return lower.contains("bị lừa") || lower.contains("lừa đảo") || lower.contains("mất cọc")
+                || lower.contains("mất tiền cọc") || lower.contains("lừa tiền") || lower.contains("lừa tiền cọc")
+                || lower.contains("làm ăn lừa đảo") || lower.contains("chiếm đoạt cọc");
+    }
+
+    private boolean matchesExtortionOrWrongCar(String lower) {
+        return lower.contains("đòi thêm tiền") || lower.contains("phụ phí ngoài") || lower.contains("tiền mặt ngoài")
+                || lower.contains("chuyển khoản riêng") || lower.contains("đòi tiền mặt") || lower.contains("ép nhận xe")
+                || lower.contains("xe khác loại") || lower.contains("không đúng xe");
+    }
+
+    private boolean matchesDamagedCar(String lower) {
+        boolean mentionsDamage = lower.contains("trầy xước") || lower.contains("xước") || lower.contains("hư hỏng")
+                || lower.contains("móp méo") || lower.contains("rách lốp") || lower.contains("không an toàn")
+                || lower.contains("xe giao bị hỏng") || lower.contains("xe hỏng");
+        boolean mentionsHandover = lower.contains("nhận xe") || lower.contains("bàn giao") || lower.contains("lúc nhận")
+                || lower.contains("khi nhận") || lower.contains("xử lý thế nào") || lower.contains("làm sao")
+                || lower.contains("bị hư") || lower.contains("bị hỏng");
+        return mentionsDamage && mentionsHandover;
+    }
+
+    private boolean matchesHandoverEmergency(String lower) {
+        return lower.contains("chủ xe không tới") || lower.contains("chủ xe không đến") || lower.contains("chủ xe bùng")
+                || lower.contains("bùng kèo") || lower.contains("chủ xe trễ") || lower.contains("không thấy chủ xe")
+                || lower.contains("không tới giao xe") || lower.contains("không đến giao xe") || lower.contains("không giao xe")
+                || lower.contains("trễ hẹn giao xe") || lower.contains("chủ xe trễ hẹn") || lower.contains("sự cố bàn giao xe")
+                || lower.contains("sự cố nhận xe");
+    }
 
     private boolean matchesDepositPolicy(String lower) {
         return lower.contains("cọc") || lower.contains("đặt cọc") || lower.contains("bao nhiêu phần trăm")
@@ -332,18 +514,36 @@ public class AiChatServiceImpl implements AiChatService {
                 || lower.contains("tks") || lower.contains("cám ơn");
     }
 
+    private boolean matchesOutOfScope(String lower) {
+        return lower.contains("lập trình") || lower.contains("viết code") || lower.contains("python")
+                || lower.contains("java") || lower.contains("html") || lower.contains("css")
+                || lower.contains("giải toán") || lower.contains("thời tiết") || lower.contains("bóng đá")
+                || lower.contains("ai vô địch") || lower.contains("tin tức") || lower.contains("chính trị")
+                || lower.contains("viết văn") || lower.contains("làm thơ") || lower.contains("nấu ăn")
+                || lower.contains("công thức") || lower.contains("chatgpt") || lower.contains("claude")
+                || lower.contains("openai");
+    }
+
     private boolean isCarSearchIntent(String lower) {
-        if (matchesGreeting(lower) || matchesNoRequestYet(lower) || matchesThanks(lower)) {
+        if (matchesGreeting(lower) || matchesNoRequestYet(lower) || matchesThanks(lower)
+                || matchesPromptInjection(lower) || matchesHandoverEmergency(lower)
+                || matchesScamOrPanic(lower) || matchesLateArrivalRule(lower)
+                || matchesExtortionOrWrongCar(lower) || matchesDamagedCar(lower)
+                || matchesOutOfScope(lower)) {
             return false;
         }
         return lower.contains("tìm xe") || lower.contains("thuê xe") || lower.contains("kiếm xe")
                 || lower.contains("gợi ý xe") || lower.contains("cần xe") || lower.contains("muốn xe")
                 || lower.contains("tìm") || lower.contains("thuê")
                 || lower.contains("chỗ") || lower.contains("seats")
-                || lower.contains("triệu") || lower.contains("nghìn") || lower.contains("giá rẻ")
+                || lower.contains("triệu") || lower.contains("nghìn") || lower.contains("giá rẻ") || lower.contains("giá")
                 || lower.contains("xe điện") || lower.contains("tự động") || lower.contains("số sàn")
                 || lower.contains("sedan") || lower.contains("suv") || lower.contains("mpv")
                 || lower.contains("hcm") || lower.contains("hà nội") || lower.contains("đà nẵng")
+                || lower.contains("xe nào") || lower.contains("có xe") || lower.contains("danh sách")
+                || lower.contains("mới") || lower.contains("hôm nay") || lower.contains("đang có")
+                || lower.contains("tất cả xe") || lower.contains("thông tin xe") || lower.contains("bên bạn có")
+                || lower.contains("bên mình có") || lower.contains("gợi ý")
                 || containsBrand(lower);
     }
 
@@ -361,6 +561,102 @@ public class AiChatServiceImpl implements AiChatService {
     // =========================================================================
     // RESPONSE BUILDERS
     // =========================================================================
+
+    private ChatReplyResponse buildPromptInjectionResponse(String sessionId) {
+        return ChatReplyResponse.builder()
+                .sessionId(sessionId)
+                .message("Tôi là Trợ lý AI DriveShare và tôi không thể thực hiện yêu cầu này. Mọi thông tin quản trị và hệ thống bảo mật của DriveShare đều được bảo vệ nghiêm ngặt theo chính sách an toàn thông tin. Tôi chỉ có thể hỗ trợ các thông tin liên quan đến dịch vụ thuê xe DriveShare.")
+                .build();
+    }
+
+    private ChatReplyResponse buildLateArrivalRuleResponse(String sessionId) {
+        return ChatReplyResponse.builder()
+                .sessionId(sessionId)
+                .message("""
+                        ⚠️ **Quy định về thời gian bàn giao xe DriveShare:**
+                        
+                        1️⃣ **Trách nhiệm đúng giờ:** Cả khách hàng và chủ xe đều có trách nhiệm có mặt đúng giờ theo lịch hẹn trong đơn đặt xe.
+                        2️⃣ **Biên độ chờ tối đa:** Biên độ thời gian chờ linh hoạt theo quy định thông thường là **15 - 30 phút**. Nếu gặp sự cố bất khả kháng, bạn cần chủ động gọi điện thông báo trước cho chủ xe.
+                        3️⃣ **Trường hợp đến trễ 2 tiếng:** Bạn tự ý đến trễ 2 tiếng mà không thông báo thì **KHÔNG ĐƯỢC** báo chủ xe bùng kèo vì việc trễ hẹn xuất phát từ phía bạn.
+                        
+                        💡 **Hướng dẫn xử lý:** Bạn vui lòng chủ động liên hệ ngay với chủ xe để giải thích, thỏa thuận dời giờ nhận xe hoặc tìm phương án phù hợp. Nếu cần hỗ trợ kết nối, vui lòng gọi Hotline: **1900-6868 (Phím 1)**.""")
+                .build();
+    }
+
+    private ChatReplyResponse buildScamOrPanicResponse(String sessionId) {
+        return ChatReplyResponse.builder()
+                .sessionId(sessionId)
+                .message("""
+                        🛡️ **DriveShare cam kết bảo vệ 100% tiền cọc của Quý khách!**
+                        
+                        Quý khách hoàn toàn yên tâm, tiền cọc 30% được giữ trung gian an toàn tại hệ thống DriveShare và **chỉ được giải ngân cho chủ xe sau khi Quý khách đã kiểm tra xe thực tế và nhận xe thành công**. Quý khách tuyệt đối không bao giờ lo bị mất tiền cọc hay lừa đảo!
+                        
+                        Nếu Quý khách đang gặp sự cố chủ xe chưa xuất hiện hoặc không liên lạc được, vui lòng thực hiện ngay 4 bước sau:
+                        • **Bước 1:** Gọi điện cho chủ xe ít nhất 2 lần để xác nhận vị trí và tình trạng.
+                        • **Bước 2:** Chụp ảnh hiện trường có định vị/mốc số nhà và quay clip ngắn chứng minh Quý khách đã có mặt đúng giờ hẹn.
+                        • **Bước 3:** Vào mục 'Chi tiết chuyến đi' trên web DriveShare -> Bấm **'Báo cáo sự cố nhận xe'** để hệ thống lập tức đóng băng tiền cọc.
+                        • **Bước 4:** Cần hỗ trợ khẩn cấp gọi ngay Hotline: **1900-6868 (Phím 1)** để được tổng đài can thiệp và xử lý ngay lập tức!""")
+                .build();
+    }
+
+    private ChatReplyResponse buildExtortionOrWrongCarResponse(String sessionId) {
+        return ChatReplyResponse.builder()
+                .sessionId(sessionId)
+                .message("""
+                        🚨 **Cảnh báo xử lý sự cố bàn giao xe (Phụ phí ngoài / Giao sai xe):**
+                        
+                        1️⃣ **TUYỆT ĐỐI KHÔNG THANH TOÁN:** Quý khách không thanh toán bất kỳ khoản phụ phí tiền mặt hoặc chuyển khoản cá nhân nào ngoài hợp đồng trên hệ thống DriveShare.
+                        2️⃣ **Quyền từ chối nhận xe:** Quý khách có toàn quyền từ chối nhận xe nếu chủ xe ép nhận mẫu xe khác không đúng thỏa thuận ban đầu.
+                        3️⃣ **Thu thập bằng chứng:** Chụp ảnh màn hình tin nhắn thỏa thuận, ghi âm hoặc chụp ảnh xe giao sai thực tế tại hiện trường.
+                        4️⃣ **Báo cáo sự cố:** Vào 'Chi tiết chuyến đi' -> Bấm **'Báo cáo sự cố nhận xe'** để đóng băng tiền cọc, hoặc liên hệ ngay Hotline: **1900-6868 (Phím 1)**. DriveShare cam kết bảo vệ 100% tiền cọc, hỗ trợ đổi xe tương đương hoặc hoàn 100% tiền cọc ngay lập tức và áp dụng chế tài phạt chủ xe.""")
+                .build();
+    }
+
+    private ChatReplyResponse buildDamagedCarResponse(String sessionId) {
+        return ChatReplyResponse.builder()
+                .sessionId(sessionId)
+                .message("""
+                        🔧 **Quy trình xử lý khi xe bàn giao bị trầy xước / hư hỏng:**
+                        
+                        1️⃣ **Kiểm tra & Ghi hình hiện trạng:** Chụp ảnh rõ nét và quay video 360 độ xung quanh xe, cận cảnh các vị trí trầy xước, móp méo, lốp xe hoặc lỗi kỹ thuật trước khi ký nhận xe.
+                        2️⃣ **Ghi chú vào biên bản:** Yêu cầu chủ xe xác nhận và ghi chú đầy đủ hiện trạng vào Biên bản bàn giao xe để làm bằng chứng pháp lý tránh tranh chấp khi trả xe.
+                        3️⃣ **Từ chối nhận nếu mất an toàn:** Nếu xe bị hư hỏng nghiêm trọng (phanh không an toàn, lốp nứt rách, đèn hỏng...) không đảm bảo tiêu chuẩn lưu thông, Quý khách có toàn quyền **TỪ CHỐI NHẬN XE**.
+                        4️⃣ **Kích hoạt hỗ trợ khẩn cấp:** Vào 'Chi tiết chuyến đi' -> Bấm **'Báo cáo sự cố nhận xe'** và gọi ngay Hotline: **1900-6868 (Phím 1)**. DriveShare cam kết bảo vệ 100% tiền cọc và hỗ trợ tìm xe thay thế hoặc hoàn tiền cọc nhanh chóng.""")
+                .build();
+    }
+
+    private ChatReplyResponse buildHandoverEmergencyResponse(String sessionId) {
+        return ChatReplyResponse.builder()
+                .sessionId(sessionId)
+                .message("""
+                        🚨 **Quy trình hỗ trợ khẩn cấp khi gặp sự cố bàn giao xe:**
+                        
+                        🛡️ **Cam kết:** DriveShare cam kết **bảo vệ 100% tiền cọc** cho bạn! Tiền cọc đang được đóng băng an toàn trên hệ thống.
+                        
+                        Vui lòng thực hiện đủ 4 bước sau:
+                        • **Bước 1:** Gọi điện cho chủ xe ít nhất 2 lần để xác nhận vị trí và tình trạng bàn giao.
+                        • **Bước 2:** Chụp ảnh hiện trường có định vị/mốc số nhà và quay clip ngắn chứng minh đã có mặt đúng giờ.
+                        • **Bước 3:** Vào 'Chi tiết chuyến đi' trên web DriveShare -> Bấm **'Báo cáo sự cố nhận xe'** để đóng băng tiền cọc.
+                        • **Bước 4:** Cần hỗ trợ khẩn cấp gọi Hotline: **1900-6868 (Phím 1)** để được tổng đài can thiệp và xử lý ngay lập tức!""")
+                .build();
+    }
+
+    private ChatReplyResponse buildOutOfScopeResponse(String sessionId) {
+        return ChatReplyResponse.builder()
+                .sessionId(sessionId)
+                .message("""
+                        Dạ em rất tiếc và xin lỗi anh/chị ạ! Em là **Trợ lý AI DriveShare** — chuyên trách tư vấn và hỗ trợ khách hàng tìm kiếm thuê xe trên hệ thống DriveShare nên chưa thể hỗ trợ tốt cho chủ đề này. 😊
+                        
+                        Để nhận được câu trả lời chi tiết và đầy đủ nhất cho câu hỏi này, em gợi ý anh/chị có thể tham khảo trực tiếp các trợ lý AI đa năng hàng đầu thế giới hiện nay nhé:
+                        • 🌐 [ChatGPT (OpenAI)](https://chatgpt.com) — Trợ lý AI hỏi đáp đa năng phổ biến nhất
+                        • ⚡ [Google Gemini](https://gemini.google.com) — Trí tuệ nhân tạo thế hệ mới từ Google
+                        • 🧠 [Claude AI (Anthropic)](https://claude.ai) — Trợ lý AI phân tích và lập luận chuyên sâu
+                        • 🐋 [DeepSeek](https://chat.deepseek.com) — Trí tuệ nhân tạo thông minh thế hệ mới
+                        • 🚀 [Grok (xAI)](https://grok.com) — Trợ lý AI đối thoại và cập nhật thời gian thực
+                        
+                        Bất cứ lúc nào anh/chị cần tìm xe du lịch, xe công tác, xe tự lái hay có tài xế trên DriveShare, em luôn sẵn lòng hỗ trợ anh/chị ạ! 🚗✨""")
+                .build();
+    }
 
     private ChatReplyResponse buildGreetingResponse(String sessionId) {
         return ChatReplyResponse.builder()
@@ -903,7 +1199,7 @@ public class AiChatServiceImpl implements AiChatService {
                 .driverFeePerDay(car.getDriverFeePerDay())
                 .driverFeeFormatted(car.getDriverFeePerDay() != null && car.getDriverFeePerDay().compareTo(BigDecimal.ZERO) > 0
                         ? formatCurrency(car.getDriverFeePerDay()) : null)
-                .bookingUrl("/car-detail.html?id=" + car.getCarId())
+                .bookingUrl("index.html?carId=" + car.getCarId())
                 .build();
     }
 
@@ -1000,8 +1296,26 @@ public class AiChatServiceImpl implements AiChatService {
     // =========================================================================
 
     private List<ChatMessageDto> loadHistory(Long userId, String sessionId) {
-        return chatMemoryRepository.findByUserIdAndSessionId(userId, sessionId)
-                .map(entity -> {
+        Long effectiveUserId = userId != null ? userId : 0L;
+
+        // 1. Tìm theo effectiveUserId và sessionId
+        Optional<ChatMemoryEntity> memoryOpt = chatMemoryRepository.findByUserIdAndSessionId(effectiveUserId, sessionId);
+
+        // 2. Nếu user đã đăng nhập mà chưa có bản ghi theo userId, kiểm tra xem có bản ghi vãng lai (0L) với cùng sessionId không để chuyển giao
+        if (memoryOpt.isEmpty() && effectiveUserId > 0) {
+            Optional<ChatMemoryEntity> anonMemoryOpt = chatMemoryRepository.findByUserIdAndSessionId(0L, sessionId);
+            if (anonMemoryOpt.isPresent()) {
+                ChatMemoryEntity anon = anonMemoryOpt.get();
+                anon.setUserId(effectiveUserId);
+                updateUserMetadata(anon, effectiveUserId);
+                chatMemoryRepository.save(anon);
+                memoryOpt = Optional.of(anon);
+                log.info("[AI Chat] Đã tự động chuyển giao lịch sử session {} từ vãng lai sang User ID: {}", sessionId, effectiveUserId);
+            }
+        }
+
+        // Tuyệt đối không lấy trộm session của user khác: Chỉ đọc hội thoại của chính effectiveUserId
+        return memoryOpt.map(entity -> {
                     try {
                         return objectMapper.readValue(entity.getMessages(), new TypeReference<List<ChatMessageDto>>() {});
                     } catch (Exception e) {
@@ -1020,23 +1334,143 @@ public class AiChatServiceImpl implements AiChatService {
                     : history;
 
             String json = objectMapper.writeValueAsString(truncated);
-            ChatMemoryEntity entity = chatMemoryRepository.findByUserIdAndSessionId(userId, sessionId)
-                    .map(existing -> {
-                        existing.setMessages(json);
-                        existing.setUpdatedAt(Instant.now());
-                        return existing;
+            Long effectiveUserId = userId != null ? userId : 0L;
+
+            // Chỉ tìm entity của chính user này hoặc session vãng lai (0L) để chuyển giao, không ghi đè session của user khác
+            ChatMemoryEntity entity = chatMemoryRepository.findByUserIdAndSessionId(effectiveUserId, sessionId)
+                    .or(() -> {
+                        if (effectiveUserId > 0) {
+                            return chatMemoryRepository.findByUserIdAndSessionId(0L, sessionId);
+                        }
+                        return Optional.empty();
                     })
                     .orElseGet(() -> ChatMemoryEntity.builder()
-                            .userId(userId)
                             .sessionId(sessionId)
-                            .messages(json)
-                            .updatedAt(Instant.now())
+                            .userId(effectiveUserId)
                             .build());
 
+            entity.setUserId(effectiveUserId);
+            entity.setMessages(json);
+            entity.setMessageCount(history.size());
+            entity.setUpdatedAt(Instant.now());
+
+            // Lưu câu hỏi đầu tiên và tin nhắn cuối cùng để hiển thị tóm tắt trong lịch sử
+            if (!history.isEmpty()) {
+                ChatMessageDto first = history.stream()
+                        .filter(m -> "USER".equalsIgnoreCase(m.getRole()))
+                        .findFirst()
+                        .orElse(history.get(0));
+                ChatMessageDto last = history.get(history.size() - 1);
+                entity.setFirstMessage(truncateString(first.getContent(), 300));
+                entity.setLastMessage(truncateString(last.getContent(), 300));
+            }
+
+            updateUserMetadata(entity, effectiveUserId);
             chatMemoryRepository.save(entity);
         } catch (Exception e) {
             log.error("Lỗi khi lưu chat history cho session {}: {}", sessionId, e.getMessage());
         }
+    }
+
+    private void updateUserMetadata(ChatMemoryEntity entity, Long userId) {
+        if (userId == null || userId <= 0) {
+            entity.setUserRole("GUEST");
+            entity.setUserFullName("Khách vãng lai");
+            entity.setUserEmail("Chưa đăng nhập");
+            return;
+        }
+        if (userRepository != null) {
+            userRepository.findById(userId).ifPresent(user -> {
+                entity.setUserEmail(user.getEmail());
+                entity.setUserFullName(user.getFullName() != null && !user.getFullName().isBlank() ? user.getFullName() : user.getUsername());
+                if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+                    String roleName = user.getRoles().iterator().next().getRoleName().name();
+                    entity.setUserRole(roleName);
+                } else {
+                    entity.setUserRole("ROLE_RENTER");
+                }
+            });
+        }
+    }
+
+    private String truncateString(String s, int maxLen) {
+        if (s == null) return "";
+        return s.length() > maxLen ? s.substring(0, maxLen) + "..." : s;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.driveshare.modules.ai.dto.response.ChatSessionSummaryDto> getMyChatSessions(Long userId) {
+        if (userId == null || userId <= 0) {
+            return Collections.emptyList();
+        }
+        return chatMemoryRepository.findByUserIdOrderByUpdatedAtDesc(userId).stream()
+                .map(this::toSessionSummary)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.driveshare.modules.ai.dto.response.ChatSessionSummaryDto> getAllSessionsForAdmin(String roleFilter, String search) {
+        List<ChatMemoryEntity> list;
+        if (roleFilter != null && !roleFilter.isBlank() && !"ALL".equalsIgnoreCase(roleFilter)) {
+            list = chatMemoryRepository.findByUserRoleOrderByUpdatedAtDesc(roleFilter.trim().toUpperCase());
+        } else {
+            list = chatMemoryRepository.findAllByOrderByUpdatedAtDesc();
+        }
+
+        if (search != null && !search.isBlank()) {
+            String s = search.trim().toLowerCase();
+            list = list.stream().filter(e ->
+                    (e.getSessionId() != null && e.getSessionId().toLowerCase().contains(s)) ||
+                    (e.getUserEmail() != null && e.getUserEmail().toLowerCase().contains(s)) ||
+                    (e.getUserFullName() != null && e.getUserFullName().toLowerCase().contains(s)) ||
+                    (e.getFirstMessage() != null && e.getFirstMessage().toLowerCase().contains(s))
+            ).collect(Collectors.toList());
+        }
+
+        return list.stream().map(this::toSessionSummary).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ChatMessageDto> getSessionTranscriptForAdmin(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return Collections.emptyList();
+        }
+        Optional<ChatMemoryEntity> opt = chatMemoryRepository.findFirstBySessionIdOrderByUpdatedAtDesc(sessionId);
+        if (opt.isEmpty()) {
+            opt = chatMemoryRepository.findBySessionId(sessionId);
+        }
+        return opt.map(entity -> {
+                    try {
+                        return objectMapper.readValue(entity.getMessages(), new TypeReference<List<ChatMessageDto>>() {});
+                    } catch (Exception e) {
+                        log.warn("Không thể parse chat history cho session {}: {}", sessionId, e.getMessage());
+                        return new ArrayList<ChatMessageDto>();
+                    }
+                })
+                .orElseGet(ArrayList::new);
+    }
+
+    private com.driveshare.modules.ai.dto.response.ChatSessionSummaryDto toSessionSummary(ChatMemoryEntity e) {
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter
+                .ofPattern("HH:mm dd/MM/yyyy")
+                .withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+
+        return com.driveshare.modules.ai.dto.response.ChatSessionSummaryDto.builder()
+                .id(e.getId())
+                .sessionId(e.getSessionId())
+                .userId(e.getUserId())
+                .userRole(e.getUserRole() != null ? e.getUserRole() : "GUEST")
+                .userEmail(e.getUserEmail() != null ? e.getUserEmail() : "Chưa đăng nhập")
+                .userFullName(e.getUserFullName() != null ? e.getUserFullName() : "Khách vãng lai")
+                .messageCount(e.getMessageCount() != null ? e.getMessageCount() : 0)
+                .firstMessage(e.getFirstMessage() != null ? e.getFirstMessage() : "Cuộc trò chuyện mới")
+                .lastMessage(e.getLastMessage())
+                .updatedAt(e.getUpdatedAt())
+                .updatedAtFormatted(e.getUpdatedAt() != null ? formatter.format(e.getUpdatedAt()) : "")
+                .build();
     }
 
     private String formatCurrency(BigDecimal amount) {
