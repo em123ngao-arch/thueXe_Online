@@ -74,6 +74,8 @@ public class DataInitializer implements CommandLineRunner {
             jdbcTemplate.execute("ALTER TABLE cars DROP CONSTRAINT IF EXISTS cars_status_check");
             jdbcTemplate.execute("ALTER TABLE cars ADD CONSTRAINT cars_status_check CHECK (status IN ('PENDING_REVIEW', 'APPROVED', 'REJECTED', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING', 'DRAFT'))");
             log.info("Successfully updated cars_status_check constraint for PostgreSQL");
+            jdbcTemplate.execute("UPDATE users SET email_verified = true WHERE email_verified IS NULL");
+            jdbcTemplate.execute("ALTER TABLE email_otps DROP COLUMN IF EXISTS code_hash;");
         } catch (Exception e) {
             log.warn("Could not update cars_status_check constraint: {}", e.getMessage());
         }
@@ -225,6 +227,143 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
             carRepository.save(car2);
             log.info("Initialized default car 2: Mazda CX-5 (Plate: 30H-67890, Status: ACTIVE)");
+        }
+
+        // Xe 3: Toyota Fortuner Legender 7 chỗ (Phục vụ khách tìm xe 7 chỗ, du lịch Đà Lạt, gia đình)
+        if (!carRepository.existsByPlateNumber("51G-777.99")) {
+            Car car3 = Car.builder()
+                    .ownerId(owner.getUserId())
+                    .plateNumber("51G-777.99")
+                    .brand("Toyota")
+                    .model("Fortuner Legender")
+                    .year(2023)
+                    .color("Đen")
+                    .seats(7)
+                    .transmission(ETransmission.AUTOMATIC)
+                    .fuelType(EFuelType.DIESEL)
+                    .pricePerDay(new BigDecimal("1350000.00"))
+                    .address("789 Nguyễn Hữu Thọ, Phường Tân Phong, Quận 7")
+                    .province("Hồ Chí Minh")
+                    .description("SUV 7 chỗ gầm cao máy dầu mạnh mẽ, bứt tốc êm ái, cực kỳ phù hợp cho chuyến du lịch Đà Lạt, Vũng Tàu gia đình.")
+                    .features("GPS,Bluetooth,Camera360,CruiseControl,AppleCarPlay")
+                    .thumbnailUrl("https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80")
+                    .hasDriverService(true)
+                    .driverFeePerDay(new BigDecimal("500000.00"))
+                    .rating(new BigDecimal("4.95"))
+                    .ratingCount(12)
+                    .status(ECarStatus.ACTIVE)
+                    .build();
+            carRepository.save(car3);
+            log.info("Initialized default car 3: Toyota Fortuner Legender 7 chỗ (Plate: 51G-777.99, Status: ACTIVE)");
+        }
+
+        // Xe 4: Mitsubishi Xpander Premium 7 chỗ (Phục vụ khách tìm xe 7 chỗ giá rẻ tiết kiệm)
+        if (!carRepository.existsByPlateNumber("51K-555.66")) {
+            Car car4 = Car.builder()
+                    .ownerId(owner.getUserId())
+                    .plateNumber("51K-555.66")
+                    .brand("Mitsubishi")
+                    .model("Xpander Premium")
+                    .year(2023)
+                    .color("Trắng")
+                    .seats(7)
+                    .transmission(ETransmission.AUTOMATIC)
+                    .fuelType(EFuelType.GASOLINE)
+                    .pricePerDay(new BigDecimal("850000.00"))
+                    .address("234 Võ Văn Ngân, Phường Linh Chiểu, TP. Thủ Đức")
+                    .province("Hồ Chí Minh")
+                    .description("MPV 7 chỗ hiện đại, gầm cao 225mm vượt ngập tốt, điều hòa làm mát nhanh, giá thuê tiết kiệm cho cả nhà.")
+                    .features("GPS,Bluetooth,BackCamera,AppleCarPlay")
+                    .thumbnailUrl("https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=800&q=80")
+                    .hasDriverService(true)
+                    .driverFeePerDay(new BigDecimal("400000.00"))
+                    .rating(new BigDecimal("4.85"))
+                    .ratingCount(8)
+                    .status(ECarStatus.ACTIVE)
+                    .build();
+            carRepository.save(car4);
+            log.info("Initialized default car 4: Mitsubishi Xpander 7 chỗ (Plate: 51K-555.66, Status: ACTIVE)");
+        }
+
+        // Xe 5: Hyundai Accent 1.4 AT (Phục vụ khách tìm xe 5 chỗ phân khúc giá rẻ dưới 800k)
+        if (!carRepository.existsByPlateNumber("30E-888.22")) {
+            Car car5 = Car.builder()
+                    .ownerId(owner.getUserId())
+                    .plateNumber("30E-888.22")
+                    .brand("Hyundai")
+                    .model("Accent 1.4 AT")
+                    .year(2023)
+                    .color("Đỏ")
+                    .seats(5)
+                    .transmission(ETransmission.AUTOMATIC)
+                    .fuelType(EFuelType.GASOLINE)
+                    .pricePerDay(new BigDecimal("650000.00"))
+                    .address("12 Chùa Bộc, Phường Quang Trung, Quận Đống Đa")
+                    .province("Hà Nội")
+                    .description("Sedan 5 chỗ trẻ trung, tiết kiệm nhiên liệu tối đa, chi phí thuê siêu hợp lý cho các chuyến đi ngắn ngày.")
+                    .features("GPS,Bluetooth,BackCamera,Sunroof")
+                    .thumbnailUrl("https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=800&q=80")
+                    .hasDriverService(false)
+                    .rating(new BigDecimal("4.90"))
+                    .ratingCount(15)
+                    .status(ECarStatus.ACTIVE)
+                    .build();
+            carRepository.save(car5);
+            log.info("Initialized default car 5: Hyundai Accent (Plate: 30E-888.22, Status: ACTIVE)");
+        }
+
+        // Xe 6: Toyota Vios 1.5 G (Phục vụ khách tìm xe phổ thông giá rẻ, bền bỉ)
+        if (!carRepository.existsByPlateNumber("43A-666.88")) {
+            Car car6 = Car.builder()
+                    .ownerId(owner.getUserId())
+                    .plateNumber("43A-666.88")
+                    .brand("Toyota")
+                    .model("Vios 1.5 G")
+                    .year(2022)
+                    .color("Bạc")
+                    .seats(5)
+                    .transmission(ETransmission.AUTOMATIC)
+                    .fuelType(EFuelType.GASOLINE)
+                    .pricePerDay(new BigDecimal("600000.00"))
+                    .address("88 Nguyễn Văn Linh, Quận Hải Châu")
+                    .province("Đà Nẵng")
+                    .description("Dòng sedan quốc dân bền bỉ, êm ái, máy 1.5L vận hành bền bỉ và tiết kiệm xăng tối ưu.")
+                    .features("GPS,Bluetooth,BackCamera")
+                    .thumbnailUrl("https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=800&q=80")
+                    .hasDriverService(false)
+                    .rating(new BigDecimal("4.75"))
+                    .ratingCount(6)
+                    .status(ECarStatus.ACTIVE)
+                    .build();
+            carRepository.save(car6);
+            log.info("Initialized default car 6: Toyota Vios (Plate: 43A-666.88, Status: ACTIVE)");
+        }
+
+        // Xe 7: VinFast VF e34 (Phục vụ khách tìm xe điện nội thành phân khúc dưới 800k)
+        if (!carRepository.existsByPlateNumber("51H-333.44")) {
+            Car car7 = Car.builder()
+                    .ownerId(owner.getUserId())
+                    .plateNumber("51H-333.44")
+                    .brand("VinFast")
+                    .model("VF e34")
+                    .year(2023)
+                    .color("Xanh dương")
+                    .seats(5)
+                    .transmission(ETransmission.AUTOMATIC)
+                    .fuelType(EFuelType.ELECTRIC)
+                    .pricePerDay(new BigDecimal("750000.00"))
+                    .address("101 Mai Chí Thọ, Phường An Phú, TP. Thủ Đức")
+                    .province("Hồ Chí Minh")
+                    .description("Crossover điện thông minh, trợ lý ảo ViVi tiếng Việt, không mùi xăng xe, vận hành êm ái trong đô thị.")
+                    .features("GPS,Bluetooth,Camera360,VoiceControl,AppleCarPlay")
+                    .thumbnailUrl("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80")
+                    .hasDriverService(false)
+                    .rating(new BigDecimal("4.80"))
+                    .ratingCount(9)
+                    .status(ECarStatus.ACTIVE)
+                    .build();
+            carRepository.save(car7);
+            log.info("Initialized default car 7: VinFast VF e34 (Plate: 51H-333.44, Status: ACTIVE)");
         }
 
         // Cập nhật dịch vụ tài xế và rating Sprint 3 cho xe VinFast VF8

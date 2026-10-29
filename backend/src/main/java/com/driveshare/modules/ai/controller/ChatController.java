@@ -50,6 +50,51 @@ public class ChatController {
         return ResponseEntity.ok(ApiResponse.success(history));
     }
 
+    private final com.driveshare.modules.ai.service.LangfuseService langfuseService;
+
+    @GetMapping("/my-sessions")
+    @Operation(summary = "Lấy danh sách các phiên trò chuyện của người dùng hiện tại (Khách thuê hoặc Chủ xe)")
+    public ResponseEntity<ApiResponse<List<com.driveshare.modules.ai.dto.response.ChatSessionSummaryDto>>> getMySessions() {
+        Long userId = resolveUserId();
+        List<com.driveshare.modules.ai.dto.response.ChatSessionSummaryDto> list = aiChatService.getMyChatSessions(userId);
+        return ResponseEntity.ok(ApiResponse.success("Danh sách phiên trò chuyện của bạn", list));
+    }
+
+    @PostMapping("/reload-prompt")
+    @Operation(summary = "Làm mới kịch bản System Prompt từ ổ cứng/file ngay lập tức mà không cần restart server")
+    public ResponseEntity<ApiResponse<String>> reloadPrompt() {
+        aiChatService.reloadSystemPrompt();
+        return ResponseEntity.ok(ApiResponse.success("Đã làm mới System Prompt thành công từ file mã nguồn!", "RELOAD_SUCCESS"));
+    }
+
+    @GetMapping("/langfuse-status")
+    @Operation(summary = "Kiểm tra trạng thái kết nối Langfuse Observability & Tracing")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> getLangfuseStatus() {
+        return ResponseEntity.ok(ApiResponse.success(langfuseService.getStatus()));
+    }
+
+    @PostMapping("/langfuse-test-trace")
+    @Operation(summary = "Gửi một Trace mẫu lên Langfuse để kiểm tra kết nối và quan sát ngay trên Dashboard")
+    public ResponseEntity<ApiResponse<String>> testLangfuseTrace(
+            @RequestParam(value = "message", defaultValue = "Kiểm thử kết nối Langfuse từ DriveShare") String message
+    ) {
+        String traceId = "test-" + java.util.UUID.randomUUID();
+        langfuseService.recordGeneration(
+                traceId,
+                "test-observability",
+                "test-session-demo",
+                "test-user",
+                "gemini-2.5-flash",
+                "Hệ thống DriveShare kiểm thử Langfuse",
+                message,
+                "Xin chào! Đây là tin nhắn phản hồi mẫu từ DriveShare đã được ghi vết thành công lên Langfuse.",
+                320L,
+                true,
+                null
+        );
+        return ResponseEntity.ok(ApiResponse.success("Đã gửi Trace mẫu thành công lên Langfuse!", traceId));
+    }
+
     @DeleteMapping("/{sessionId}")
     @Operation(summary = "Xóa lịch sử cuộc trò chuyện theo session")
     public ResponseEntity<ApiResponse<Void>> clearHistory(

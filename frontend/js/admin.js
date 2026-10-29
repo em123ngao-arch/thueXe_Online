@@ -50,6 +50,9 @@ const AdminService = {
             <button class="portal-tab-btn" id="adminTabUsers" onclick="AdminService.switchTab('USERS')">
               Quản lý tài khoản & Vai trò
             </button>
+            <button class="portal-tab-btn" id="adminTabChat" onclick="AdminService.switchTab('CHAT')">
+              Lịch sử Tư Vấn AI (<span id="badgeChatHistory">...</span>)
+            </button>
           </div>
         </div>
       </div>
@@ -284,6 +287,51 @@ const AdminService = {
             <!-- Users Table Container -->
             <div class="table-responsive" id="adminUsersTableWrapper">
               <!-- Sẽ được điền động qua renderUsersTable -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Content: Lịch sử Tư Vấn AI (Admin Chat History) -->
+        <div id="adminTabChatContent" style="display: none;">
+          <div class="admin-table-card">
+            <div class="admin-table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 20px;">
+              <div>
+                <h3 style="margin: 0; font-size: 18px; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                  <span>🤖</span> Lịch sử Hội Thoại & Tư Vấn Của Trợ Lý AI DriveShare
+                </h3>
+                <p style="font-size: 13px; color: #64748b; margin: 4px 0 0 0;">
+                  Giám sát toàn bộ các phiên trò chuyện của Khách thuê (Renter), Chủ xe (Owner) và Khách vãng lai (Guest).
+                </p>
+              </div>
+              <button class="btn btn-outline btn-sm" onclick="AdminService.renderChatHistoryTable()" style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
+                🔄 Làm mới danh sách
+              </button>
+            </div>
+
+            <!-- Toolbar: Role Filter & Search -->
+            <div class="user-table-toolbar" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #e2e8f0; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+              <div class="user-search-input-wrap" style="flex: 1; min-width: 280px;">
+                <input 
+                  type="text" 
+                  id="adminChatSearchInput" 
+                  class="user-search-input" 
+                  placeholder="Tìm theo tên người dùng, email hoặc mã Session ID..." 
+                  oninput="AdminService.onChatFilterChange()"
+                />
+              </div>
+
+              <!-- Role Filter: ALL, ROLE_RENTER, ROLE_OWNER, GUEST -->
+              <select id="adminChatRoleFilter" class="user-filter-select" onchange="AdminService.onChatFilterChange()">
+                <option value="ALL">🔍 Tất cả vai trò</option>
+                <option value="ROLE_RENTER">🚗 Khách thuê (Renter)</option>
+                <option value="ROLE_OWNER">🔑 Chủ xe (Owner)</option>
+                <option value="GUEST">👤 Khách vãng lai (Guest)</option>
+              </select>
+            </div>
+
+            <!-- Chat History Table Container -->
+            <div class="table-responsive" id="adminChatTableWrapper">
+              <!-- Được render động qua renderChatHistoryTable -->
             </div>
           </div>
         </div>
@@ -607,6 +655,24 @@ const AdminService = {
     if (badgePendingLicenses) badgePendingLicenses.innerText = stats.pendingLicenses;
     const badgeTotalBookings = document.getElementById('badgeTotalBookings');
     if (badgeTotalBookings) badgeTotalBookings.innerText = stats.totalBookings;
+
+    const badgeChatHistory = document.getElementById('badgeChatHistory');
+    if (badgeChatHistory) {
+      try {
+        const baseUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) ? API_CONFIG.BASE_URL : 'http://localhost:8080/api/v1';
+        const token = (typeof getAccessToken === 'function' ? getAccessToken() : null) ||
+                      (typeof TokenService !== 'undefined' ? TokenService.getToken() : null) ||
+                      localStorage.getItem('access_token') ||
+                      localStorage.getItem('token');
+        fetch(`${baseUrl}/admin/chat-history`, {
+          headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+        }).then(r => r.json()).then(data => {
+          if (data && data.success && Array.isArray(data.data)) {
+            badgeChatHistory.innerText = data.data.length;
+          }
+        }).catch(() => {});
+      } catch (_) {}
+    }
   },
 
   // Tab 1: Duyệt xe mới đăng (GET /api/v1/admin/cars/pending)
@@ -2106,6 +2172,7 @@ const AdminService = {
     document.getElementById('adminTabBookings')?.classList.toggle('active', tabName === 'BOOKINGS');
     document.getElementById('adminTabDisputes')?.classList.toggle('active', tabName === 'DISPUTES');
     document.getElementById('adminTabUsers')?.classList.toggle('active', tabName === 'USERS');
+    document.getElementById('adminTabChat')?.classList.toggle('active', tabName === 'CHAT');
 
     const tabCars = document.getElementById('adminTabCarsContent');
     const tabCccd = document.getElementById('adminTabCccdContent');
@@ -2113,6 +2180,7 @@ const AdminService = {
     const tabBookings = document.getElementById('adminTabBookingsContent');
     const tabDisputes = document.getElementById('adminTabDisputesContent');
     const tabUsers = document.getElementById('adminTabUsersContent');
+    const tabChat = document.getElementById('adminTabChatContent');
 
     if (tabCars) {
       tabCars.style.display = tabName === 'CARS' ? 'block' : 'none';
@@ -2137,6 +2205,10 @@ const AdminService = {
     if (tabUsers) {
       tabUsers.style.display = tabName === 'USERS' ? 'block' : 'none';
       if (tabName === 'USERS') this.renderUsersTable();
+    }
+    if (tabChat) {
+      tabChat.style.display = tabName === 'CHAT' ? 'block' : 'none';
+      if (tabName === 'CHAT') this.renderChatHistoryTable();
     }
   },
 
@@ -2691,6 +2763,242 @@ const AdminService = {
       this.loadAdminStats();
     } else {
       this.showToast(res?.message || 'Không thể mở khóa tài khoản', 'error');
+    }
+  },
+
+  // =========================================================================
+  // ADMIN AI CHAT HISTORY MONITORING & FILTERING
+  // =========================================================================
+
+  chatState: {
+    role: 'ALL',
+    search: ''
+  },
+
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  },
+
+  onChatFilterChange() {
+    const searchInput = document.getElementById('adminChatSearchInput');
+    const roleSelect = document.getElementById('adminChatRoleFilter');
+    this.chatState.search = searchInput ? searchInput.value.trim() : '';
+    this.chatState.role = roleSelect ? roleSelect.value : 'ALL';
+    this.renderChatHistoryTable();
+  },
+
+  async renderChatHistoryTable() {
+    const wrapper = document.getElementById('adminChatTableWrapper');
+    if (!wrapper) return;
+
+    wrapper.innerHTML = `
+      <div style="padding: 2.5rem; text-align: center; color: var(--slate-500);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" style="margin: 0 auto 0.5rem auto; display: block;">
+          <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10"></path>
+        </svg>
+        Đang tải danh sách lịch sử hội thoại AI...
+      </div>
+    `;
+
+    try {
+      const baseUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) ? API_CONFIG.BASE_URL : 'http://localhost:8080/api/v1';
+      const token = (typeof getAccessToken === 'function' ? getAccessToken() : null) ||
+                    (typeof TokenService !== 'undefined' ? TokenService.getToken() : null) ||
+                    localStorage.getItem('access_token') ||
+                    localStorage.getItem('ds_access_token') ||
+                    localStorage.getItem('token');
+      const params = new URLSearchParams();
+      if (this.chatState.role && this.chatState.role !== 'ALL') {
+        params.append('role', this.chatState.role);
+      }
+      if (this.chatState.search) {
+        params.append('search', this.chatState.search);
+      }
+
+      const res = await fetch(`${baseUrl}/admin/chat-history?${params.toString()}`, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      const data = await res.json();
+
+      if (!data.success || !Array.isArray(data.data)) {
+        wrapper.innerHTML = `<div style="text-align: center; padding: 30px; color: #ef4444;">Không thể tải dữ liệu: ${this.escapeHtml(data.message || 'Lỗi không xác định')}</div>`;
+        return;
+      }
+
+      const sessions = data.data;
+      const badge = document.getElementById('badgeChatHistory');
+      if (badge) badge.textContent = sessions.length;
+
+      if (sessions.length === 0) {
+        wrapper.innerHTML = `
+          <div style="text-align: center; padding: 50px 20px; color: #94a3b8;">
+            <div style="font-size: 48px; margin-bottom: 10px;">💬</div>
+            <div style="font-size: 15px; font-weight: 600; color: #475569;">Không tìm thấy phiên hội thoại nào</div>
+            <div style="font-size: 13px; margin-top: 4px;">Thử thay đổi bộ lọc vai trò hoặc từ khóa tìm kiếm.</div>
+          </div>
+        `;
+        return;
+      }
+
+      let html = `
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th style="width: 170px;">Thời gian</th>
+              <th style="width: 220px;">Người dùng</th>
+              <th style="width: 140px;">Vai trò</th>
+              <th>Trích đoạn hội thoại gần nhất</th>
+              <th style="width: 100px; text-align: center;">Số tin nhắn</th>
+              <th style="width: 130px; text-align: center;">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      sessions.forEach(s => {
+        const timeStr = s.updatedAt ? new Date(s.updatedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+        let roleBadge = '';
+        if (s.userRole === 'ROLE_RENTER') {
+          roleBadge = '<span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 600;">Khách thuê</span>';
+        } else if (s.userRole === 'ROLE_OWNER') {
+          roleBadge = '<span class="badge" style="background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; font-weight: 600;">Chủ xe</span>';
+        } else if (s.userRole === 'ROLE_ADMIN') {
+          roleBadge = '<span class="badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 600;">Quản trị</span>';
+        } else {
+          roleBadge = '<span class="badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-weight: 600;">Khách vãng lai</span>';
+        }
+
+        const userDisplay = s.userFullName
+          ? `<strong>${this.escapeHtml(s.userFullName)}</strong><br><small style="color: #64748b;">${this.escapeHtml(s.userEmail || '')}</small>`
+          : `<span style="color: #94a3b8; font-style: italic;">Khách vãng lai (Chưa đăng nhập)</span>`;
+
+        const lastSnippet = s.lastMessage
+          ? this.escapeHtml(s.lastMessage.length > 90 ? s.lastMessage.substring(0, 90) + '...' : s.lastMessage)
+          : '<span style="color: #cbd5e1;">(Chưa có nội dung)</span>';
+
+        html += `
+          <tr>
+            <td style="font-size: 12px; color: #64748b; white-space: nowrap;">${timeStr}</td>
+            <td style="font-size: 13px;">${userDisplay}</td>
+            <td>${roleBadge}</td>
+            <td style="font-size: 13px; color: #334155;">${lastSnippet}</td>
+            <td style="text-align: center;"><span class="badge" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #1e293b; font-weight: 700;">${s.messageCount || 0}</span></td>
+            <td style="text-align: center;">
+              <button class="btn btn-primary btn-sm" onclick="AdminService.viewChatDetail('${this.escapeHtml(s.sessionId)}', '${this.escapeHtml(s.userFullName || 'Khách vãng lai')}')" style="font-size: 12px; padding: 4px 10px;">
+                Xem chi tiết
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+          </tbody>
+        </table>
+      `;
+
+      wrapper.innerHTML = html;
+    } catch (err) {
+      wrapper.innerHTML = `<div style="text-align: center; padding: 30px; color: #ef4444;">Lỗi kết nối máy chủ: ${this.escapeHtml(err.message)}</div>`;
+    }
+  },
+
+  async viewChatDetail(sessionId, userDisplay) {
+    this.openModal(`Lịch sử hội thoại: ${userDisplay}`, `
+      <div style="text-align: center; padding: 30px; color: #64748b;">
+        <div style="display: inline-block; width: 24px; height: 24px; border: 2px solid #cbd5e1; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+        <div style="margin-top: 8px; font-size: 13px;">Đang tải nội dung hội thoại...</div>
+      </div>
+    `);
+
+    try {
+      const baseUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) ? API_CONFIG.BASE_URL : 'http://localhost:8080/api/v1';
+      const token = (typeof getAccessToken === 'function' ? getAccessToken() : null) ||
+                    (typeof TokenService !== 'undefined' ? TokenService.getToken() : null) ||
+                    localStorage.getItem('access_token') ||
+                    localStorage.getItem('ds_access_token') ||
+                    localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/admin/chat-history/${encodeURIComponent(sessionId)}`, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      const data = await res.json();
+
+      const messages = Array.isArray(data.data) ? data.data : (Array.isArray(data.data?.messages) ? data.data.messages : null);
+
+      if (!data.success || !messages) {
+        this.openModal(`Lịch sử hội thoại: ${userDisplay}`, `
+          <div style="padding: 20px; color: #ef4444; text-align: center;">
+            Không tìm thấy dữ liệu hội thoại cho phiên này.
+          </div>
+        `);
+        return;
+      }
+      let bodyHtml = `
+        <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; font-size: 12px; color: #64748b; display: flex; justify-content: space-between;">
+          <span><strong>Mã phiên:</strong> <code>${this.escapeHtml(sessionId)}</code></span>
+          <span><strong>Tổng tin nhắn:</strong> ${messages.length}</span>
+        </div>
+        <div style="max-height: 480px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 8px 4px;">
+      `;
+
+      if (messages.length === 0) {
+        bodyHtml += `<div style="text-align: center; padding: 30px; color: #94a3b8;">Phiên này chưa có tin nhắn nào.</div>`;
+      } else {
+        messages.forEach(m => {
+          const isUser = (m.role === 'user' || m.role === 'USER');
+          const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '';
+          const content = this.escapeHtml(m.text || m.content || '')
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+          if (isUser) {
+            bodyHtml += `
+              <div style="display: flex; justify-content: flex-end;">
+                <div style="max-width: 80%; background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; padding: 10px 14px; border-radius: 14px 14px 2px 14px; font-size: 13px; line-height: 1.5;">
+                  <div style="font-weight: 600; font-size: 11px; opacity: 0.85; margin-bottom: 2px;">👤 ${this.escapeHtml(userDisplay)} ${time ? '• ' + time : ''}</div>
+                  <div>${content}</div>
+                </div>
+              </div>
+            `;
+          } else {
+            bodyHtml += `
+              <div style="display: flex; gap: 8px; align-items: flex-start;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #ede9fe; color: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;">🤖</div>
+                <div style="max-width: 82%; background: #f1f5f9; color: #1e293b; padding: 10px 14px; border-radius: 14px 14px 14px 2px; font-size: 13px; line-height: 1.55;">
+                  <div style="font-weight: 600; font-size: 11px; color: #7c3aed; margin-bottom: 2px;">Trợ Lý AI DriveShare ${time ? '• ' + time : ''}</div>
+                  <div>${content}</div>
+                </div>
+              </div>
+            `;
+          }
+        });
+      }
+
+      bodyHtml += `
+        </div>
+        <div style="margin-top: 16px; text-align: right;">
+          <button class="btn btn-outline btn-sm" onclick="AdminService.closeModal()">Đóng cửa sổ</button>
+        </div>
+      `;
+
+      this.openModal(`Lịch sử hội thoại: ${userDisplay}`, bodyHtml);
+    } catch (err) {
+      this.openModal(`Lịch sử hội thoại: ${userDisplay}`, `
+        <div style="padding: 20px; color: #ef4444; text-align: center;">
+          Lỗi tải tin nhắn: ${this.escapeHtml(err.message)}
+        </div>
+      `);
     }
   }
 };

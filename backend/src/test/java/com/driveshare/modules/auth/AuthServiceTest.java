@@ -9,6 +9,7 @@ import com.driveshare.modules.auth.repository.AuthSessionRepository;
 import com.driveshare.modules.auth.repository.EmailChangeTokenRepository;
 import com.driveshare.modules.auth.repository.PasswordResetTokenRepository;
 import com.driveshare.modules.auth.service.AuthService;
+import com.driveshare.modules.auth.service.OtpService;
 import com.driveshare.modules.user.entity.User;
 import com.driveshare.modules.user.repository.OwnerProfileRepository;
 import com.driveshare.modules.user.repository.RenterProfileRepository;
@@ -54,6 +55,8 @@ class AuthServiceTest {
     private EmailChangeTokenRepository emailChangeTokenRepository;
     @Mock
     private com.driveshare.common.service.CloudinaryService cloudinaryService;
+    @Mock
+    private OtpService otpService;
 
     private AuthService authService;
 
@@ -69,7 +72,8 @@ class AuthServiceTest {
                 sessionRepository,
                 resetTokenRepository,
                 emailChangeTokenRepository,
-                cloudinaryService
+                cloudinaryService,
+                otpService
         );
     }
 
@@ -232,5 +236,82 @@ class AuthServiceTest {
         AppException ex = assertThrows(AppException.class, () ->
                 authService.registerWithDocs(request, front, back, null));
         assertEquals(ErrorCode.VALIDATION_FAILED, ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("registerWithDocs: Bắt buộc OTP ticket hợp lệ trước khi tạo tài khoản")
+    void registerWithDocs_WithoutOtpTicket_ThrowsOtpInvalid() {
+        com.driveshare.modules.auth.dto.RegisterRequest request = com.driveshare.modules.auth.dto.RegisterRequest.builder()
+                .email("test@example.com")
+                .password("Password123@")
+                .confirmPassword("Password123@")
+                .role("RENTER")
+                .idCardNumber("079201001234")
+                .otpTicket(null)
+                .build();
+
+        org.springframework.mock.web.MockMultipartFile front =
+                new org.springframework.mock.web.MockMultipartFile("cccdFront", "front.jpg", "image/jpeg", "content".getBytes());
+        org.springframework.mock.web.MockMultipartFile back =
+                new org.springframework.mock.web.MockMultipartFile("cccdBack", "back.jpg", "image/jpeg", "content".getBytes());
+        org.springframework.mock.web.MockMultipartFile gplx =
+                new org.springframework.mock.web.MockMultipartFile("gplxFront", "gplx.jpg", "image/jpeg", "content".getBytes());
+
+        AppException ex = assertThrows(AppException.class, () ->
+                authService.registerWithDocs(request, front, back, gplx));
+        assertEquals(ErrorCode.OTP_INVALID, ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("verifyResetOtp: Nhập đúng OTP -> sinh reset token dùng 1 lần")
+    void verifyResetOtp_Success() {
+        String email = "user@example.com";
+        String otp = "123456";
+        User user = User.builder().userId(5L).email(email).build();
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(otpService.verify(email, com.driveshare.modules.auth.entity.EmailOtp.PURPOSE_RESET_PASSWORD, otp)).thenReturn(true);
+
+        com.driveshare.modules.auth.dto.VerifyOtpRequest request =
+                new com.driveshare.modules.auth.dto.VerifyOtpRequest(email, otp);
+        com.driveshare.modules.auth.dto.ResetTokenResponse response = authService.verifyResetOtp(request);
+
+        assertNotNull(response.getResetToken());
+        verify(resetTokenRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("resetPassword: Đặt lại mật khẩu thành công bằng token hợp lệ")
+    void resetPassword_Success() {
+        String rawToken = "sample-reset-token-123";
+        String tokenHash = AuthService.sha256(rawToken);
+        Long userId = 8L;
+
+        com.driveshare.modules.auth.entity.PasswordResetToken token = com.driveshare.modules.auth.entity.PasswordResetToken.builder()
+                .id(1L)
+                .userId(userId)
+                .tokenHash(tokenHash)
+                .expiresAt(Instant.now().plusSeconds(900))
+                .usedAt(null)
+                .build();
+
+        User user = User.builder().userId(userId).tokenVersion(1L).build();
+
+        when(resetTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(token));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode("NewPass@123")).thenReturn("newHash");
+
+        com.driveshare.modules.auth.dto.ResetPasswordRequest request = new com.driveshare.modules.auth.dto.ResetPasswordRequest();
+        request.setToken(rawToken);
+        request.setNewPassword("NewPass@123");
+        request.setConfirmPassword("NewPass@123");
+
+        authService.resetPassword(request);
+
+        assertEquals("newHash", user.getPasswordHash());
+        assertEquals(2L, user.getTokenVersion());
+        assertNotNull(token.getUsedAt());
+        verify(userRepository).save(user);
+        verify(sessionRepository).revokeAllByUserId(userId);
     }
 }

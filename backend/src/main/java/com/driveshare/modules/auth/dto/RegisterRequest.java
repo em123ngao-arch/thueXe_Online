@@ -41,4 +41,7 @@ public class RegisterRequest {
 
     // Role ("OWNER", "RENTER", etc.)
     private String role;
+
+    // Vé xác thực OTP (nếu đã nhập OTP trước khi đăng ký) -> tài khoản tạo ra có email đã xác thực
+    private String otpTicket;
 }
