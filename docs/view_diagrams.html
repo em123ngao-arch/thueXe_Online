@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sơ đồ Trình tự UML DriveShare - Bản Dựng Đồ Họa Vector Sắc Nét</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #cbd5e1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      background: #ffffff;
+      border-bottom: 2px solid #e2e8f0;
+      padding: 0.85rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .header-title h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .header-title p {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .tabs {
+      display: flex;
+      gap: 0.4rem;
+      background: #f1f5f9;
+      padding: 0.3rem;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 0.55rem 1.2rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--muted);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(37,99,235,0.3);
+    }
+    .toolbar {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .tool-btn {
+      padding: 0.45rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: #334155;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tool-btn:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+    .tool-btn.primary {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .tool-btn.primary:hover {
+      background: var(--primary-dark);
+    }
+    .main-container {
+      max-width: 1600px;
+      margin: 1.2rem auto;
+      padding: 0 1.2rem;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+    .card-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .card-header h2 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #ffffff;
+      padding: 0.25rem 0.5rem;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+    }
+    .zoom-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #1e293b;
+      font-size: 1.1rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .zoom-btn:hover {
+      background: #e2e8f0;
+    }
+    .zoom-level {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #334155;
+      min-width: 55px;
+      text-align: center;
+    }
+    .viewer-wrapper {
+      background: #ffffff;
+      overflow: auto;
+      max-height: 82vh;
+      padding: 2rem 1rem;
+      text-align: center;
+      position: relative;
+      cursor: grab;
+    }
+    .viewer-wrapper:active {
+      cursor: grabbing;
+    }
+    .diagram-container {
+      display: inline-block;
+      transition: transform 0.15s ease-out;
+      transform-origin: top center;
+    }
+    .diagram-container img {
+      display: block;
+      margin: 0 auto;
+      max-width: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .info-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: #dbeafe;
+      color: #1e40af;
+      margin-left: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-title">
+      <h1>🚗 DriveShare — Sơ Đồ Trình Tự UML Chuẩn Doanh Nghiệp</h1>
+      <p>Bản thiết kế tái cấu trúc: Rõ ràng, dễ nhìn, font chữ lớn, phân khối nghiệp vụ chuẩn màu</p>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('tab1')">1. Đặt Xe & Cọc VietQR</button>
+      <button class="tab-btn" onclick="switchTab('tab2')">2. Bàn Giao Xe Hai Chiều</button>
+    </div>
+  </header>
+
+  <div class="main-container">
+
+    <!-- TAB 1: ĐẶT XE & CỌC -->
+    <div id="tab1" class="tab-content active">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>Sơ đồ 1: Đặt Xe và Thanh Toán Tiền Cọc 30% qua VietQR <span class="info-badge">Bản 4K Sắc Nét</span></h2>
+            <p style="font-size: 0.82rem; color: #64748b; margin-top: 2px;">
+              Vòng đời: <strong>PENDING_APPROVAL</strong> &rarr; <strong>WAITING_PAYMENT (Soft Lock 45p)</strong> &rarr; <strong>CONFIRMED (Hard Lock)</strong>
+            </p>
+          </div>
+          <div class="toolbar">
+            <div class="zoom-controls">
+              <button class="zoom-btn" onclick="zoom('container1', -0.15)">−</button>
+              <span id="zoom1" class="zoom-level">100%</span>
+              <button class="zoom-btn" onclick="zoom('container1', 0.15)">+</button>
+              <button class="tool-btn" onclick="resetZoom('container1', 'zoom1')" style="padding: 2px 8px; font-size: 0.75rem;">100%</button>
+              <button class="tool-btn" onclick="fitWidth('container1', 'img1', 'zoom1')" style="padding: 2px 8px; font-size: 0.75rem;">Vừa màn hình</button>
+            </div>
+            <a href="diagrams/04_sequence_booking_and_deposit.png" target="_blank" class="tool-btn primary">Tải Ảnh PNG Gốc</a>
+            <a href="diagrams/04_sequence_booking_and_deposit.svg" target="_blank" class="tool-btn">Mở Vector SVG</a>
+          </div>
+        </div>
+        <div class="viewer-wrapper" id="wrapper1">
+          <div class="diagram-container" id="container1">
+            <img id="img1" src="diagrams/04_sequence_booking_and_deposit.svg" alt="Sơ đồ 1: Đặt Xe và Cọc Tiền" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: BÀN GIAO HAI CHIỀU -->
+    <div id="tab2" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>Sơ đồ 2: Bàn Giao Xe Hai Chiều (Check-in & Check-out) <span class="info-badge">Sprint 3 Inspection</span></h2>
+            <p style="font-size: 0.82rem; color: #64748b; margin-top: 2px;">
+              Vòng đời: <strong>CONFIRMED</strong> &rarr; <strong>IN_PROGRESS (Check-in)</strong> &rarr; <strong>OVERDUE (nếu trễ)</strong> &rarr; <strong>COMPLETED (Check-out)</strong>
+            </p>
+          </div>
+          <div class="toolbar">
+            <div class="zoom-controls">
+              <button class="zoom-btn" onclick="zoom('container2', -0.15)">−</button>
+              <span id="zoom2" class="zoom-level">100%</span>
+              <button class="zoom-btn" onclick="zoom('container2', 0.15)">+</button>
+              <button class="tool-btn" onclick="resetZoom('container2', 'zoom2')" style="padding: 2px 8px; font-size: 0.75rem;">100%</button>
+              <button class="tool-btn" onclick="fitWidth('container2', 'img2', 'zoom2')" style="padding: 2px 8px; font-size: 0.75rem;">Vừa màn hình</button>
+            </div>
+            <a href="diagrams/05_sequence_two_way_handover.png" target="_blank" class="tool-btn primary">Tải Ảnh PNG Gốc</a>
+            <a href="diagrams/05_sequence_two_way_handover.svg" target="_blank" class="tool-btn">Mở Vector SVG</a>
+          </div>
+        </div>
+        <div class="viewer-wrapper" id="wrapper2">
+          <div class="diagram-container" id="container2">
+            <img id="img2" src="diagrams/05_sequence_two_way_handover.svg" alt="Sơ đồ 2: Bàn Giao Xe Hai Chiều" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const scales = {
+      container1: 1.0,
+      container2: 1.0
+    };
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      if (tabId === 'tab1') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+      } else {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+      }
+    }
+
+    function zoom(containerId, delta) {
+      scales[containerId] = Math.max(0.3, Math.min(3.0, (scales[containerId] || 1.0) + delta));
+      applyTransform(containerId);
+    }
+
+    function resetZoom(containerId, labelId) {
+      scales[containerId] = 1.0;
+      applyTransform(containerId);
+      document.getElementById(labelId).innerText = '100%';
+    }
+
+    function fitWidth(containerId, imgId, labelId) {
+      const wrapper = document.getElementById(containerId).parentElement;
+      const img = document.getElementById(imgId);
+      if (!img.naturalWidth) {
+        scales[containerId] = 0.75;
+      } else {
+        const availableWidth = wrapper.clientWidth - 80;
+        scales[containerId] = Math.max(0.3, Math.min(1.5, availableWidth / img.naturalWidth));
+      }
+      applyTransform(containerId);
+      document.getElementById(labelId).innerText = Math.round(scales[containerId] * 100) + '%';
+    }
+
+    function applyTransform(containerId) {
+      const el = document.getElementById(containerId);
+      const val = scales[containerId];
+      el.style.transform = `scale(${val})`;
+      const labelId = containerId === 'container1' ? 'zoom1' : 'zoom2';
+      document.getElementById(labelId).innerText = Math.round(val * 100) + '%';
+    }
+
+    // Tự động căn vừa màn hình khi ảnh load xong
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        fitWidth('container1', 'img1', 'zoom1');
+        fitWidth('container2', 'img2', 'zoom2');
+      }, 300);
+    });
+  </script>
+</body>
+</html>
