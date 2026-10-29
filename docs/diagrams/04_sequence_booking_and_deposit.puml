@@ -1,0 +1,174 @@
+@startuml
+autonumber
+skinparam dpi 180
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 14
+skinparam roundCorner 8
+skinparam BoxPadding 10
+skinparam ParticipantPadding 12
+skinparam Shadowing false
+skinparam MaxMessageSize 165
+skinparam responseMessageBelowArrow true
+
+skinparam sequence {
+    ArrowColor #2563EB
+    ArrowThickness 1.5
+    LifeLineBorderColor #94A3B8
+    LifeLineBackgroundColor #F1F5F9
+    GroupBorderColor #64748B
+    GroupHeaderFontColor #0F172A
+    GroupBackgroundColor #F8FAFC
+}
+
+title <size:18><b>SƠ ĐỒ TRÌNH TỰ 1: ĐẶT XE VÀ THANH TOÁN TIỀN CỌC 30%</b></size>\n<size:12><color:#64748B>Quy trình kiểm tra điều kiện, kích hoạt Soft Lock 45p và chốt cọc Hard Lock</color></size>
+
+box "Người dùng" #EFF6FF
+    actor "🧑 <b>Khách thuê</b>\n(Renter)" as Renter #DBEAFE
+    actor "🚗 <b>Chủ xe</b>\n(Owner)" as Owner #CCFBF1
+end box
+
+box "Giao diện & API" #F8FAFC
+    boundary "💻 <b>Frontend UI</b>" as UI #F1F5F9
+    control "⚙️ <b>RentalCtrl</b>" as RentalCtrl #E0E7FF
+    control "💳 <b>PaymentCtrl</b>" as PaymentCtrl #FEF3C7
+end box
+
+box "Nghiệp vụ Backend" #FAF5FF
+    entity "🧠 <b>RentalService</b>" as RentalSvc #EDE9FE
+    entity "💰 <b>PaymentService</b>" as PaymentSvc #FEF08A
+    control "⏰ <b>Scheduler</b>" as Scheduler #FEE2E2
+end box
+
+box "Dữ liệu & Ngoại vi" #F0FDF4
+    database "🗄️ <b>PostgreSQL DB</b>" as DB #DCFCE7
+    boundary "🌐 <b>Dịch vụ VietQR</b>" as VietQR #FFEDD5
+end box
+
+== 1. KHÁCH THUÊ GỬI YÊU CẦU ĐẶT XE MỚI ==
+
+Renter -> UI: Chọn xe, khoảng ngày thuê,\ndịch vụ tài xế & ghi chú
+activate UI
+UI -> RentalCtrl: POST /api/v1/rentals (CreateRentalRequest)
+activate RentalCtrl
+RentalCtrl -> RentalSvc: createRentalRequest(request)
+activate RentalSvc
+
+RentalSvc -> DB: Kiểm tra User status, Blacklist,\nđơn OVERDUE & giới hạn 3 đơn chờ
+RentalSvc -> DB: Kiểm tra KYC GPLX/CCCD (tự lái),\nxe ACTIVE & lịch trống
+DB --> RentalSvc: Dữ liệu hợp lệ (hoặc báo lỗi)
+
+alt #FFF1F2 Điều kiện thuê không thỏa mãn (Blacklist / GPLX / Trùng lịch)
+    RentalSvc --> RentalCtrl: throw AppException (Lỗi nghiệp vụ tương ứng)
+    RentalCtrl --> UI: 400 Bad Request
+    UI --> Renter: Hiển thị cảnh báo từ chối đặt xe
+else #F0FDF4 Hợp lệ & Lịch xe còn trống
+    RentalSvc -> RentalSvc: Tính giá + tiền cọc 30% (depositAmount = totalPrice * 0.30)
+    RentalSvc -> DB: Lưu đơn mới: status = PENDING_APPROVAL
+    DB --> RentalSvc: rentalId
+    RentalSvc --> RentalCtrl: RentalResponse
+    RentalCtrl --> UI: 200 OK
+    UI --> Renter: Đặt xe thành công, đang chờ Chủ xe duyệt
+end
+deactivate RentalSvc
+deactivate RentalCtrl
+deactivate UI
+
+== 2. CHỦ XE PHẢN HỒI YÊU CẦU HOẶC HẾT HẠN ==
+
+alt #F0FDF4 Chủ xe duyệt (Kích hoạt Soft Lock 45 phút)
+    Owner -> UI: Bấm "Duyệt yêu cầu thuê"
+    activate UI
+    UI -> RentalCtrl: PUT /api/v1/owner/rentals/{id}/approve
+    activate RentalCtrl
+    RentalCtrl -> RentalSvc: approveRental(rentalId)
+    activate RentalSvc
+    RentalSvc -> DB: status = WAITING_PAYMENT, hạn paymentExpiresAt = now + 45 phút
+    RentalSvc -> DB: Chuyển các đơn trùng lịch khác sang ON_HOLD
+    RentalSvc --> RentalCtrl: RentalSummaryResponse
+    RentalCtrl --> UI: 200 OK (Kích hoạt giữ chỗ 45 phút)
+    UI --> Owner: Cập nhật trạng thái WAITING_PAYMENT
+    deactivate RentalSvc
+    deactivate RentalCtrl
+    deactivate UI
+
+else #FFF1F2 Chủ xe từ chối yêu cầu
+    Owner -> UI: Nhập lý do & bấm "Từ chối"
+    activate UI
+    UI -> RentalCtrl: PUT /api/v1/owner/rentals/{id}/reject
+    activate RentalCtrl
+    RentalCtrl -> RentalSvc: rejectRental(rentalId, reason)
+    activate RentalSvc
+    RentalSvc -> DB: Cập nhật status = REJECTED, rejectReason = lý do
+    opt Đang ở trạng thái WAITING_PAYMENT
+        RentalSvc -> DB: Khôi phục đơn ON_HOLD sang PENDING_APPROVAL
+    end
+    RentalSvc --> RentalCtrl: RentalSummaryResponse
+    RentalCtrl --> UI: 200 OK
+    UI --> Owner: Thông báo đã từ chối đơn thuê
+    deactivate RentalSvc
+    deactivate RentalCtrl
+    deactivate UI
+
+else #FFFBEB Quá hạn 45 phút Soft Lock (Khách chưa cọc)
+    Scheduler -> DB: Quét các đơn WAITING_PAYMENT quá hạn 45 phút
+    Scheduler -> DB: Cập nhật status = EXPIRED (Giải phóng Soft Lock)
+    Scheduler -> DB: Mở lại các đơn ON_HOLD trùng lịch sang PENDING_APPROVAL
+end
+
+== 3. KHÁCH THUÊ THANH TOÁN TIỀN CỌC 30% QUA VIETQR ==
+
+Renter -> UI: Mở trang thanh toán của đơn thuê đã duyệt
+activate UI
+UI -> PaymentCtrl: POST /api/v1/rentals/{id}/payment
+activate PaymentCtrl
+PaymentCtrl -> PaymentSvc: createDepositPayment(rentalId)
+activate PaymentSvc
+
+PaymentSvc -> DB: Kiểm tra trạng thái WAITING_PAYMENT và thời hạn 45 phút
+
+alt #FFF1F2 Đã quá hạn 45 phút giữ chỗ
+    PaymentSvc -> DB: status = EXPIRED, mở lại đơn ON_HOLD
+    PaymentSvc --> PaymentCtrl: throw AppException (Hết hạn giữ chỗ 45 phút)
+    PaymentCtrl --> UI: 400 Bad Request
+    UI --> Renter: Thông báo đơn đã hết hạn thanh toán
+else #F0FDF4 Trong thời hạn 45 phút hợp lệ
+    PaymentSvc -> VietQR: VietQrUtils.generateQrUrl (Mã GD, STK, tiền cọc 30%)
+    VietQR --> PaymentSvc: qrCodeUrl
+    PaymentSvc -> DB: Tạo bản ghi Payment: status = PENDING, amount, qrCodeUrl
+    PaymentSvc --> PaymentCtrl: PaymentResponse
+    PaymentCtrl --> UI: 201 Created
+    UI --> Renter: Hiển thị mã VietQR, STK nhận, số tiền cọc 30% & đếm ngược
+end
+deactivate PaymentSvc
+deactivate PaymentCtrl
+deactivate UI
+
+== 4. XÁC NHẬN KẾT QUẢ CỌC & KHÓA LỊCH CỨNG (HARD LOCK) ==
+
+Renter -> UI: Quét mã chuyển khoản & bấm "Tôi đã chuyển khoản thành công"
+activate UI
+UI -> PaymentCtrl: POST /api/v1/payments/{id}/confirm
+activate PaymentCtrl
+PaymentCtrl -> PaymentSvc: confirmPayment(paymentId)
+activate PaymentSvc
+
+PaymentSvc -> DB: Kiểm tra giao dịch và thời hạn 45 phút
+
+alt #F0FDF4 Thanh toán thành công trong hạn
+    PaymentSvc -> DB: Cập nhật payment.status = SUCCESS, paidAt = now
+    PaymentSvc -> DB: Cập nhật rental.status = CONFIRMED (Kích hoạt Hard Lock)
+    PaymentSvc -> DB: Auto-rejection: Quét dọn các đơn trùng lịch sang REJECTED
+    PaymentSvc --> PaymentCtrl: PaymentResponse
+    PaymentCtrl --> UI: 200 OK
+    UI --> Renter: Chúc mừng! Đơn đã CONFIRMED (Xe chính thức được giữ chỗ)
+else #FFF1F2 Thanh toán quá hạn hoặc thất bại
+    PaymentSvc -> DB: payment.status = FAILED, rental.status = EXPIRED
+    PaymentSvc --> PaymentCtrl: throw AppException
+    PaymentCtrl --> UI: 400 Bad Request
+    UI --> Renter: Báo lỗi thanh toán không hợp lệ
+end
+deactivate PaymentSvc
+deactivate PaymentCtrl
+deactivate UI
+
+@enduml

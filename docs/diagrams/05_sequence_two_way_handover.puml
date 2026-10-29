@@ -1,0 +1,154 @@
+@startuml
+autonumber
+skinparam dpi 180
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 14
+skinparam roundCorner 8
+skinparam BoxPadding 10
+skinparam ParticipantPadding 12
+skinparam Shadowing false
+skinparam MaxMessageSize 165
+skinparam responseMessageBelowArrow true
+
+skinparam sequence {
+    ArrowColor #2563EB
+    ArrowThickness 1.5
+    LifeLineBorderColor #94A3B8
+    LifeLineBackgroundColor #F1F5F9
+    GroupBorderColor #64748B
+    GroupHeaderFontColor #0F172A
+    GroupBackgroundColor #F8FAFC
+}
+
+title <size:18><b>SƠ ĐỒ TRÌNH TỰ 2: BÀN GIAO XE HAI CHIỀU (CHECK-IN & CHECK-OUT)</b></size>\n<size:12><color:#64748B>Quy trình bàn giao bắt đầu chuyến đi và nghiệm thu trả xe hoàn tất chuyến đi</color></size>
+
+box "Người dùng" #EFF6FF
+    actor "🧑 <b>Khách thuê</b>\n(Renter)" as Renter #DBEAFE
+    actor "🚗 <b>Chủ xe</b>\n(Owner)" as Owner #CCFBF1
+end box
+
+box "Giao diện & API" #F8FAFC
+    boundary "💻 <b>Frontend UI</b>" as UI #F1F5F9
+    control "⚙️ <b>OwnerRentalController</b>\n<b>RentalController</b>" as Controller #E0E7FF
+end box
+
+box "Nghiệp vụ Backend" #FAF5FF
+    entity "📋 <b>RentalInspectionService</b>" as InspectSvc #EDE9FE
+    entity "🚨 <b>RentalDisputeService</b>" as DisputeSvc #FEE2E2
+    control "⏰ <b>RentalScheduler</b>" as Scheduler #FEE2E2
+end box
+
+box "Dữ liệu & Media" #F0FDF4
+    database "🗄️ <b>PostgreSQL DB</b>" as DB #DCFCE7
+    boundary "☁️ <b>Cloudinary</b>" as Cloudinary #FFEDD5
+end box
+
+== CHẶNG A: GIAO XE CHO KHÁCH (CHECK-IN BÀN GIAO) ==
+
+note over Renter, Owner #EFF6FF
+<b>Điều kiện:</b> Đơn thuê đã được chốt cọc thành công (status = <b>CONFIRMED</b>).
+Chủ xe và Khách thuê gặp nhau tại điểm hẹn để kiểm tra thực tế xe.
+end note
+
+Owner -> UI: Mở modal Check-in: Nhập ODO nhận,\nmức xăng (%), ảnh 4 góc xe & ghi chú
+activate UI
+UI -> Controller: POST /api/v1/owner/rentals/{id}/check-in (CheckInRequest)
+activate Controller
+Controller -> InspectSvc: checkIn(rentalId, ownerId, request)
+activate InspectSvc
+
+InspectSvc -> DB: Kiểm tra: Đúng chủ xe & đơn CONFIRMED & chưa check-in
+DB --> InspectSvc: Dữ liệu hợp lệ
+
+alt #F0FDF4 Bàn giao hợp lệ
+    InspectSvc -> DB: Lưu RentalInspection (loại CHECK_IN, ODO, xăng, ảnh, extraFee = 0)
+    InspectSvc -> DB: Cập nhật rental.status = IN_PROGRESS, updatedAt = now
+    InspectSvc --> Controller: RentalInspectionResponse
+    Controller --> UI: 200 OK (ApiResponse)
+    UI --> Owner: Bàn giao thành công! Chuyến đi bắt đầu (IN_PROGRESS)
+else #FFF1F2 Không hợp lệ (Sai chủ xe / Đơn chưa cọc / Đã check-in)
+    InspectSvc --> Controller: throw AppException
+    Controller --> UI: 400 / 403 Error
+    UI --> Owner: Hiển thị thông báo lỗi từ chối Check-in
+end
+deactivate InspectSvc
+deactivate Controller
+deactivate UI
+
+opt #FFFBEB Xử lý sự cố: Chủ xe không giao xe (No-Show)
+    Renter -> UI: Bấm "Báo sự cố không nhận xe",\nnhập lý do & đính kèm tệp bằng chứng
+    activate UI
+    UI -> Controller: POST /api/v1/rentals/{id}/report-no-show
+    activate Controller
+    Controller -> DisputeSvc: reportNoShow(rentalId, reason, files, renterId)
+    activate DisputeSvc
+    DisputeSvc -> Cloudinary: Tải ảnh/video bằng chứng
+    Cloudinary --> DisputeSvc: Danh sách URL bằng chứng
+    DisputeSvc -> DB: Cập nhật rental.status = DISPUTED (Đóng băng 100% tiền cọc)
+    DisputeSvc -> DB: Lưu biên bản khiếu nại RentalDispute (status = PENDING)
+    DisputeSvc --> Controller: RentalDisputeResponse
+    Controller --> UI: 200 OK
+    UI --> Renter: Đã tiếp nhận khiếu nại, tiền cọc đóng băng chờ Admin
+    deactivate DisputeSvc
+    deactivate Controller
+    deactivate UI
+end
+
+== CHẶNG B: NHẬN LẠI XE KHI TRẢ (CHECK-OUT NGHIỆM THU) ==
+
+opt #FFF1F2 Kiểm soát quá hạn trả xe (Sprint 4)
+    Scheduler -> DB: Quét định kỳ các chuyến đi trễ hạn (today > endDate)
+    Scheduler -> DB: Cập nhật rental.status = OVERDUE, tính penaltyFee lũy tiến
+    opt Trễ hạn trên 24 giờ
+        Scheduler -> DB: Khóa tài khoản vi phạm: User(renterId).status = BLOCKED
+    end
+end
+
+note over Renter, Owner #EFF6FF
+Khách thuê mang xe về điểm hẹn hoàn trả cho Chủ xe.
+Hai bên kiểm tra số ODO trả, mức xăng còn lại, vết trầy xước mới & thỏa thuận phụ phí.
+end note
+
+Owner -> UI: Mở modal Check-out: Nhập ODO trả,\nmức xăng (%), ảnh xe, extraFee & lý do
+activate UI
+UI -> Controller: POST /api/v1/owner/rentals/{id}/check-out (CheckOutRequest)
+activate Controller
+Controller -> InspectSvc: checkOut(rentalId, ownerId, request)
+activate InspectSvc
+
+InspectSvc -> DB: Kiểm tra: Đúng chủ xe & đơn đang IN_PROGRESS hoặc OVERDUE
+DB --> InspectSvc: Dữ liệu hợp lệ
+
+alt #F0FDF4 Nghiệm thu hợp lệ
+    InspectSvc -> DB: Lưu RentalInspection (loại CHECK_OUT, ODO, xăng, extraFee, lý do)
+    InspectSvc -> DB: Cập nhật rental.status = COMPLETED, updatedAt = now
+    InspectSvc --> Controller: RentalInspectionResponse
+    Controller --> UI: 200 OK (ApiResponse)
+    UI --> Owner: Nghiệm thu hoàn tất! Đơn chuyển sang COMPLETED
+else #FFF1F2 Không hợp lệ (Sai chủ xe / Đơn chưa bắt đầu / Đã check-out)
+    InspectSvc --> Controller: throw AppException
+    Controller --> UI: 400 / 403 Error
+    UI --> Owner: Hiển thị thông báo lỗi từ chối Check-out
+end
+deactivate InspectSvc
+deactivate Controller
+deactivate UI
+
+opt #F0FDF4 Tra cứu đối chiếu hai chiều minh bạch (Sprint 3)
+    Renter -> UI: Mở trang xem chi tiết chuyến đi
+    activate UI
+    UI -> Controller: GET /api/v1/rentals/{id}/inspections
+    activate Controller
+    Controller -> InspectSvc: getInspections(rentalId, currentUserId)
+    activate InspectSvc
+    InspectSvc -> DB: Lấy 2 biên bản: CHECK_IN và CHECK_OUT
+    DB --> InspectSvc: Dữ liệu biên bản
+    InspectSvc --> Controller: Danh sách RentalInspectionResponse
+    Controller --> UI: 200 OK
+    UI --> Renter: Hiển thị bảng đối chiếu minh bạch: ODO chênh lệch, xăng tiêu thụ & phụ phí
+    deactivate InspectSvc
+    deactivate Controller
+    deactivate UI
+end
+
+@enduml
