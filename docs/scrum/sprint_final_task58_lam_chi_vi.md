@@ -1,4 +1,4 @@
-# BÁO CÁO KẾT QUẢ TÁC CHIẾN SPRINT FINAL — LÂM CHÍ VĨ (@technology-web)
+# BÁO CÁO HOÀN THÀNH NHIỆM VỤ LAMCHIVI
 
 ## 📌 THÔNG TIN NHIỆM VỤ
 - **Người thực hiện:** Lâm Chí Vĩ (@technology-web)
