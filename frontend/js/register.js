@@ -311,18 +311,8 @@ const RegisterController = {
       }
     }
 
-    // 3b. Xác thực email bằng OTP TRƯỚC (giống Travel) -> nhập đúng mới tạo tài khoản
-    if (this._otpTicketEmail !== email.toLowerCase() || !this._otpTicket) {
-      if (typeof openRegisterOtpModal === "function") {
-        openRegisterOtpModal(email, (ticket) => {
-          this._otpTicket = ticket;
-          this._otpTicketEmail = email.toLowerCase();
-          this.handleRegister();
-        });
-        return;
-      }
-    }
-
+    // 3b. Xác thực email bằng OTP đã được tắt để đăng ký nhanh, mượt mà trong demo
+    // (Bỏ qua modal OTP, gửi thẳng hồ sơ kèm ảnh CCCD/GPLX lên server)
     if (btnSubmit) {
       btnSubmit.disabled = true;
       btnSubmit.innerHTML = `<span class="spinner"></span> Đang tải hồ sơ &amp; đăng ký...`;
@@ -359,7 +349,6 @@ const RegisterController = {
     }
 
     if (res.success) {
-      const usedTicket = !!this._otpTicket;
       this._otpTicket = null;
       this._otpTicketEmail = null;
 
@@ -367,21 +356,10 @@ const RegisterController = {
       const loginIdentifier = document.getElementById("loginIdentifier");
       if (loginIdentifier) loginIdentifier.value = email;
 
-      if (usedTicket && res.data && res.data.requiresEmailVerification === false) {
-        // Email đã xác thực bằng OTP từ trước -> không cần nhập OTP lần nữa
-        if (typeof showToast === "function") {
-          showToast(res.message || "Đăng ký thành công!", "success", 5000);
-        }
-        this.switchTab("login");
-      } else {
-        if (typeof showToast === "function") {
-          showToast("Đăng ký thành công! Mã OTP đã được gửi tới email của bạn.", "success", 4000);
-        }
-        // Bắt buộc nhập đúng OTP email -> mới chuyển hồ sơ cho Admin duyệt
-        if (typeof openVerifyEmailModal === "function") {
-          openVerifyEmailModal(email, true);
-        }
+      if (typeof showToast === "function") {
+        showToast(res.message || "Đăng ký thành công! Hồ sơ đã được gửi tới Admin xét duyệt.", "success", 4000);
       }
+      this.switchTab("login");
     } else {
       // Vé OTP hết hạn / đã dùng -> bắt xác thực lại ở lần gửi sau
       if (res.errorCode === "OTP_EXPIRED") { this._otpTicket = null; this._otpTicketEmail = null; }

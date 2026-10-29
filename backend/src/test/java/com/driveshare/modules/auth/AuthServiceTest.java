@@ -10,6 +10,8 @@ import com.driveshare.modules.auth.repository.EmailChangeTokenRepository;
 import com.driveshare.modules.auth.repository.PasswordResetTokenRepository;
 import com.driveshare.modules.auth.service.AuthService;
 import com.driveshare.modules.auth.service.OtpService;
+import com.driveshare.common.enums.ERole;
+import com.driveshare.modules.user.entity.Role;
 import com.driveshare.modules.user.entity.User;
 import com.driveshare.modules.user.repository.OwnerProfileRepository;
 import com.driveshare.modules.user.repository.RenterProfileRepository;
@@ -239,8 +241,8 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("registerWithDocs: Bắt buộc OTP ticket hợp lệ trước khi tạo tài khoản")
-    void registerWithDocs_WithoutOtpTicket_ThrowsOtpInvalid() {
+    @DisplayName("registerWithDocs: Cho phép đăng ký khi không có OTP ticket (luồng demo mượt mà)")
+    void registerWithDocs_WithoutOtpTicket_Success() {
         com.driveshare.modules.auth.dto.RegisterRequest request = com.driveshare.modules.auth.dto.RegisterRequest.builder()
                 .email("test@example.com")
                 .password("Password123@")
@@ -257,9 +259,20 @@ class AuthServiceTest {
         org.springframework.mock.web.MockMultipartFile gplx =
                 new org.springframework.mock.web.MockMultipartFile("gplxFront", "gplx.jpg", "image/jpeg", "content".getBytes());
 
-        AppException ex = assertThrows(AppException.class, () ->
-                authService.registerWithDocs(request, front, back, gplx));
-        assertEquals(ErrorCode.OTP_INVALID, ex.getErrorCode());
+        Role renterRole = Role.builder().roleId(1L).roleName(ERole.ROLE_RENTER).build();
+        when(roleRepository.findByRoleName(ERole.ROLE_RENTER)).thenReturn(Optional.of(renterRole));
+        when(passwordEncoder.encode(any())).thenReturn("hashedPassword");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            u.setUserId(10L);
+            return u;
+        });
+
+        java.util.Map<String, Object> resp = authService.registerWithDocs(request, front, back, gplx);
+        assertNotNull(resp);
+        assertEquals("test@example.com", resp.get("email"));
+        assertEquals("PENDING", resp.get("status"));
+        verify(userRepository).save(any(User.class));
     }
 
     @Test

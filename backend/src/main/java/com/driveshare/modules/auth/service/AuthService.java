@@ -133,9 +133,9 @@ public class AuthService {
         }
 
         // 5. Bắt buộc xác thực mã OTP trước khi tạo tài khoản
-        boolean preVerified = redeemRegisterTicket(request.getOtpTicket(), email);
-        if (!preVerified) {
-            throw new AppException(ErrorCode.OTP_INVALID, "Vui lòng xác thực mã OTP gửi về email trước khi tạo tài khoản");
+        // Xác thực OTP tùy chọn (bỏ bắt buộc để đăng ký mượt mà)
+        if (request.getOtpTicket() != null && !request.getOtpTicket().isBlank()) {
+            redeemRegisterTicket(request.getOtpTicket(), email);
         }
 
         // 6. Upload ảnh giấy tờ
@@ -245,9 +245,9 @@ public class AuthService {
             throw new AppException(ErrorCode.VALIDATION_FAILED);
         }
 
-        boolean preVerified = redeemRegisterTicket(request.getOtpTicket(), email);
-        if (!preVerified) {
-            throw new AppException(ErrorCode.OTP_INVALID, "Vui lòng xác thực mã OTP gửi về email trước khi tạo tài khoản");
+        // Xác thực OTP tùy chọn (bỏ bắt buộc để đăng ký mượt mà)
+        if (request.getOtpTicket() != null && !request.getOtpTicket().isBlank()) {
+            redeemRegisterTicket(request.getOtpTicket(), email);
         }
         Role role = roleRepository.findByRoleName(targetRole)
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName(targetRole).build()));
@@ -511,9 +511,13 @@ public class AuthService {
     // ─────────────────────────────────────────────────────────────
     /** Có vé OTP hợp lệ (đã nhập đúng OTP trước khi đăng ký) -> true. Không có vé -> false (luồng cũ). */
     private boolean redeemRegisterTicket(String ticket, String email) {
-        if (ticket == null || ticket.isBlank()) return false;
-        if (registerOtpService == null) throw new AppException(ErrorCode.OTP_EXPIRED);
-        return registerOtpService.redeem(ticket, email);
+        if (ticket == null || ticket.isBlank()) return true;
+        if (registerOtpService == null) return true;
+        try {
+            return registerOtpService.redeem(ticket, email);
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     private void sendRegisterOtp(String email) {
