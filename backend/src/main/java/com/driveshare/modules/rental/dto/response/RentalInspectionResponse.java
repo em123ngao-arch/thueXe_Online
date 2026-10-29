@@ -1,5 +1,6 @@
 package com.driveshare.modules.rental.dto.response;
 
+import com.driveshare.common.enums.EInspectionStatus;
 import com.driveshare.common.enums.EInspectionType;
 import com.driveshare.modules.rental.entity.RentalInspection;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -12,7 +13,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
- * DTO phản hồi dữ liệu biên bản bàn giao hoặc nghiệm thu trả xe (Sprint 3 - Vĩ).
+ * DTO phản hồi dữ liệu biên bản bàn giao hoặc nghiệm thu trả xe (Sprint 3 & Sprint Final - Vĩ).
  */
 @Data
 @Builder
@@ -28,6 +29,9 @@ public class RentalInspectionResponse {
 
     @JsonProperty("inspection_type")
     private EInspectionType inspectionType;
+
+    @JsonProperty("status")
+    private EInspectionStatus status;
 
     @JsonProperty("odo_meter")
     private Integer odoMeter;
@@ -61,6 +65,7 @@ public class RentalInspectionResponse {
                 .inspectionId(inspection.getInspectionId())
                 .rentalId(inspection.getRentalId())
                 .inspectionType(inspection.getInspectionType())
+                .status(inspection.getStatus() != null ? inspection.getStatus() : EInspectionStatus.CONFIRMED)
                 .odoMeter(inspection.getOdoMeter())
                 .fuelLevel(inspection.getFuelLevel())
                 .images(inspection.getImages())

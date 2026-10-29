@@ -3,6 +3,7 @@ package com.driveshare.modules.rental.controller;
 import com.driveshare.common.dto.ApiResponse;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
+import com.driveshare.modules.rental.dto.ConfirmInspectionRequest;
 import com.driveshare.modules.rental.dto.CreateRentalRequest;
 import com.driveshare.modules.rental.dto.RentalResponse;
 import com.driveshare.modules.rental.dto.response.RentalInspectionResponse;
@@ -28,7 +29,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/rentals")
 @RequiredArgsConstructor
-@Tag(name = "Rental Management", description = "API quản lý và truy vấn yêu cầu thuê xe (CRP-41, CRP-42, CRP-44, Sprint 3 Inspection)")
+@Tag(name = "Rental Management", description = "API quản lý và truy vấn yêu cầu thuê xe (CRP-41, CRP-42, CRP-44, Sprint 3 & Sprint Final Inspection)")
 @SecurityRequirement(name = "bearerAuth")
 public class RentalController {
 
@@ -108,6 +109,34 @@ public class RentalController {
                         .data(data)
                         .build()
         );
+    }
+
+    /**
+     * Sprint Final (Lâm Chí Vĩ): Khách thuê xác nhận đồng ý hoặc khiếu nại biên bản giao nhận xe 2 chiều.
+     */
+    @PostMapping("/{rentalId}/inspections/{inspectionId}/confirm")
+    @PreAuthorize("hasRole('RENTER')")
+    @Operation(
+            summary = "Khách xác nhận biên bản giao nhận xe 2 chiều (Sprint Final)",
+            description = "Khách thuê kiểm tra ODO, vạch xăng, ảnh hiện trạng và bấm Đồng ý hoặc Khiếu nại sai lệch"
+    )
+    public ResponseEntity<ApiResponse<RentalInspectionResponse>> confirmInspection(
+            @PathVariable("rentalId") Long rentalId,
+            @PathVariable("inspectionId") Long inspectionId,
+            @Valid @RequestBody ConfirmInspectionRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long customerId = userDetails != null ? userDetails.getUserId() : getCurrentUserId();
+        RentalInspectionResponse response = rentalInspectionService.confirmInspection(
+                rentalId,
+                inspectionId,
+                customerId,
+                request
+        );
+        String message = Boolean.TRUE.equals(request.agreed())
+                ? "Xác nhận biên bản bàn giao xe thành công"
+                : "Đã gửi khiếu nại sai lệch hiện trạng xe thành công";
+        return ResponseEntity.ok(ApiResponse.success(message, response));
     }
 
     /**

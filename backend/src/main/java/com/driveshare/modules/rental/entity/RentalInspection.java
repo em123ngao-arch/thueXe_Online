@@ -1,5 +1,6 @@
 package com.driveshare.modules.rental.entity;
 
+import com.driveshare.common.enums.EInspectionStatus;
 import com.driveshare.common.enums.EInspectionType;
 import com.driveshare.modules.user.entity.User;
 import jakarta.persistence.*;
@@ -9,9 +10,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
- * Entity ánh xạ bảng {@code rental_inspections} trong Sprint 3.
+ * Entity ánh xạ bảng {@code rental_inspections} trong Sprint 3 & Sprint Final.
  * <p>
- * Lưu trữ biên bản bàn giao xe (CHECK_IN) và nghiệm thu trả xe (CHECK_OUT).
+ * Lưu trữ biên bản bàn giao xe (CHECK_IN) và nghiệm thu trả xe (CHECK_OUT)
+ * hỗ trợ cơ chế đồng thuận 2 chiều (Two-Way Handover Consensus).
  */
 @Getter
 @Setter
@@ -43,6 +45,11 @@ public class RentalInspection {
     @Enumerated(EnumType.STRING)
     @Column(name = "inspection_type", length = 20, nullable = false)
     private EInspectionType inspectionType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 40, nullable = false)
+    @Builder.Default
+    private EInspectionStatus status = EInspectionStatus.CONFIRMED;
 
     @Column(name = "odo_meter", nullable = false)
     private Integer odoMeter;
