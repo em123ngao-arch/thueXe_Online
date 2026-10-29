@@ -77,6 +77,13 @@ public class DataInitializer implements CommandLineRunner {
         } catch (Exception e) {
             log.warn("Could not update cars_status_check constraint: {}", e.getMessage());
         }
+
+        try {
+            jdbcTemplate.execute("ALTER TABLE rental_inspections ADD COLUMN IF NOT EXISTS status VARCHAR(40) DEFAULT 'CONFIRMED'");
+            log.info("Successfully ensured status column exists in rental_inspections for PostgreSQL");
+        } catch (Exception e) {
+            log.warn("Could not add status column to rental_inspections: {}", e.getMessage());
+        }
     }
 
     private void initRoles() {
