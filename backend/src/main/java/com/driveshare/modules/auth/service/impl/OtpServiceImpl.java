@@ -28,8 +28,8 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class OtpServiceImpl implements OtpService {
 
-    /** Thời hạn hiệu lực của mã OTP: 120 giây (2 phút) */
-    public static final long TTL_SECONDS = 120;
+    /** Thời hạn hiệu lực của mã OTP: 300 giây (5 phút) */
+    public static final long TTL_SECONDS = 300;
     
     /** Chống brute-force: Tối đa 3 lần nhập sai liên tiếp */
     public static final int MAX_FAILED_ATTEMPTS = 3;
@@ -63,7 +63,7 @@ public class OtpServiceImpl implements OtpService {
         String rawOtp = String.format("%06d", rawNumber);
         String hash = AuthService.sha256(rawOtp);
 
-        // 2. Lưu trữ mã OTP trong database với TTL 120 giây
+        // 2. Lưu trữ mã OTP trong database với TTL 300 giây
         Instant now = Instant.now();
         Instant expiresAt = now.plusSeconds(TTL_SECONDS);
 
@@ -91,7 +91,7 @@ public class OtpServiceImpl implements OtpService {
 
         // 5. Gửi thư thực tế qua Gmail SMTP
         dispatchEmail(cleanEmail, rawOtp, "Mã xác thực OTP DriveShare", "Xác thực OTP",
-                "Mã OTP của bạn có hiệu lực trong vòng 120 giây (2 phút). Tuyệt đối không chia sẻ mã cho bất kỳ ai.");
+                "Mã OTP của bạn có hiệu lực trong vòng 300 giây (5 phút). Tuyệt đối không chia sẻ mã cho bất kỳ ai.");
 
         return OtpSendResponse.builder()
                 .email(cleanEmail)
@@ -154,16 +154,18 @@ public class OtpServiceImpl implements OtpService {
     @Transactional(noRollbackFor = AppException.class)
     public boolean verify(String email, String purpose, String rawOtp) {
         String cleanEmail = normalize(email);
-        EmailOtp otp = emailOtpRepository.findTopByEmailAndPurposeOrderByIdDesc(cleanEmail, purpose)
-                .orElseThrow(() -> new AppException(ErrorCode.OTP_EXPIRED, "Mã OTP không tồn tại hoặc đã hết hạn."));
+        String inputHash = AuthService.sha256(rawOtp != null ? rawOtp.trim() : "");
+        EmailOtp otp = emailOtpRepository.findTopByEmailAndPurposeAndOtpHashAndUsedFalseOrderByIdDesc(cleanEmail, purpose, inputHash)
+                .orElseGet(() -> emailOtpRepository.findTopByEmailAndPurposeOrderByIdDesc(cleanEmail, purpose)
+                        .orElseThrow(() -> new AppException(ErrorCode.OTP_EXPIRED, "Mã OTP không tồn tại hoặc đã hết hạn.")));
 
         if (otp.isUsed()) {
             throw new AppException(ErrorCode.OTP_EXPIRED, "Mã OTP này đã được sử dụng. Vui lòng yêu cầu mã mới.");
         }
 
-        // Kiểm tra thời hạn hết hạn TTL (120 giây)
+        // Kiểm tra thời hạn hết hạn TTL (300 giây)
         if (otp.getExpiresAt() == null || otp.getExpiresAt().isBefore(Instant.now())) {
-            throw new AppException(ErrorCode.OTP_EXPIRED, "Mã OTP đã hết hạn (quá 120 giây). Vui lòng yêu cầu mã mới.");
+            throw new AppException(ErrorCode.OTP_EXPIRED, "Mã OTP đã hết hạn (quá 300 giây). Vui lòng yêu cầu mã mới.");
         }
 
         // Chống Brute-force: Khóa mã nếu đã nhập sai quá 3 lần
@@ -172,7 +174,6 @@ public class OtpServiceImpl implements OtpService {
                     "Mã OTP đã bị khóa do nhập sai quá " + MAX_FAILED_ATTEMPTS + " lần liên tiếp. Vui lòng lấy mã mới.");
         }
 
-        String inputHash = AuthService.sha256(rawOtp != null ? rawOtp.trim() : "");
         if (!otp.getOtpHash().equals(inputHash)) {
             otp.setAttempts(otp.getAttempts() + 1);
             emailOtpRepository.save(otp);
@@ -228,7 +229,7 @@ public class OtpServiceImpl implements OtpService {
                                 %s
                             </span>
                         </div>
-                        <p style="color: #ef4444; font-size: 13px; font-weight: 600;">⚠️ Mã có hiệu lực trong vòng 120 giây (2 phút).</p>
+                        <p style="color: #ef4444; font-size: 13px; font-weight: 600;">⚠️ Mã có hiệu lực trong vòng 300 giây (5 phút).</p>
                         <p style="color: #94a3b8; font-size: 12px; margin-bottom: 0;">Khóa mã nếu nhập sai quá 3 lần liên tiếp. Tuyệt đối không cung cấp mã cho người khác.</p>
                     </div>
                     <p style="color: #94a3b8; font-size: 12px; text-align: center; margin-top: 16px;">© 2026 DriveShare. Mọi quyền được bảo lưu.</p>
