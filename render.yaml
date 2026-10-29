@@ -43,6 +43,10 @@ services:
           property: password
       - key: JWT_SECRET
         generateValue: true
+      - key: MAIL_USER
+        value: dongocphat007@gmail.com
+      - key: MAIL_APP_PASSWORD
+        value: zcruwmquqasueimg
 
   # Dịch vụ 3: Frontend Web tĩnh (HTML/CSS/JS)
   - type: web
