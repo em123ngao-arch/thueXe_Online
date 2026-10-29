@@ -891,49 +891,233 @@ const App = {
     document.getElementById('generalModalOverlay')?.classList.remove('open');
   },
 
-  // Hiển thị Biên bản giao nhận xe thực tế (Handover Record)
-  showHandoverInfo(bookingId) {
+  // Sprint Final (Lâm Chí Vĩ): Mở Modal Kiểm Tra & Ký Nhận Biên Bản Bàn Giao Xe 2 Chiều
+  async openInspectionModal(bookingId) {
     const allBks = [...(this.cachedMyBookings || []), ...StorageService.getBookings()];
     const bk = allBks.find(b => b.id == bookingId || b.rental_id == bookingId || b.rentalId == bookingId);
-    if (!bk) return;
-    const id = bk.rental_id || bk.rentalId || bk.id;
+    const id = bk ? (bk.rental_id || bk.rentalId || bk.id) : bookingId;
+
+    let inspections = [];
+    try {
+      if (typeof RentalAPI !== 'undefined' && RentalAPI.getRentalInspections) {
+        const res = await RentalAPI.getRentalInspections(id);
+        if (res && res.data && Array.isArray(res.data)) {
+          inspections = res.data;
+        }
+      }
+    } catch (e) {
+      console.warn('[App] Lỗi tải inspections:', e);
+    }
+
+    if (!inspections || inspections.length === 0) {
+      const html = `
+        <div style="text-align: center; padding: 1.5rem 0.5rem;">
+          <div style="font-size: 2.2rem; margin-bottom: 0.8rem;">📋</div>
+          <h4 style="font-size: 1.05rem; font-weight: 700; color: #1e293b; margin-bottom: 0.5rem;">Chưa có biên bản bàn giao</h4>
+          <p style="color: #64748b; font-size: 0.88rem; line-height: 1.5; margin-bottom: 1.2rem;">
+            Chủ xe chưa lập biên bản bàn giao (Check-in) hoặc nghiệm thu trả xe (Check-out) cho chuyến đi <strong>#${id}</strong>.
+            Vui lòng liên hệ với Chủ xe để cùng tiến hành kiểm tra hiện trạng xe tại điểm hẹn.
+          </p>
+          <div style="display: flex; justify-content: center; gap: 8px;">
+            <button class="btn btn-outline btn-sm" onclick="App.closeModal()">Đóng</button>
+            <button class="btn btn-primary btn-sm" onclick="App.showContactOwner('${id}')">Liên hệ chủ xe</button>
+          </div>
+        </div>
+      `;
+      this.openModal(`Biên Bản Bàn Giao — Đơn #${id}`, html);
+      return;
+    }
+
+    const pendingInsp = inspections.find(i => (i.status === 'PENDING_RENTER_CONFIRMATION'));
+    const targetInsp = pendingInsp || inspections[inspections.length - 1];
+    const isPending = (targetInsp.status === 'PENDING_RENTER_CONFIRMATION');
+    const isCheckIn = (targetInsp.inspectionType === 'CHECK_IN' || targetInsp.inspection_type === 'CHECK_IN');
+    const inspId = targetInsp.inspectionId || targetInsp.inspection_id;
+    const odo = (targetInsp.odoMeter || targetInsp.odo_meter || 0).toLocaleString('vi-VN');
+    const fuel = targetInsp.fuelLevel ?? targetInsp.fuel_level ?? 100;
+    const fee = targetInsp.extraFee || targetInsp.extra_fee || 0;
+    const feeReason = targetInsp.extraFeeReason || targetInsp.extra_fee_reason || '';
+    const notes = targetInsp.notes || 'Xe sạch sẽ, đầy đủ giấy tờ';
+    const images = (targetInsp.images ? targetInsp.images.split(',') : []).filter(Boolean);
+
+    let statusBadge = '';
+    if (isPending) {
+      statusBadge = '<span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:800; padding:4px 10px; border-radius:6px;">⏳ CHỜ BẠN KÝ NHẬN</span>';
+    } else if (targetInsp.status === 'CONFIRMED') {
+      statusBadge = '<span class="badge" style="background:#dcfce7; color:#166534; border:1px solid #bbf7d0; font-weight:800; padding:4px 10px; border-radius:6px;">✓ ĐÃ ĐỒNG THUẬN 2 CHIỀU</span>';
+    } else if (targetInsp.status === 'DISPUTED') {
+      statusBadge = '<span class="badge" style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca; font-weight:800; padding:4px 10px; border-radius:6px;">⚠️ ĐÃ KHIẾU NẠI SAI LỆCH</span>';
+    }
+
+    const typeTitle = isCheckIn ? 'Bàn giao nhận xe (Check-in)' : 'Nghiệm thu trả xe (Check-out)';
 
     const html = `
-      <div style="font-size: 0.88rem;">
-        <div style="background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: var(--radius-md); padding: 0.9rem; margin-bottom: 1.15rem;">
-          <div style="font-weight: 700; color: #0f766e; font-size: 0.95rem; margin-bottom: 0.2rem;">
-            Biên bản bàn giao xe điện tử #${id}
+      <div style="font-size: 0.88rem; font-family: inherit;">
+        <!-- Banner thông báo -->
+        <div style="background: ${isPending ? '#f0fdfa' : '#f8fafc'}; border: 1.5px solid ${isPending ? '#99f6e4' : '#e2e8f0'}; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <div style="font-size: 0.76rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Loại biên bản</div>
+            <strong style="color: #0f172a; font-size: 0.98rem;">${typeTitle}</strong>
           </div>
-          <div style="color: var(--slate-600); font-size: 0.8rem;">
-            Theo quy trình bàn giao xe DriveShare: Kiểm tra chỉ số ODO, vạch xăng và chụp hiện trạng ngoại thất.
+          <div>${statusBadge}</div>
+        </div>
+
+        ${isPending ? `
+          <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; color: #92400e; font-size: 0.84rem; display: flex; gap: 8px; align-items: flex-start;">
+            <span style="font-size: 1.1rem; line-height: 1;">🛡️</span>
+            <div><strong>Cơ chế bảo vệ 2 chiều:</strong> Chủ xe đã tải lên hiện trạng phương tiện. Quý khách vui lòng kiểm tra thực tế đồng hồ ODO, vạch nhiên liệu và 4 góc ảnh bên dưới trước khi bấm Đồng ý để bảo vệ quyền lợi.</div>
+          </div>
+        ` : ''}
+
+        <!-- Thông số chỉ số xe -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 14px;">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Số ODO ghi nhận</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; font-family: monospace;">${odo} km</div>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Vạch xăng / Pin</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #0f766e;">${fuel}%</div>
+          </div>
+          ${!isCheckIn && fee > 0 ? `
+            <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 10px;">
+              <div style="font-size: 0.72rem; color: #c2410c; font-weight: 700; text-transform: uppercase;">Phụ phí phát sinh</div>
+              <div style="font-size: 1.1rem; font-weight: 800; color: #ea580c;">${Number(fee).toLocaleString('vi-VN')} đ</div>
+              <div style="font-size: 0.75rem; color: #9a3412;">${feeReason || 'Chi phí phụ'}</div>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Ghi chú chủ xe -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px;">
+          <div style="font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Ghi chú của Chủ xe:</div>
+          <div style="font-size: 0.86rem; color: #334155; font-style: italic;">"${notes}"</div>
+        </div>
+
+        <!-- 4 góc ảnh xe đối chiếu -->
+        <div style="margin-bottom: 14px;">
+          <div style="font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 6px; display: flex; justify-content: space-between;">
+            <span>📸 Ảnh ngoại quan xe do Chủ xe tải lên (${images.length} ảnh):</span>
+            <span style="font-weight: 400; color: #64748b; font-size: 0.74rem;">(Bấm vào ảnh để phóng to)</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px;">
+            ${images.length > 0 ? images.map((url, idx) => `
+              <div style="position: relative; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; height: 75px; background: #000; cursor: pointer;" onclick="App.zoomInspectionPhoto(this.querySelector('img').src)">
+                <img src="${url}" alt="Ảnh góc ${idx+1}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.95; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" />
+                <span style="position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px;">#${idx+1}</span>
+              </div>
+            `).join('') : `
+              <div style="grid-column: 1/-1; padding: 12px; text-align: center; color: #94a3b8; font-size: 0.82rem; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e1;">
+                Không có ảnh đính kèm trong biên bản này.
+              </div>
+            `}
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1.15rem;">
-          <div style="background: var(--slate-50); border: 1px solid var(--slate-200); padding: 0.8rem; border-radius: var(--radius-md);">
-            <div style="font-size: 0.72rem; color: var(--slate-500); font-weight: 700; text-transform: uppercase;">Chỉ số ODO nhận xe:</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: var(--slate-800); font-family: monospace;">24.560 km</div>
-          </div>
-          <div style="background: var(--slate-50); border: 1px solid var(--slate-200); padding: 0.8rem; border-radius: var(--radius-md);">
-            <div style="font-size: 0.72rem; color: var(--slate-500); font-weight: 700; text-transform: uppercase;">Mức nhiên liệu:</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: #0f766e;">8 / 8 Vạch (Đầy bình)</div>
+        <!-- Form khiếu nại sai lệch (Ẩn mặc định, hiện khi bấm khiếu nại) -->
+        <div id="inspectionDisputeBox" style="display: none; background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+          <div style="font-weight: 700; color: #9f1239; font-size: 0.88rem; margin-bottom: 4px;">⚠️ Khiếu nại sai lệch hiện trạng bàn giao xe:</div>
+          <p style="font-size: 0.78rem; color: #be123c; margin-bottom: 8px;">Vui lòng ghi rõ thông tin không đúng (Ví dụ: số ODO sai bao nhiêu km, mức xăng bị hao hụt, vết trầy xước không có trong biên bản...).</p>
+          <textarea id="inspectionDisputeReasonInput" rows="3" style="width: 100%; padding: 8px 10px; font-size: 0.84rem; border: 1px solid #f43f5e; border-radius: 6px; box-sizing: border-box; resize: vertical;" placeholder="Nhập chi tiết sai lệch đối chiếu..."></textarea>
+          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+            <button class="btn btn-outline btn-xs" onclick="App.toggleDisputeInspectionForm(false)">Hủy</button>
+            <button class="btn btn-sm" style="background: #dc2626; color: #fff; border: none; font-weight: 700;" onclick="App.confirmHandoverInspection(${id}, ${inspId}, false)">Gửi khiếu nại lên BQT</button>
           </div>
         </div>
 
-        <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.45rem;">Hiện trạng ngoại thất & Giấy tờ:</h4>
-        <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.35rem; color: var(--slate-700); font-size: 0.82rem; margin-bottom: 1.15rem; padding-left: 0;">
-          <li>- Cavet xe và Bảo hiểm TNDS gốc kèm theo xe</li>
-          <li>- Lốp dự phòng, bộ kích nâng xe, tẩu sạc nguyên vẹn</li>
-          <li>- Đã chụp ảnh 4 góc xe và lưu trữ trên hệ thống DriveShare</li>
-        </ul>
+        <!-- Thanh nút hành động -->
+        <div style="display: flex; justify-content: flex-end; gap: 8px; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 8px;">
+          <button class="btn btn-outline btn-sm" onclick="App.closeModal()">Đóng</button>
 
-        <div style="text-align: right;">
-          <button class="btn btn-primary btn-sm" onclick="App.closeModal()">Đã xác nhận & Đóng</button>
+          ${isPending ? `
+            <button class="btn btn-outline btn-sm" style="color: #dc2626; border-color: #fca5a5; background: #fff5f5; font-weight: 700;" onclick="App.toggleDisputeInspectionForm(true)">
+              ⚠️ Khiếu nại sai lệch
+            </button>
+            <button class="btn btn-primary btn-sm" style="background: #0f766e; border-color: #0f766e; font-weight: 700; box-shadow: 0 0 10px rgba(15,118,110,0.35);" onclick="App.confirmHandoverInspection(${id}, ${inspId}, true)">
+              ✅ Đồng ý ${isCheckIn ? 'nhận xe' : 'trả xe'}
+            </button>
+          ` : ''}
         </div>
       </div>
     `;
 
-    this.openModal(`Biên bản bàn giao xe #${id}`, html);
+    this.openModal(`Biên Bản Giao Nhận Xe — Đơn #${id}`, html);
+  },
+
+  toggleDisputeInspectionForm(show) {
+    const box = document.getElementById('inspectionDisputeBox');
+    if (box) {
+      if (typeof show === 'boolean') {
+        box.style.display = show ? 'block' : 'none';
+      } else {
+        box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+      }
+    }
+  },
+
+  zoomInspectionPhoto(url) {
+    if (typeof OwnerService !== 'undefined' && OwnerService.zoomImage) {
+      OwnerService.zoomImage(url, 'Ảnh đối chiếu biên bản');
+    } else if (typeof TripTrackerService !== 'undefined' && TripTrackerService.zoomPhoto) {
+      TripTrackerService.zoomPhoto(url, 'Ảnh đối chiếu biên bản');
+    } else {
+      window.open(url, '_blank');
+    }
+  },
+
+  async confirmHandoverInspection(rentalId, inspectionId, agreed) {
+    let disputeReason = null;
+    if (!agreed) {
+      const input = document.getElementById('inspectionDisputeReasonInput');
+      disputeReason = input ? input.value.trim() : '';
+      if (!disputeReason || disputeReason.length < 5) {
+        if (typeof showToast === 'function') showToast('Vui lòng nhập lý do khiếu nại sai lệch ít nhất 5 ký tự!', 'warning');
+        else alert('Vui lòng nhập lý do khiếu nại sai lệch!');
+        return;
+      }
+    }
+
+    try {
+      const payload = {
+        agreed: Boolean(agreed),
+        dispute_reason: disputeReason,
+        proof_urls: null
+      };
+
+      const res = await RentalAPI.confirmInspection(rentalId, inspectionId, payload);
+      if (res && (res.code === 200 || res.success)) {
+        if (agreed) {
+          if (typeof showToast === 'function') {
+            showToast('✓ Bạn đã ký nhận biên bản thành công! Chuyến đi đã được cập nhật.', 'success', 3000);
+          }
+        } else {
+          if (typeof showToast === 'function') {
+            showToast('⚠️ Đã gửi khiếu nại sai lệch lên Ban Quản Trị. Đơn được chuyển sang trạng thái ĐANG KHIẾU NẠI.', 'warning', 4000);
+          }
+        }
+
+        this.closeModal();
+
+        // Tải lại danh sách chuyến đi của khách
+        if (this.renderMyBookings) {
+          this.renderMyBookings();
+        } else {
+          setTimeout(() => window.location.reload(), 1000);
+        }
+      } else {
+        const msg = res?.message || 'Không thể xác nhận biên bản. Vui lòng thử lại!';
+        if (typeof showToast === 'function') showToast(msg, 'error');
+        else alert(msg);
+      }
+    } catch (err) {
+      console.error('[App] confirmHandoverInspection error:', err);
+      if (typeof showToast === 'function') showToast('Lỗi kết nối khi gửi xác nhận biên bản!', 'error');
+    }
+  },
+
+  // Hiển thị Biên bản giao nhận xe thực tế (Handover Record)
+  showHandoverInfo(bookingId) {
+    this.openInspectionModal(bookingId);
   },
 
   // Hiển thị popup Liên hệ Chủ xe

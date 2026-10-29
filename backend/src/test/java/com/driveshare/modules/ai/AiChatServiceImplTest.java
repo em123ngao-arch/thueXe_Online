@@ -93,7 +93,7 @@ class AiChatServiceImplTest {
         assertThat(card.getSeats()).isEqualTo(5);
         assertThat(card.getTransmission()).isEqualTo("Tự động");
         assertThat(card.getFuelType()).isEqualTo("Xăng");
-        assertThat(card.getBookingUrl()).isEqualTo("/car-detail.html?id=1");
+        assertThat(card.getBookingUrl()).isEqualTo("index.html?carId=1");
     }
 
     @Test
@@ -166,5 +166,45 @@ class AiChatServiceImplTest {
         assertThat(response).isNotNull();
         assertThat(response.getMessage()).contains("Không sao ạ");
         assertThat(response.getSuggestedCars()).isNull();
+    }
+
+    @Test
+    @DisplayName("Out-of-scope redirection: When user asks out-of-scope question (coding/math), responds politely with ChatGPT, Gemini, and Claude links")
+    void testChatOutOfScopeWithAiLinks() {
+        ChatRequest request = new ChatRequest("sess-code", "Viết cho tôi một hàm Python giải phương trình bậc hai");
+        ChatReplyResponse response = aiChatService.chat(request, 100L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getMessage()).contains("ChatGPT");
+        assertThat(response.getMessage()).contains("https://chatgpt.com");
+        assertThat(response.getMessage()).contains("Gemini");
+        assertThat(response.getMessage()).contains("https://gemini.google.com");
+        assertThat(response.getMessage()).contains("Claude");
+        assertThat(response.getMessage()).contains("https://claude.ai");
+        assertThat(response.getSuggestedCars()).isNull();
+    }
+
+    @Test
+    @DisplayName("Prompt hot reload: Calling reloadSystemPrompt updates the active system prompt")
+    void testReloadPrompt() {
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> aiChatService.reloadSystemPrompt());
+    }
+
+    @Test
+    @DisplayName("Admin transcript: Admin can retrieve full transcript of any session regardless of logged-in user")
+    void testGetSessionTranscriptForAdmin() {
+        com.driveshare.modules.ai.entity.ChatMemoryEntity entity = com.driveshare.modules.ai.entity.ChatMemoryEntity.builder()
+                .sessionId("sess-admin-1")
+                .userId(99L)
+                .messages("[{\"role\":\"USER\",\"content\":\"Xin chào\"},{\"role\":\"ASSISTANT\",\"content\":\"Chào bạn!\"}]")
+                .build();
+        when(chatMemoryRepository.findBySessionId("sess-admin-1")).thenReturn(Optional.of(entity));
+
+        List<com.driveshare.modules.ai.dto.ChatMessageDto> transcript = aiChatService.getSessionTranscriptForAdmin("sess-admin-1");
+
+        assertThat(transcript).hasSize(2);
+        assertThat(transcript.get(0).getRole()).isEqualTo("USER");
+        assertThat(transcript.get(0).getContent()).isEqualTo("Xin chào");
+        assertThat(transcript.get(1).getRole()).isEqualTo("ASSISTANT");
     }
 }

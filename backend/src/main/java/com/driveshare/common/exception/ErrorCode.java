@@ -23,6 +23,10 @@ public enum ErrorCode {
     WEAK_PASSWORD("WEAK_PASSWORD", "Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường và chữ số", HttpStatus.BAD_REQUEST),
     PASSWORD_CONFIRM_MISMATCH("PASSWORD_CONFIRM_MISMATCH", "Mật khẩu xác nhận không khớp", HttpStatus.BAD_REQUEST),
     RESET_TOKEN_INVALID("RESET_TOKEN_INVALID", "Liên kết đặt lại mật khẩu không hợp lệ, đã hết hạn hoặc đã được sử dụng", HttpStatus.BAD_REQUEST),
+    EMAIL_NOT_VERIFIED("EMAIL_NOT_VERIFIED", "Email chưa được xác thực bằng mã OTP. Vui lòng xác thực trước khi đăng nhập", HttpStatus.FORBIDDEN),
+    OTP_INVALID("OTP_INVALID", "Mã OTP không chính xác. Vui lòng kiểm tra lại", HttpStatus.BAD_REQUEST),
+    OTP_EXPIRED("OTP_EXPIRED", "Mã OTP đã hết hạn hoặc không tồn tại. Vui lòng lấy mã mới", HttpStatus.BAD_REQUEST),
+    OTP_COOLDOWN("OTP_COOLDOWN", "Vui lòng đợi 60 giây trước khi yêu cầu gửi lại mã OTP", HttpStatus.TOO_MANY_REQUESTS),
 
     // User & Profile
     USER_NOT_FOUND("USER_NOT_FOUND", "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),
@@ -78,9 +82,10 @@ public enum ErrorCode {
     // CRP-NEW: Ngăn chặn 2 đơn thuê trùng ngày cùng 1 xe từ 1 người dùng
     DUPLICATE_RENTAL_REQUEST("DUPLICATE_RENTAL_REQUEST", "Bạn đã có yêu cầu thuê xe này trong khoảng thời gian trùng lặp. Vui lòng hủy đơn cũ trước khi gửi yêu cầu mới.", HttpStatus.CONFLICT),
 
-    // Sprint 3: Inspection & Review (Vĩ, Quân)
+    // Sprint 3 & Sprint Final: Inspection & Review (Vĩ, Quân)
     INSPECTION_ALREADY_EXISTS("INSPECTION_ALREADY_EXISTS", "Biên bản bàn giao/trả xe đã được lập trước đó", HttpStatus.CONFLICT),
     INSPECTION_NOT_FOUND("INSPECTION_NOT_FOUND", "Không tìm thấy biên bản kiểm tra bàn giao xe", HttpStatus.NOT_FOUND),
+    INSPECTION_ALREADY_PROCESSED("INSPECTION_ALREADY_PROCESSED", "Biên bản bàn giao này đã được xác nhận hoặc khiếu nại trước đó", HttpStatus.BAD_REQUEST),
     REVIEW_ALREADY_EXISTS("REVIEW_ALREADY_EXISTS", "Đơn thuê xe này đã được đánh giá trước đó", HttpStatus.CONFLICT),
     RENTAL_NOT_COMPLETED_FOR_REVIEW("RENTAL_NOT_COMPLETED_FOR_REVIEW", "Chuyến đi phải ở trạng thái hoàn tất (COMPLETED) mới có thể đánh giá", HttpStatus.BAD_REQUEST),
     KYC_NOT_VERIFIED("KYC_NOT_VERIFIED", "Hồ sơ giấy tờ (CCCD hoặc GPLX) của bạn chưa được phê duyệt. Vui lòng kiểm tra hồ sơ cá nhân trước khi thuê xe", HttpStatus.FORBIDDEN),

@@ -318,6 +318,65 @@ class QAHttpHandler(http.server.SimpleHTTPRequestHandler):
                     "data": review
                 })
             
+            if path == "/api/v1/admin/rentals/overdue":
+                overdue_rentals = [r for r in qa_db["rentals"] if r.get("status") == "OVERDUE"]
+                return self._send_json(200, {
+                    "code": 200,
+                    "success": True,
+                    "message": "Lấy danh sách đơn quá hạn thành công",
+                    "data": overdue_rentals
+                })
+
+            dossier_match = re.match(r"^/api/v1/admin/rentals/(\d+)/dossier$", path)
+            if dossier_match:
+                rental_id = int(dossier_match.group(1))
+                rental = next((r for r in qa_db["rentals"] if r.get("id") == rental_id), None)
+                return self._send_json(200, {
+                    "code": 200,
+                    "success": True,
+                    "message": "Xuất hồ sơ pháp lý vi phạm thành công",
+                    "data": {
+                        "dossierCode": f"HSPL-RENTAL-{rental_id}",
+                        "legalNotice": "Hồ sơ vi phạm chiếm dụng phương tiện giao thông đường bộ theo Điều 175 Bộ luật Hình sự (Tội lạm dụng tín nhiệm chiếm đoạt tài sản) được trích xuất từ hệ thống DriveShare phục vụ bàn giao Cơ quan Cảnh sát Điều tra và Công ty Bảo hiểm.",
+                        "rentalId": rental_id,
+                        "status": "OVERDUE",
+                        "overdueHours": rental.get("overdueHours", 26) if rental else 26,
+                        "penaltyFee": rental.get("penaltyFee", 1800000) if rental else 1800000,
+                        "renter": {
+                            "fullName": rental.get("renterName", "Nguyễn Văn Vi Phạm") if rental else "Nguyễn Văn Vi Phạm",
+                            "phone": "0987654321",
+                            "idCardNumber": "079201009999",
+                            "licenseNumber": "B2-998877",
+                            "idCardFrontUrl": "https://img.driveshare.vn/cccd_front.jpg",
+                            "idCardBackUrl": "https://img.driveshare.vn/cccd_back.jpg",
+                            "licenseFrontUrl": "https://img.driveshare.vn/gplx_front.jpg",
+                            "licenseBackUrl": "https://img.driveshare.vn/gplx_back.jpg"
+                        },
+                        "car": {
+                            "plateNumber": rental.get("licensePlate", "51G-888.99") if rental else "51G-888.99",
+                            "brand": "Mazda",
+                            "model": "Mazda 3",
+                            "chassisNumber": "VN-CHASSIS-51G88899"
+                        },
+                        "owner": {
+                            "fullName": rental.get("ownerName", "Nguyễn Văn Chủ Xe") if rental else "Nguyễn Văn Chủ Xe",
+                            "phone": rental.get("ownerPhone", "0901234567") if rental else "0901234567",
+                            "bankName": "Vietcombank",
+                            "bankAccountNumber": "0123456789"
+                        },
+                        "depositPayment": {
+                            "amount": 600000,
+                            "paymentMethod": "VIETQR",
+                            "transactionCode": "VQR-TX-998811",
+                            "status": "SUCCESS"
+                        },
+                        "contract": {
+                            "contractCode": f"HDDT-{rental_id}",
+                            "criminalLiabilityNotice": "Cảnh báo chế tài hình sự theo Điều 175 Bộ luật Hình sự."
+                        }
+                    }
+                })
+
             if path == "/api/v1/admin/users/pending-cccd":
                 return self._send_json(200, {
                     "code": 200,

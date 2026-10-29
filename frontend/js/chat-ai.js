@@ -4,12 +4,36 @@
  * Supports: Visual Car Cards (Issue #28) & Deposit 30% VietQR Calculation (Issue #27)
  */
 const AiChatWidget = (() => {
-  let sessionId = localStorage.getItem("driveshare_ai_session_id");
-  if (!sessionId) {
-    sessionId = "session_" + Math.random().toString(36).substring(2, 11) + "_" + Date.now();
-    localStorage.setItem("driveshare_ai_session_id", sessionId);
+  function getCurrentUserIdentity() {
+    try {
+      const u = (typeof getCurrentUser === "function" ? getCurrentUser() : null) ||
+                (typeof AuthService !== "undefined" && AuthService.getCurrentUser ? AuthService.getCurrentUser() : null);
+      if (u) {
+        const id = u.userId || u.id;
+        if (id) return `user_${id}`;
+        if (u.email) return `user_${String(u.email).toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')}`;
+      }
+    } catch (_) {}
+    return "guest";
   }
 
+  function getSessionStorageKey(identity) {
+    const id = identity || getCurrentUserIdentity();
+    return `driveshare_ai_session_${id}`;
+  }
+
+  function getActiveSessionId() {
+    const key = getSessionStorageKey();
+    let sid = localStorage.getItem(key);
+    if (!sid) {
+      sid = "session_" + getCurrentUserIdentity() + "_" + Math.random().toString(36).substring(2, 9) + "_" + Date.now();
+      localStorage.setItem(key, sid);
+    }
+    return sid;
+  }
+
+  let currentTrackedUser = getCurrentUserIdentity();
+  let sessionId = getActiveSessionId();
   let isOpen = false;
 
   const FEATURED_CARS = [
@@ -135,10 +159,44 @@ const AiChatWidget = (() => {
     return [];
   }
 
+  function resetChatBoxToWelcome(customGreeting) {
+    const box = document.getElementById("ai-messages-box");
+    if (!box) return;
+    const greetingText = customGreeting || `
+      Xin chào! Tôi là Trợ lý AI DriveShare 🚗✨<br><br>
+      Tôi có thể giúp bạn:<br>
+      • Tìm xe thuê theo nhu cầu (du lịch, công tác, xe điện...)<br>
+      • Tính chi phí & cọc 30% VietQR<br>
+      • Giới thiệu dịch vụ thuê kèm tài xế<br><br>
+      Bạn đang muốn tìm xe gì hôm nay?
+    `;
+    box.innerHTML = `
+      <div style="display: flex; gap: 8px; align-items: flex-start;">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: #ede9fe; color: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;">🤖</div>
+        <div style="background: #f1f5f9; color: #1e293b; padding: 10px 14px; border-radius: 14px 14px 14px 2px; font-size: 13px; line-height: 1.5; max-width: 85%;">
+          ${greetingText}
+        </div>
+      </div>
+    `;
+  }
+
+  async function syncUserSession(forceReload = false) {
+    const activeIdentity = getCurrentUserIdentity();
+    if (forceReload || activeIdentity !== currentTrackedUser) {
+      currentTrackedUser = activeIdentity;
+      sessionId = getActiveSessionId();
+      resetChatBoxToWelcome();
+      const win = document.getElementById("ai-chat-window");
+      if (win && win.style.display === "flex") {
+        await loadHistory();
+      }
+    }
+  }
+
   function init() {
     renderWidgetHtml();
     attachEvents();
-    loadHistory();
+    syncUserSession(true);
   }
 
   function renderWidgetHtml() {
@@ -210,9 +268,34 @@ const AiChatWidget = (() => {
               </div>
             </div>
           </div>
-          <div style="display: flex; gap: 8px;">
-            <button id="ai-clear-btn" title="Xóa đoạn chat" style="background: none; border: none; color: white; opacity: 0.8; cursor: pointer; font-size: 15px; padding: 4px;">🗑️</button>
-            <button id="ai-close-btn" title="Đóng" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; font-weight: bold; padding: 4px;">✕</button>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <button id="ai-history-btn" title="Xem lịch sử trò chuyện của tôi" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; font-weight: 600;">📜 Lịch sử</button>
+            <button id="ai-clear-btn" title="Làm mới cuộc trò chuyện" style="background: none; border: none; color: white; opacity: 0.85; cursor: pointer; font-size: 15px;">🔄</button>
+            <button id="ai-close-btn" title="Đóng" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; font-weight: bold;">✕</button>
+          </div>
+        </div>
+
+        <!-- History Drawer Overlay -->
+        <div id="ai-history-drawer" style="
+          display: none;
+          position: absolute;
+          top: 68px;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: #ffffff;
+          z-index: 20;
+          flex-direction: column;
+          padding: 14px;
+          overflow-y: auto;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        ">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 14px; color: #1e293b;">📜 Lịch sử phiên trò chuyện</div>
+            <button id="ai-history-close" style="background: none; border: none; color: #64748b; font-size: 16px; cursor: pointer;">✕</button>
+          </div>
+          <div id="ai-history-list" style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="font-size: 12px; color: #94a3b8; text-align: center; padding: 20px 0;">Đang tải danh sách...</div>
           </div>
         </div>
 
@@ -300,6 +383,8 @@ const AiChatWidget = (() => {
         .ai-deposit-box { animation: aiCardSlideIn 0.3s ease-out 0.1s both; }
         .ai-book-btn { transition: background 0.2s, transform 0.1s; }
         .ai-book-btn:hover { background: #1d4ed8 !important; transform: scale(1.02); }
+        .ai-session-item { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; cursor: pointer; transition: all 0.2s; }
+        .ai-session-item:hover { border-color: #3b82f6; background: #eff6ff; }
       </style>
     `;
     document.body.appendChild(container);
@@ -309,31 +394,29 @@ const AiChatWidget = (() => {
     const trigger = document.getElementById("ai-chat-trigger");
     const closeBtn = document.getElementById("ai-close-btn");
     const clearBtn = document.getElementById("ai-clear-btn");
+    const historyBtn = document.getElementById("ai-history-btn");
+    const historyClose = document.getElementById("ai-history-close");
     const form = document.getElementById("ai-chat-form");
     const chips = document.querySelectorAll(".ai-chip");
 
     if (trigger) trigger.addEventListener("click", toggleChat);
     if (closeBtn) closeBtn.addEventListener("click", toggleChat);
 
+    if (historyBtn) historyBtn.addEventListener("click", toggleHistoryDrawer);
+    if (historyClose) {
+      historyClose.addEventListener("click", () => {
+        const d = document.getElementById("ai-history-drawer");
+        if (d) d.style.display = "none";
+      });
+    }
+
     if (clearBtn) {
-      clearBtn.addEventListener("click", async () => {
-        if (confirm("Bạn có muốn xóa toàn bộ lịch sử trò chuyện này không?")) {
-          try {
-            const baseUrl = getBaseUrl();
-            await fetch(`${baseUrl}/chat/${sessionId}`, {
-              method: "DELETE",
-              headers: { "Authorization": getAuthHeader() }
-            });
-          } catch (e) {}
-          const box = document.getElementById("ai-messages-box");
-          box.innerHTML = `
-            <div style="display: flex; gap: 8px; align-items: flex-start;">
-              <div style="width: 28px; height: 28px; border-radius: 50%; background: #ede9fe; color: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;">🤖</div>
-              <div style="background: #f1f5f9; color: #1e293b; padding: 10px 14px; border-radius: 14px 14px 14px 2px; font-size: 13px; line-height: 1.45; max-width: 85%;">
-                Đã làm mới cuộc hội thoại! 🔄 Bạn đang cần tìm xe gì hôm nay?
-              </div>
-            </div>
-          `;
+      clearBtn.addEventListener("click", () => {
+        if (confirm("Bắt đầu cuộc trò chuyện mới? Các cuộc trò chuyện trước đây vẫn được lưu an toàn trong mục '📜 Lịch sử'.")) {
+          const userKey = getCurrentUserIdentity();
+          sessionId = "session_" + userKey + "_" + Math.random().toString(36).substring(2, 9) + "_" + Date.now();
+          localStorage.setItem(getSessionStorageKey(userKey), sessionId);
+          resetChatBoxToWelcome("Đã tạo phiên trò chuyện mới! 🔄 Cuộc trò chuyện cũ của bạn đã được lưu trong mục '📜 Lịch sử'. Bạn đang cần tìm xe gì hôm nay?");
         }
       });
     }
@@ -364,12 +447,15 @@ const AiChatWidget = (() => {
 
         try {
           const baseUrl = getBaseUrl();
+          const headers = { "Content-Type": "application/json" };
+          const auth = getAuthHeader();
+          if (auth) {
+            headers["Authorization"] = auth;
+          }
+          sessionId = getActiveSessionId();
           const res = await fetch(`${baseUrl}/chat`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": getAuthHeader()
-            },
+            headers,
             body: JSON.stringify({ sessionId, message: text })
           });
 
@@ -455,17 +541,19 @@ const AiChatWidget = (() => {
           </div>
           ${car.address ? `<div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">📍 ${escapeHtml(car.address)}</div>` : ''}
           ${car.hasDriverService && car.driverFeeFormatted ? `<div style="font-size: 11px; color: #059669; margin-bottom: 8px;">🚘 Phí tài xế: ${escapeHtml(car.driverFeeFormatted)}/ngày</div>` : ''}
-          <a href="${escapeHtml(car.bookingUrl || '#')}" class="ai-book-btn" style="
+          <button type="button" onclick="AiChatWidget.bookCar(${car.carId})" class="ai-book-btn" style="
             display: block;
+            width: 100%;
             text-align: center;
             background: #2563eb;
             color: white;
-            padding: 7px 12px;
+            padding: 8px 12px;
             border-radius: 8px;
             font-size: 12px;
             font-weight: 600;
-            text-decoration: none;
-          ">Xem chi tiết & Đặt xe →</a>
+            border: none;
+            cursor: pointer;
+          ">Xem chi tiết & Đặt xe →</button>
         </div>
       `;
 
@@ -534,8 +622,6 @@ const AiChatWidget = (() => {
 
   // =========================================================================
   // CORE CHAT FUNCTIONS
-  // =========================================================================
-
   function toggleChat() {
     isOpen = !isOpen;
     const win = document.getElementById("ai-chat-window");
@@ -546,6 +632,151 @@ const AiChatWidget = (() => {
     if (isOpen) {
       const input = document.getElementById("ai-user-input");
       if (input) input.focus();
+      const activeIdentity = getCurrentUserIdentity();
+      if (activeIdentity !== currentTrackedUser) {
+        syncUserSession(true);
+      } else {
+        loadHistory();
+      }
+    }
+  }
+
+  async function toggleHistoryDrawer() {
+    const drawer = document.getElementById("ai-history-drawer");
+    if (!drawer) return;
+    const isShowing = drawer.style.display === "flex";
+    if (isShowing) {
+      drawer.style.display = "none";
+    } else {
+      drawer.style.display = "flex";
+      // Nếu user đã có token đăng nhập, đồng bộ lại phiên hiện tại trước khi hiển thị danh sách
+      if (getAuthHeader()) {
+        try {
+          await loadHistory();
+        } catch (e) {}
+      }
+      await loadMyChatSessions();
+    }
+  }
+
+  async function loadMyChatSessions() {
+    const listEl = document.getElementById("ai-history-list");
+    if (!listEl) return;
+    const auth = getAuthHeader();
+    if (!auth) {
+      listEl.innerHTML = `
+        <div style="text-align: center; padding: 25px 15px; color: #64748b;">
+          <div style="font-size: 32px; margin-bottom: 8px;">🔐</div>
+          <div style="font-weight: 600; font-size: 13px; color: #1e293b; margin-bottom: 6px;">Chưa đăng nhập</div>
+          <div style="font-size: 12px; margin-bottom: 12px; line-height: 1.4;">Đăng nhập để lưu và xem lại toàn bộ lịch sử tư vấn xe của bạn trên DriveShare.</div>
+          <a href="login.html" style="display: inline-block; background: #2563eb; color: white; padding: 6px 14px; border-radius: 8px; font-size: 12px; text-decoration: none; font-weight: 600;">Đăng nhập ngay</a>
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = `<div style="text-align: center; padding: 20px; font-size: 12px; color: #94a3b8;">Đang tải lịch sử...</div>`;
+
+    try {
+      const baseUrl = getBaseUrl();
+      const res = await fetch(`${baseUrl}/chat/my-sessions`, {
+        headers: { "Authorization": auth }
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+        listEl.innerHTML = "";
+        data.data.forEach(item => {
+          const itemEl = document.createElement("div");
+          itemEl.className = "ai-session-item";
+          const isActive = item.sessionId === sessionId;
+          if (isActive) {
+            itemEl.style.borderColor = "#2563eb";
+            itemEl.style.background = "#eff6ff";
+          }
+          const timeStr = item.updatedAt ? new Date(item.updatedAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" }) : "";
+          const preview = item.lastMessage || item.firstMessage || "(Trống)";
+          itemEl.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-weight: 700; font-size: 12px; color: #1e293b;">${isActive ? '👉 Đang mở' : 'Phiên tư vấn'}</span>
+              <span style="font-size: 10px; color: #94a3b8;">${timeStr}</span>
+            </div>
+            <div style="font-size: 12px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 4px;">
+              ${escapeHtml(preview)}
+            </div>
+            <div style="font-size: 10px; color: #64748b; display: flex; justify-content: space-between; align-items: center;">
+              <span>💬 ${item.messageCount || 0} tin nhắn</span>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button type="button" class="ai-del-session-btn" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; padding: 2px 4px;" title="Xóa phiên này">🗑️</button>
+                <span style="color: #2563eb; font-weight: 600;">Mở lại &raquo;</span>
+              </div>
+            </div>
+          `;
+          itemEl.addEventListener("click", () => switchSession(item.sessionId));
+          const delBtn = itemEl.querySelector(".ai-del-session-btn");
+          if (delBtn) {
+            delBtn.addEventListener("click", (e) => deleteSession(e, item.sessionId));
+          }
+          listEl.appendChild(itemEl);
+        });
+      } else if (!data.success && (res.status === 401 || data.errorCode === "UNAUTHENTICATED")) {
+        listEl.innerHTML = `
+          <div style="text-align: center; padding: 25px 15px; color: #64748b;">
+            <div style="font-size: 32px; margin-bottom: 8px;">⚠️</div>
+            <div style="font-weight: 600; font-size: 13px; color: #e11d48; margin-bottom: 6px;">Phiên đăng nhập đã hết hạn</div>
+            <div style="font-size: 12px; margin-bottom: 12px; line-height: 1.4;">Vui lòng đăng nhập lại để tiếp tục xem và lưu lịch sử.</div>
+            <a href="login.html" style="display: inline-block; background: #2563eb; color: white; padding: 6px 14px; border-radius: 8px; font-size: 12px; text-decoration: none; font-weight: 600;">Đăng nhập lại</a>
+          </div>
+        `;
+      } else {
+        listEl.innerHTML = `<div style="text-align: center; padding: 30px 10px; font-size: 12px; color: #94a3b8;">Bạn chưa có lịch sử cuộc trò chuyện nào. Hãy gửi câu hỏi đầu tiên nhé! 😊</div>`;
+      }
+    } catch (e) {
+      listEl.innerHTML = `<div style="text-align: center; padding: 20px; font-size: 12px; color: #ef4444;">Không thể tải lịch sử trò chuyện.</div>`;
+    }
+  }
+
+  async function deleteSession(e, targetSessionId) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (!confirm("Bạn có chắc chắn muốn xóa vĩnh viễn phiên trò chuyện này không?")) return;
+    try {
+      const baseUrl = getBaseUrl();
+      const auth = getAuthHeader();
+      if (auth && targetSessionId) {
+        await fetch(`${baseUrl}/chat/${targetSessionId}`, {
+          method: "DELETE",
+          headers: { "Authorization": auth }
+        });
+      }
+      if (sessionId === targetSessionId) {
+        const userKey = getCurrentUserIdentity();
+        sessionId = "session_" + userKey + "_" + Math.random().toString(36).substring(2, 9) + "_" + Date.now();
+        localStorage.setItem(getSessionStorageKey(userKey), sessionId);
+        resetChatBoxToWelcome();
+      }
+      await loadMyChatSessions();
+    } catch (_) {}
+  }
+
+  function switchSession(targetSessionId) {
+    if (!targetSessionId) return;
+    sessionId = targetSessionId;
+    localStorage.setItem(getSessionStorageKey(currentTrackedUser), sessionId);
+    const drawer = document.getElementById("ai-history-drawer");
+    if (drawer) drawer.style.display = "none";
+    resetChatBoxToWelcome();
+    loadHistory(targetSessionId);
+  }
+
+  function bookCar(carId) {
+    if (!carId) return;
+    if (typeof BookingService !== 'undefined' && typeof BookingService.startBookingFlow === 'function') {
+      if (typeof AuthService !== 'undefined' && typeof AuthService.requireLoginThen === 'function') {
+        AuthService.requireLoginThen(() => BookingService.startBookingFlow(carId));
+      } else {
+        BookingService.startBookingFlow(carId);
+      }
+    } else {
+      window.location.href = `index.html?carId=${carId}`;
     }
   }
 
@@ -706,17 +937,33 @@ const AiChatWidget = (() => {
     if (el) el.remove();
   }
 
-  async function loadHistory() {
+  async function loadHistory(targetId) {
     try {
       const baseUrl = getBaseUrl();
+      const headers = {};
+      const auth = getAuthHeader();
+      if (auth) {
+        headers["Authorization"] = auth;
+      }
+      if (targetId) {
+        sessionId = targetId;
+        localStorage.setItem(getSessionStorageKey(currentTrackedUser), sessionId);
+      } else {
+        sessionId = getActiveSessionId();
+      }
       const res = await fetch(`${baseUrl}/chat/${sessionId}/history`, {
-        headers: { "Authorization": getAuthHeader() }
+        headers
       });
       const data = await res.json();
-      if (data.success && data.data && data.data.messages && data.data.messages.length > 0) {
+      if (data.success && data.data && Array.isArray(data.data.messages) && data.data.messages.length > 0) {
         const box = document.getElementById("ai-messages-box");
-        box.innerHTML = "";
-        data.data.messages.forEach(m => appendMessage(m.role, m.content || m.text, m.cars || m.suggested_cars));
+        if (box) {
+          box.innerHTML = "";
+          data.data.messages.forEach(m => appendMessage(m.role, m.content || m.text, m.cars || m.suggested_cars));
+          box.scrollTop = box.scrollHeight;
+        }
+      } else {
+        resetChatBoxToWelcome();
       }
     } catch (e) {}
   }
@@ -729,16 +976,36 @@ const AiChatWidget = (() => {
     return (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) ? API_CONFIG.BASE_URL : 'http://localhost:8080/api/v1';
   }
 
+  function getAuthToken() {
+    if (typeof getAccessToken === "function") {
+      const t = getAccessToken();
+      if (t) return t;
+    }
+    if (typeof TokenService !== "undefined" && typeof TokenService.getToken === "function") {
+      const t = TokenService.getToken();
+      if (t) return t;
+    }
+    return (
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("ds_access_token") ||
+      localStorage.getItem("driveshare_access_token") ||
+      localStorage.getItem("token") ||
+      ""
+    );
+  }
+
   function getAuthHeader() {
-    return localStorage.getItem("token") ? `Bearer ${localStorage.getItem("token")}` : "";
+    const token = getAuthToken();
+    return token ? `Bearer ${token}` : "";
   }
 
   /**
-   * Render simple Markdown: **bold**, \n → <br>, • bullet points
+   * Render simple Markdown: **bold**, [text](url), \n → <br>, • bullet points
    */
   function renderSimpleMarkdown(text) {
     return escapeHtml(text)
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\[(.*?)\]\((https?:\/\/[^\s\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; font-weight: 600;">$1</a>')
       .replace(/\n/g, '<br>')
       .replace(/^• /gm, '&bull; ');
   }
@@ -779,11 +1046,23 @@ const AiChatWidget = (() => {
 
   return {
     init,
+    syncUserSession,
+    resetChatBoxToWelcome,
     viewCarDetail,
-    bookCarNow
+    bookCarNow,
+    bookCar,
+    switchSession,
+    toggleHistoryDrawer
   };
 })();
 
 document.addEventListener("DOMContentLoaded", () => {
   AiChatWidget.init();
+  const urlParams = new URLSearchParams(window.location.search);
+  const carId = urlParams.get("carId");
+  if (carId && typeof BookingService !== 'undefined' && typeof BookingService.startBookingFlow === 'function') {
+    setTimeout(() => {
+      AiChatWidget.bookCar(carId);
+    }, 400);
+  }
 });

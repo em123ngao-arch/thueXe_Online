@@ -8,6 +8,7 @@ import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.auth.dto.*;
 import com.driveshare.modules.auth.entity.AuthSession;
 import com.driveshare.modules.auth.entity.EmailChangeToken;
+import com.driveshare.modules.auth.entity.EmailOtp;
 import com.driveshare.modules.auth.entity.PasswordResetToken;
 import com.driveshare.modules.auth.repository.AuthSessionRepository;
 import com.driveshare.modules.auth.repository.EmailChangeTokenRepository;
@@ -46,7 +47,7 @@ import java.util.stream.Collectors;
 public class AuthService {
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final long LOCK_MINUTES = 15;
-    private static final long RESET_MINUTES = 30;
+    private static final long RESET_TOKEN_SECONDS = 10 * 60;
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -58,6 +59,10 @@ public class AuthService {
     private final PasswordResetTokenRepository resetTokenRepository;
     private final EmailChangeTokenRepository emailChangeTokenRepository;
     private final CloudinaryService cloudinaryService;
+    private final OtpService otpService;
+    // Không nằm trong constructor: chỉ dùng khi đăng ký có kèm vé OTP
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private RegisterOtpService registerOtpService;
     private static final long EMAIL_CHANGE_MINUTES = 15;
 
     @Value("${driveshare.frontend.base-url:http://127.0.0.1:5500/thueXe_Online/frontend/index.html}")
@@ -127,14 +132,20 @@ public class AuthService {
             throw new AppException(ErrorCode.ID_CARD_EXISTED);
         }
 
-        // 5. Upload ảnh giấy tờ
+        // 5. Bắt buộc xác thực mã OTP trước khi tạo tài khoản
+        boolean preVerified = redeemRegisterTicket(request.getOtpTicket(), email);
+        if (!preVerified) {
+            throw new AppException(ErrorCode.OTP_INVALID, "Vui lòng xác thực mã OTP gửi về email trước khi tạo tài khoản");
+        }
+
+        // 6. Upload ảnh giấy tờ
         String cccdFrontUrl = cloudinaryService.uploadImage(cccdFront, "driveshare/cccd", 10 * 1024 * 1024L);
         String cccdBackUrl = cloudinaryService.uploadImage(cccdBack, "driveshare/cccd", 10 * 1024 * 1024L);
         String gplxFrontUrl = (gplxFront != null && !gplxFront.isEmpty())
                 ? cloudinaryService.uploadImage(gplxFront, "driveshare/gplx", 10 * 1024 * 1024L)
                 : null;
 
-        // 6. Tạo người dùng với trạng thái PENDING
+        // 7. Tạo người dùng với trạng thái PENDING (chờ Admin duyệt CCCD & GPLX)
         Role role = roleRepository.findByRoleName(targetRole)
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName(targetRole).build()));
 
@@ -146,6 +157,7 @@ public class AuthService {
                 .phone(request.getPhone() != null && !request.getPhone().isBlank() ? request.getPhone().trim() : null)
                 .idCardNumber(request.getIdCardNumber() != null && !request.getIdCardNumber().isBlank() ? request.getIdCardNumber().trim() : null)
                 .status(EUserStatus.PENDING)
+                .emailVerified(true)
                 .roles(new HashSet<>(Set.of(role)))
                 .build();
 
@@ -179,8 +191,8 @@ public class AuthService {
                 savedUser.getUserId(), savedUser.getEmail(), cccdFrontUrl != null, cccdBackUrl != null, gplxFrontUrl != null);
 
         Map<String, Object> resp = new LinkedHashMap<>();
-        resp.put("message", "Đăng ký tài khoản thành công! Hồ sơ giấy tờ (CCCD & GPLX) của bạn đã được gửi tới Ban quản trị để phê duyệt danh tính. Vui lòng đợi tài khoản được kích hoạt trước khi đăng nhập.");
-        resp.put("userId", savedUser.getUserId());
+        resp.put("message", "Đăng ký thành công! Email đã được xác thực — hồ sơ của bạn đã được chuyển tới Admin xét duyệt.");
+        resp.put("requiresEmailVerification", false);
         resp.put("username", savedUser.getUsername());
         resp.put("email", savedUser.getEmail());
         resp.put("status", savedUser.getStatus().name());
@@ -233,6 +245,10 @@ public class AuthService {
             throw new AppException(ErrorCode.VALIDATION_FAILED);
         }
 
+        boolean preVerified = redeemRegisterTicket(request.getOtpTicket(), email);
+        if (!preVerified) {
+            throw new AppException(ErrorCode.OTP_INVALID, "Vui lòng xác thực mã OTP gửi về email trước khi tạo tài khoản");
+        }
         Role role = roleRepository.findByRoleName(targetRole)
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName(targetRole).build()));
 
@@ -244,6 +260,7 @@ public class AuthService {
                 .phone(request.getPhone() != null && !request.getPhone().isBlank() ? request.getPhone().trim() : null)
                 .idCardNumber(request.getIdCardNumber() != null && !request.getIdCardNumber().isBlank() ? request.getIdCardNumber().trim() : null)
                 .status(initialStatus)
+                .emailVerified(true)
                 .roles(new HashSet<>(Set.of(role)))
                 .build();
 
@@ -265,12 +282,12 @@ public class AuthService {
             renterProfileRepository.save(profile);
         }
 
-        String message = (initialStatus == EUserStatus.PENDING)
-                ? "Đăng ký tài khoản Chủ xe thành công! Tài khoản của bạn đang ở trạng thái Chờ duyệt (Pending Approval). Vui lòng chờ Admin kích hoạt trước khi đăng nhập."
-                : "Đăng ký tài khoản Khách thuê thành công! Bạn có thể đăng nhập ngay bây giờ.";
+        String message = "Đăng ký thành công! Email đã được xác thực"
+                + (initialStatus == EUserStatus.PENDING ? " — tài khoản đang chờ Admin phê duyệt." : ". Bạn có thể đăng nhập ngay.");
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("message", message);
+        resp.put("requiresEmailVerification", false);
         resp.put("userId", savedUser.getUserId());
         resp.put("username", savedUser.getUsername());
         resp.put("email", savedUser.getEmail());
@@ -305,6 +322,9 @@ public class AuthService {
             throw new AppException(ErrorCode.AUTH_FAILED);
         }
 
+        if (!user.hasVerifiedEmail()) {
+            throw new AppException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
         if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(Instant.now())) {
             throw new AppException(ErrorCode.ACCOUNT_LOCKED);
         }
@@ -486,20 +506,95 @@ public class AuthService {
         sessionRepository.revokeAllByUserId(user.getUserId());
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // OTP EMAIL: xác thực đăng ký
+    // ─────────────────────────────────────────────────────────────
+    /** Có vé OTP hợp lệ (đã nhập đúng OTP trước khi đăng ký) -> true. Không có vé -> false (luồng cũ). */
+    private boolean redeemRegisterTicket(String ticket, String email) {
+        if (ticket == null || ticket.isBlank()) return false;
+        if (registerOtpService == null) throw new AppException(ErrorCode.OTP_EXPIRED);
+        return registerOtpService.redeem(ticket, email);
+    }
+
+    private void sendRegisterOtp(String email) {
+        otpService.issueAndSend(email, EmailOtp.PURPOSE_REGISTER,
+                "[DriveShare] Mã OTP xác thực email đăng ký",
+                "Xác thực email đăng ký",
+                "Nhập mã dưới đây vào trang đăng ký để xác thực email. Sau khi xác thực, hồ sơ của bạn sẽ được chuyển tới Admin để duyệt.");
+    }
+
+    @Transactional(noRollbackFor = AppException.class)
+    public Map<String, Object> verifyRegistrationOtp(VerifyOtpRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null || user.isDeleted() || user.hasVerifiedEmail()) {
+            // Không tiết lộ email có tồn tại/đã xác thực hay chưa
+            throw new AppException(ErrorCode.OTP_EXPIRED);
+        }
+        otpService.verify(email, EmailOtp.PURPOSE_REGISTER, request.getOtp());
+
+        user.setEmailVerified(true);
+        userRepository.save(user);
+
+        boolean waitingAdmin = user.getStatus() == EUserStatus.PENDING;
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("message", waitingAdmin
+                ? "Xác thực email thành công! Hồ sơ của bạn đã được gửi tới Admin và đang chờ duyệt. Vui lòng đợi xét duyệt trước khi đăng nhập."
+                : "Xác thực email thành công! Bạn có thể đăng nhập ngay bây giờ.");
+        resp.put("status", user.getStatus().name());
+        resp.put("waitingAdminApproval", waitingAdmin);
+        return resp;
+    }
+
+    /** Gửi lại OTP đăng ký. Luôn trả về như nhau để không lộ email nào đã đăng ký. */
     @Transactional
+    public void resendRegistrationOtp(ResendOtpRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null || user.isDeleted() || user.hasVerifiedEmail()) return;
+        if (otpService.isInCooldown(email, EmailOtp.PURPOSE_REGISTER)) return;
+        sendRegisterOtp(email);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // OTP EMAIL: quên mật khẩu (email -> OTP -> reset token -> mật khẩu mới)
+    // ─────────────────────────────────────────────────────────────
+    // Không dùng @Transactional ở đây: lỗi gửi mail bị nuốt, tránh UnexpectedRollbackException do transaction con đánh dấu rollback-only.
     public ResetResponse forgotPassword(ForgotPasswordRequest request) {
-        String generic = "Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.";
-        User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase()).orElse(null);
-        if (user == null || user.isDeleted()) return ResetResponse.builder().message(generic).build();
+        String generic = "Nếu email tồn tại, hệ thống đã gửi mã OTP đặt lại mật khẩu. Vui lòng kiểm tra hộp thư.";
+        String email = request.getEmail().trim().toLowerCase();
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null || user.isDeleted() || !user.hasVerifiedEmail()) {
+            return ResetResponse.builder().message(generic).build();
+        }
+        if (otpService.isInCooldown(email, EmailOtp.PURPOSE_RESET_PASSWORD)) {
+            return ResetResponse.builder().message(generic).build();
+        }
+        try {
+            otpService.issueAndSend(email, EmailOtp.PURPOSE_RESET_PASSWORD,
+                    "[DriveShare] Mã OTP đặt lại mật khẩu",
+                    "Đặt lại mật khẩu",
+                    "Bạn vừa yêu cầu đặt lại mật khẩu. Nhập mã dưới đây để tiếp tục.");
+        } catch (AppException e) {
+            // Không báo lỗi ra ngoài để tránh lộ việc email có tồn tại hay không
+            log.error("Không gửi được OTP quên mật khẩu tới {}: {}", email, e.getMessage());
+        }
+        return ResetResponse.builder().message(generic).build();
+    }
+
+    /** Bước 2: nhập đúng OTP -> cấp reset token dùng một lần để đổi mật khẩu. */
+    @Transactional(noRollbackFor = AppException.class)
+    public ResetTokenResponse verifyResetOtp(VerifyOtpRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null || user.isDeleted()) throw new AppException(ErrorCode.OTP_EXPIRED);
+        otpService.verify(email, EmailOtp.PURPOSE_RESET_PASSWORD, request.getOtp());
 
         String raw = UUID.randomUUID().toString() + UUID.randomUUID();
-        PasswordResetToken token = PasswordResetToken.builder()
+        resetTokenRepository.save(PasswordResetToken.builder()
                 .userId(user.getUserId()).tokenHash(sha256(raw))
-                .expiresAt(Instant.now().plusSeconds(RESET_MINUTES * 60)).build();
-        resetTokenRepository.save(token);
-        String url = frontendBaseUrl + "#reset=" + raw;
-        log.info("Password reset link for {} (development): {}", user.getEmail(), url);
-        return ResetResponse.builder().message(generic).resetUrl(url).build();
+                .expiresAt(Instant.now().plusSeconds(RESET_TOKEN_SECONDS)).build());
+        return ResetTokenResponse.builder().resetToken(raw).expiresInSeconds(RESET_TOKEN_SECONDS).build();
     }
 
     @Transactional
@@ -525,7 +620,7 @@ public class AuthService {
         Role ownerRole = roleRepository.findByRoleName(ERole.ROLE_OWNER)
                 .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
         return userRepository.findAll().stream()
-                .filter(u -> !u.isDeleted() && u.getStatus() == EUserStatus.PENDING && u.getRoles().contains(ownerRole))
+                .filter(u -> !u.isDeleted() && u.hasVerifiedEmail() && u.getStatus() == EUserStatus.PENDING && u.getRoles().contains(ownerRole))
                 .map(u -> {
                     Map<String, Object> map = new LinkedHashMap<>();
                     map.put("userId", u.getUserId());

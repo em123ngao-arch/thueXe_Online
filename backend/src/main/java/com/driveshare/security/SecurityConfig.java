@@ -65,18 +65,26 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers(
+                                "/",
+                                "/error",
+                                "/favicon.ico",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/register/**",
                                 "/api/v1/auth/register-with-docs",
+                                "/api/v1/auth/otp/**",
                                 "/api/v1/auth/refresh-token",
                                 "/api/v1/auth/forgot-password",
+                                "/api/v1/auth/verify-reset-otp",
                                 "/api/v1/auth/reset-password",
+                                "/api/v1/auth/verify-email",
+                                "/api/v1/auth/resend-otp",
                                 "/api/v1/auth/logout",
                                 "/api/v1/auth/change-email/confirm"
                         ).permitAll()
                         .requestMatchers("/api/v1/public/**").permitAll()
                         .requestMatchers("/api/v1/chat/**").permitAll()
+                        .requestMatchers("/api/v1/rag/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/api/v1/oauth2/**").permitAll()
                         .requestMatchers("/api/v1/health/**").permitAll()

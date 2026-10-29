@@ -47,6 +47,13 @@ public class User extends BaseEntity {
     @Column(name = "id_card_number", length = 20, unique = true)
     private String idCardNumber;
 
+    @Column(name = "email_verified")
+    @Builder.Default
+    private Boolean emailVerified = false;
+
+    public boolean hasVerifiedEmail() {
+        return Boolean.TRUE.equals(this.emailVerified);
+    }
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
     @Builder.Default
