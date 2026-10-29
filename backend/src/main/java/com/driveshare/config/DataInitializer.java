@@ -261,7 +261,7 @@ public class DataInitializer implements CommandLineRunner {
                     .pricePerDay(pricePerDay)
                     .totalPrice(totalPrice)
                     .depositAmount(deposit)
-                    .status(ERentalStatus.PENDING)
+                    .status(ERentalStatus.CONFIRMED)
                     .note("Đơn đặt xe mẫu tự động phục vụ test chức năng Sprint 2 (CRP-47, CRP-48, CRP-38)")
                     .build();
 
