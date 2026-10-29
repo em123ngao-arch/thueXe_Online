@@ -78,9 +78,10 @@ public enum ErrorCode {
     // CRP-NEW: Ngăn chặn 2 đơn thuê trùng ngày cùng 1 xe từ 1 người dùng
     DUPLICATE_RENTAL_REQUEST("DUPLICATE_RENTAL_REQUEST", "Bạn đã có yêu cầu thuê xe này trong khoảng thời gian trùng lặp. Vui lòng hủy đơn cũ trước khi gửi yêu cầu mới.", HttpStatus.CONFLICT),
 
-    // Sprint 3: Inspection & Review (Vĩ, Quân)
+    // Sprint 3 & Sprint Final: Inspection & Review (Vĩ, Quân)
     INSPECTION_ALREADY_EXISTS("INSPECTION_ALREADY_EXISTS", "Biên bản bàn giao/trả xe đã được lập trước đó", HttpStatus.CONFLICT),
     INSPECTION_NOT_FOUND("INSPECTION_NOT_FOUND", "Không tìm thấy biên bản kiểm tra bàn giao xe", HttpStatus.NOT_FOUND),
+    INSPECTION_ALREADY_PROCESSED("INSPECTION_ALREADY_PROCESSED", "Biên bản bàn giao này đã được xác nhận hoặc khiếu nại trước đó", HttpStatus.BAD_REQUEST),
     REVIEW_ALREADY_EXISTS("REVIEW_ALREADY_EXISTS", "Đơn thuê xe này đã được đánh giá trước đó", HttpStatus.CONFLICT),
     RENTAL_NOT_COMPLETED_FOR_REVIEW("RENTAL_NOT_COMPLETED_FOR_REVIEW", "Chuyến đi phải ở trạng thái hoàn tất (COMPLETED) mới có thể đánh giá", HttpStatus.BAD_REQUEST),
     KYC_NOT_VERIFIED("KYC_NOT_VERIFIED", "Hồ sơ giấy tờ (CCCD hoặc GPLX) của bạn chưa được phê duyệt. Vui lòng kiểm tra hồ sơ cá nhân trước khi thuê xe", HttpStatus.FORBIDDEN),
