@@ -277,6 +277,37 @@
   50% { transform: scale(1.08); }
 }
 
+.notification-bell-btn.ringing {
+  background: #fef2f2 !important;
+  border-color: #fca5a5 !important;
+}
+
+.notification-bell-btn.ringing svg {
+  animation: bellVigorousRing 0.75s ease-in-out infinite !important;
+  color: #ef4444 !important;
+}
+
+@keyframes bellVigorousRing {
+  0% { transform: rotate(0); }
+  15% { transform: rotate(24deg) scale(1.15); }
+  30% { transform: rotate(-24deg) scale(1.15); }
+  45% { transform: rotate(18deg); }
+  60% { transform: rotate(-18deg); }
+  75% { transform: rotate(8deg); }
+  85% { transform: rotate(-8deg); }
+  100% { transform: rotate(0) scale(1); }
+}
+
+.notification-badge.pop {
+  animation: badgePop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+
+@keyframes badgePop {
+  0% { transform: scale(0.2); }
+  50% { transform: scale(1.45); }
+  100% { transform: scale(1); }
+}
+
 .notification-dropdown {
   position: absolute;
   top: calc(100% + 12px);

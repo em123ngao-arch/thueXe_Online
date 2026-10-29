@@ -1640,272 +1640,709 @@ const NotificationAPI = {
     } catch (_) {}
   },
 
-  markAllLocalAsRead() {
-    try {
-      const notifs = this.getLocalNotifications();
-      const updated = notifs.map(n => ({ ...n, isRead: true }));
-      localStorage.setItem('ds_notifications', JSON.stringify(updated));
-    } catch (_) {}
-  },
-
-  addNotification(title, content, type = 'GENERAL', referenceId = null) {
-    try {
-      const notifs = this.getLocalNotifications();
-      const newNotif = {
-        id: Date.now(),
-        title,
-        content,
-        type,
-        referenceId,
-        isRead: false,
-        createdAt: new Date().toISOString()
-      };
-      notifs.unshift(newNotif);
-      localStorage.setItem('ds_notifications', JSON.stringify(notifs.slice(0, 30)));
-      if (typeof NotificationCenter !== 'undefined' && NotificationCenter.refresh) {
-        NotificationCenter.refresh();
-      }
-    } catch (_) {}
-  }
-};
-
-// ─────────────────────────────────────────────────────────────
-// NOTIFICATION CENTER UI (Sprint 3 Dropdown Chuông thông báo)
-// ─────────────────────────────────────────────────────────────
-
-const NotificationCenter = {
-  notifications: [],
-  isOpen: false,
-  _interval: null,
-
-  async init() {
-    this.mountBell();
-    await this.refresh();
-
-    if (!this._interval) {
-      this._interval = setInterval(() => this.refresh(), 20000);
-    }
-
-    if (!this._hasClickOutsideListener) {
-      document.addEventListener('click', (e) => {
-        const wrapper = document.getElementById('notificationBellWrapper');
-        if (wrapper && !wrapper.contains(e.target) && this.isOpen) {
-          this.close();
-        }
-      });
-      this._hasClickOutsideListener = true;
-    }
-  },
-
-  mountBell() {
-    if (document.getElementById('notificationBellWrapper')) return;
-
-    let container = document.getElementById('notificationBellContainer');
-    if (!container) {
-      const navActions = document.querySelector('.nav-actions');
-      if (navActions) {
-        container = document.createElement('div');
-        container.id = 'notificationBellContainer';
-        container.className = 'notification-bell-container';
-
-        const navAuth = document.getElementById('navAuthContainer');
-        if (navAuth && navAuth.parentNode === navActions) {
-          navActions.insertBefore(container, navAuth);
-        } else {
-          navActions.prepend(container);
-        }
-      }
-    }
-
-    if (!container) return;
-
-    container.innerHTML = `
-      <div class="notification-bell-wrapper" id="notificationBellWrapper">
-        <button id="btnNotificationBell" class="notification-bell-btn" title="Thông báo hệ thống" aria-label="Thông báo" onclick="NotificationCenter.toggle()">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-          </svg>
-          <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
-        </button>
-        <div class="notification-dropdown" id="notificationDropdown" style="display: none;">
-          <div class="notification-header">
-            <div class="notification-title-group">
-              <h4>Thông báo</h4>
-              <span class="notif-unread-count-pill" id="notifUnreadPill" style="display: none;">0 mới</span>
-            </div>
-            <button class="btn-mark-all-read" onclick="NotificationCenter.markAllAsRead()" title="Đánh dấu tất cả đã đọc">
-              Đánh dấu đã đọc
-            </button>
-          </div>
-          <div class="notification-list" id="notificationList">
-            <!-- Items rendered dynamically -->
-          </div>
-          <div class="notification-footer">
-            <span>Thông báo tức thời theo thời gian thực · DriveShare</span>
-          </div>
-        </div>
-      </div>
-    `;
-  },
-
-  async refresh() {
-    try {
-      const res = await NotificationAPI.getMyNotifications();
-      if (res && res.data && Array.isArray(res.data)) {
-        this.notifications = res.data;
-      } else {
-        this.notifications = NotificationAPI.getLocalNotifications();
-      }
-    } catch (_) {
-      this.notifications = NotificationAPI.getLocalNotifications();
-    }
-    this.render();
-  },
-
-  render() {
-    const unreadCount = this.notifications.filter(n => !n.isRead).length;
-    const badge = document.getElementById('notificationBadge');
-    const pill = document.getElementById('notifUnreadPill');
-    const bellBtn = document.getElementById('btnNotificationBell');
-
-    if (badge) {
-      if (unreadCount > 0) {
-        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-        badge.style.display = 'flex';
-        if (bellBtn) bellBtn.classList.add('has-unread');
-      } else {
-        badge.style.display = 'none';
-        if (bellBtn) bellBtn.classList.remove('has-unread');
-      }
-    }
-
-    if (pill) {
-      if (unreadCount > 0) {
-        pill.textContent = `${unreadCount} mới`;
-        pill.style.display = 'inline-block';
-      } else {
-        pill.style.display = 'none';
-      }
-    }
-
-    const listEl = document.getElementById('notificationList');
-    if (!listEl) return;
-
-    if (this.notifications.length === 0) {
-      listEl.innerHTML = `
-        <div class="notification-empty">
-          <div style="font-size: 28px; margin-bottom: 6px;">🔔</div>
-          <div style="font-size: 13px; font-weight: 600; color: #475569;">Bạn chưa có thông báo nào</div>
-          <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Các cập nhật đặt xe & chuyến đi sẽ xuất hiện tại đây</div>
-        </div>
-      `;
-      return;
-    }
-
-    listEl.innerHTML = this.notifications.map(n => {
-      const isUnread = !n.isRead;
-      const typeIcons = {
-        'RENTAL_CONFIRMED': { icon: '🚗', bg: '#dcfce7', color: '#166534' },
-        'INSPECTION_CHECK_IN': { icon: '🔑', bg: '#e0e7ff', color: '#3730a3' },
-        'INSPECTION_CHECK_OUT': { icon: '📋', bg: '#fef3c7', color: '#92400e' },
-        'REVIEW_RECEIVED': { icon: '⭐', bg: '#fef9c3', color: '#854d0e' },
-        'GENERAL': { icon: '🔔', bg: '#f1f5f9', color: '#475569' }
-      };
-      const iconMeta = typeIcons[n.type] || typeIcons['GENERAL'];
-      const timeAgo = this._formatTimeAgo(n.createdAt);
-
-      return `
-        <div class="notification-item ${isUnread ? 'unread' : ''}" onclick="NotificationCenter.handleItemClick(${n.id})">
-          <div class="notif-icon-circle" style="background: ${iconMeta.bg}; color: ${iconMeta.color};">
-            ${iconMeta.icon}
-          </div>
-          <div class="notif-body">
-            <div class="notif-item-title">
-              <span>${this._escapeHtml(n.title)}</span>
-              ${isUnread ? '<span class="notif-unread-dot"></span>' : ''}
-            </div>
-            <div class="notif-item-content">${this._escapeHtml(n.content)}</div>
-            <div class="notif-item-time">${timeAgo}</div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  },
-
-  toggle() {
-    this.isOpen = !this.isOpen;
-    const dropdown = document.getElementById('notificationDropdown');
-    if (dropdown) {
-      dropdown.style.display = this.isOpen ? 'flex' : 'none';
-      if (this.isOpen) {
-        this.render();
-      }
-    }
-  },
-
-  close() {
-    this.isOpen = false;
-    const dropdown = document.getElementById('notificationDropdown');
-    if (dropdown) {
-      dropdown.style.display = 'none';
-    }
-  },
-
-  async handleItemClick(notifId) {
-    const item = this.notifications.find(n => n.id == notifId);
-    if (!item) return;
-
-    if (!item.isRead) {
-      item.isRead = true;
-      await NotificationAPI.markAsRead(notifId);
-      this.render();
-    }
-
-    if (item.type === 'REVIEW_RECEIVED' && item.referenceId) {
-      if (typeof App !== 'undefined' && App.showReviewPrompt) {
-        App.showReviewPrompt(item.referenceId);
-        this.close();
-      }
-    } else if (item.type === 'RENTAL_CONFIRMED' || item.type === 'INSPECTION_CHECK_IN') {
-      if (typeof App !== 'undefined' && App.showMyBookingsView) {
-        App.showMyBookingsView();
-        this.close();
-      }
-    }
-  },
-
-  async markAllAsRead() {
-    this.notifications.forEach(n => n.isRead = true);
-    await NotificationAPI.markAllLocalAsRead();
-    this.render();
-  },
-
-  _formatTimeAgo(dateStr) {
-    if (!dateStr) return 'Vừa xong';
-    const past = new Date(dateStr).getTime();
-    const now = Date.now();
-    const diffSec = Math.floor((now - past) / 1000);
-    if (isNaN(diffSec) || diffSec < 60) return 'Vừa xong';
-    if (diffSec < 3600) return `${Math.floor(diffSec / 60)} phút trước`;
-    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} giờ trước`;
-    return `${Math.floor(diffSec / 86400)} ngày trước`;
-  },
-
-  _escapeHtml(text) {
-    if (!text) return '';
-    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-};
-
-// Khởi chạy NotificationCenter khi DOM sẵn sàng
-if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => NotificationCenter.init());
-  } else {
-    NotificationCenter.init();
-  }
-}
-
-
-
+  markAllAsRead() {
+    const url = `${API_CONFIG.BASE_URL}/notifications/read-all`;
+    try {
+      fetch(url, { method: 'PUT', headers: this.getAuthHeaders() });
+    } catch (_) {}
+    this.markAllLocalAsRead();
+    return { success: true };
+  },
+
+  async getUnreadCount() {
+    const url = `${API_CONFIG.BASE_URL}/notifications/unread-count`;
+    try {
+      const res = await fetch(url, { headers: this.getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        return { success: true, data: json.data };
+      }
+    } catch (_) {}
+    return { success: false, data: 0 };
+  },
+
+  markAllLocalAsRead() {
+    try {
+      const notifs = this.getLocalNotifications();
+      const updated = notifs.map(n => ({ ...n, isRead: true }));
+      localStorage.setItem('ds_notifications', JSON.stringify(updated));
+    } catch (_) {}
+  },
+
+  addNotification(title, content, type = 'GENERAL', referenceId = null) {
+    try {
+      const notifs = this.getLocalNotifications();
+      const newNotif = {
+        id: Date.now(),
+        notificationId: Date.now(),
+        title,
+        content,
+        type,
+        referenceId,
+        isRead: false,
+        createdAt: new Date().toISOString()
+      };
+      notifs.unshift(newNotif);
+      localStorage.setItem('ds_notifications', JSON.stringify(notifs.slice(0, 30)));
+      if (typeof NotificationCenter !== 'undefined' && NotificationCenter.refresh) {
+        NotificationCenter.refresh();
+      }
+    } catch (_) {}
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// WEBSOCKET STOMP REALTIME BROKER CLIENT (Task 57 - Nguyễn Chí Tín)
+// ─────────────────────────────────────────────────────────────
+
+const DriveShareSocket = {
+  socket: null,
+  connected: false,
+  reconnectAttempts: 0,
+  reconnectTimer: null,
+  heartbeatTimer: null,
+  activeSubscriptions: new Set(),
+
+  getBaseWsUrl() {
+    const protocol = (typeof window !== 'undefined' && window.location.protocol === 'https:') ? 'wss:' : 'ws:';
+    let host = (typeof window !== 'undefined') ? window.location.host : 'localhost:8080';
+    if (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) {
+      try {
+        if (API_CONFIG.BASE_URL.startsWith('http')) {
+          const parsed = new URL(API_CONFIG.BASE_URL);
+          host = parsed.host;
+        }
+      } catch (_) {}
+    }
+    if (!host || host === '') {
+      host = 'localhost:8080';
+    }
+    return `${protocol}//${host}/ws`;
+  },
+
+  getAuthToken() {
+    if (typeof getAccessToken === 'function') {
+      const t = getAccessToken();
+      if (t) return t;
+    }
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('access_token') ||
+        localStorage.getItem('ds_access_token') ||
+        localStorage.getItem('driveshare_access_token') ||
+        '';
+    }
+    return '';
+  },
+
+  getCurrentUser() {
+    if (typeof getCurrentUser === 'function') {
+      const u = getCurrentUser();
+      if (u) return u;
+    }
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem('user_info') ||
+          localStorage.getItem('ds_user') ||
+          localStorage.getItem('driveshare_current_auth_user');
+        return raw ? JSON.parse(raw) : null;
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
+  },
+
+  connect() {
+    if (typeof WebSocket === 'undefined') return;
+
+    const token = this.getAuthToken();
+    if (!token) {
+      return;
+    }
+
+    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+
+    const wsUrl = `${this.getBaseWsUrl()}?token=${encodeURIComponent(token)}`;
+    try {
+      this.socket = new WebSocket(wsUrl);
+    } catch (err) {
+      console.warn('[DriveShare WebSocket] Không thể tạo WebSocket connection:', err);
+      this.scheduleReconnect();
+      return;
+    }
+
+    this.socket.onopen = () => {
+      this.reconnectAttempts = 0;
+      // Gửi frame STOMP CONNECT với Bearer token
+      const connectFrame = [
+        'CONNECT',
+        'accept-version:1.2,1.1,1.0',
+        'heart-beat:10000,10000',
+        `Authorization:Bearer ${token}`,
+        '\n'
+      ].join('\n') + '\0';
+      this.socket.send(connectFrame);
+    };
+
+    this.socket.onmessage = (event) => {
+      this.handleIncomingData(event.data);
+    };
+
+    this.socket.onerror = (err) => {
+      console.warn('[DriveShare WebSocket] Lỗi kết nối WebSocket:', err);
+    };
+
+    this.socket.onclose = () => {
+      this.connected = false;
+      this.activeSubscriptions.clear();
+      if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+      this.scheduleReconnect();
+    };
+  },
+
+  scheduleReconnect() {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    const delay = Math.min(10000, 2000 * Math.pow(1.5, this.reconnectAttempts++));
+    this.reconnectTimer = setTimeout(() => {
+      this.connect();
+    }, delay);
+  },
+
+  handleIncomingData(rawText) {
+    if (!rawText) return;
+    if (rawText === '\n' || rawText === '\r\n') return; // Heartbeat ping
+
+    const frames = rawText.split('\0');
+    for (const frameStr of frames) {
+      if (!frameStr.trim()) continue;
+      this.parseAndDispatchFrame(frameStr);
+    }
+  },
+
+  parseAndDispatchFrame(frameStr) {
+    const lines = frameStr.split('\n');
+    const command = lines[0].trim();
+    const headers = {};
+    let bodyIndex = -1;
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (line === '' || line === '\r') {
+        bodyIndex = i + 1;
+        break;
+      }
+      const colonIdx = line.indexOf(':');
+      if (colonIdx > 0) {
+        const k = line.substring(0, colonIdx).trim();
+        const v = line.substring(colonIdx + 1).trim();
+        headers[k] = v;
+      }
+    }
+
+    const body = bodyIndex !== -1 ? lines.slice(bodyIndex).join('\n').trim() : '';
+
+    if (command === 'CONNECTED') {
+      this.connected = true;
+      console.log('[DriveShare WebSocket STOMP] Đã kết nối Broker realtime thành công!');
+      this.setupSubscriptions();
+    } else if (command === 'MESSAGE') {
+      this.handleStompMessage(headers, body);
+    }
+  },
+
+  setupSubscriptions() {
+    const user = this.getCurrentUser();
+    const userId = user ? (user.userId || user.id) : null;
+
+    // 1. Subscribe hàng đợi riêng: /user/queue/notifications
+    this.subscribeDestination('/user/queue/notifications', 'sub-queue-user-notif');
+
+    // 2. Subscribe topic dự phòng: /topic/notifications/{userId}
+    if (userId) {
+      this.subscribeDestination(`/topic/notifications/${userId}`, 'sub-topic-user-notif');
+      this.subscribeDestination(`/topic/notifications/${userId}/count`, 'sub-topic-user-count');
+    }
+
+    // 3. Heartbeat ping định kỳ 10s
+    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = setInterval(() => {
+      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        this.socket.send('\n');
+      }
+    }, 10000);
+  },
+
+  subscribeDestination(destination, id) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
+    if (this.activeSubscriptions.has(destination)) return;
+    this.activeSubscriptions.add(destination);
+
+    const subFrame = [
+      'SUBSCRIBE',
+      `id:${id}`,
+      `destination:${destination}`,
+      '\n'
+    ].join('\n') + '\0';
+    this.socket.send(subFrame);
+  },
+
+  handleStompMessage(headers, body) {
+    if (!body) return;
+    try {
+      const data = JSON.parse(body);
+      const dest = headers ? (headers.destination || '') : '';
+      if (typeof data === 'number' || dest.endsWith('/count')) {
+        const count = typeof data === 'number' ? data : (data?.count ?? 0);
+        if (typeof NotificationCenter !== 'undefined' && NotificationCenter.updateUnreadCount) {
+          NotificationCenter.updateUnreadCount(count);
+        }
+        return;
+      }
+      if (typeof NotificationCenter !== 'undefined' && NotificationCenter.handleIncomingNotification) {
+        NotificationCenter.handleIncomingNotification(data);
+      }
+    } catch (e) {
+      console.warn('[DriveShare WebSocket] Lỗi parse message:', e, body);
+    }
+  },
+
+  disconnect() {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+    if (this.socket) {
+      try {
+        this.socket.close();
+      } catch (_) {}
+      this.socket = null;
+    }
+    this.connected = false;
+    this.activeSubscriptions.clear();
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// NOTIFICATION CENTER UI (Sprint Final - Task 57 Realtime Bell & Pop-up)
+// ─────────────────────────────────────────────────────────────
+
+const NotificationCenter = {
+  notifications: [],
+  isOpen: false,
+  _interval: null,
+  _hasClickOutsideListener: false,
+
+  async init() {
+    this.mountBell();
+    await this.refresh();
+
+    // Khởi tạo kết nối STOMP WebSocket
+    if (typeof DriveShareSocket !== 'undefined' && DriveShareSocket.connect) {
+      DriveShareSocket.connect();
+    }
+
+    if (!this._interval) {
+      // Fallback polling chỉ chạy khi WebSocket mất kết nối
+      this._interval = setInterval(() => {
+        if (!DriveShareSocket || !DriveShareSocket.connected) {
+          this.refresh();
+        }
+      }, 25000);
+    }
+
+    if (!this._hasClickOutsideListener && typeof document !== 'undefined') {
+      document.addEventListener('click', (e) => {
+        const wrapper = document.getElementById('notificationBellWrapper');
+        if (wrapper && !wrapper.contains(e.target) && this.isOpen) {
+          this.close();
+        }
+      });
+      this._hasClickOutsideListener = true;
+    }
+  },
+
+  mountBell() {
+    if (typeof document === 'undefined') return;
+    if (document.getElementById('notificationBellWrapper')) return;
+
+    let container = document.getElementById('notificationBellContainer');
+    if (!container) {
+      const navActions = document.querySelector('.nav-actions');
+      if (navActions) {
+        container = document.createElement('div');
+        container.id = 'notificationBellContainer';
+        container.className = 'notification-bell-container';
+
+        const navAuth = document.getElementById('navAuthContainer');
+        if (navAuth && navAuth.parentNode === navActions) {
+          navActions.insertBefore(container, navAuth);
+        } else {
+          navActions.prepend(container);
+        }
+      }
+    }
+
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="notification-bell-wrapper" id="notificationBellWrapper">
+        <button id="btnNotificationBell" class="notification-bell-btn" title="Thông báo hệ thống" aria-label="Thông báo" onclick="NotificationCenter.toggle()">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+        </button>
+        <div class="notification-dropdown" id="notificationDropdown" style="display: none;">
+          <div class="notification-header">
+            <div class="notification-title-group">
+              <h4>Thông báo</h4>
+              <span class="notif-unread-count-pill" id="notifUnreadPill" style="display: none;">0 mới</span>
+            </div>
+            <button class="btn-mark-all-read" onclick="NotificationCenter.markAllAsRead()" title="Đánh dấu tất cả đã đọc">
+              Đánh dấu đã đọc
+            </button>
+          </div>
+          <div class="notification-list" id="notificationList">
+            <!-- Items rendered dynamically -->
+          </div>
+          <div class="notification-footer">
+            <span style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+              Thông báo thời gian thực WebSocket STOMP · DriveShare
+            </span>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  async refresh() {
+    try {
+      const res = await NotificationAPI.getMyNotifications();
+      if (res && res.data && Array.isArray(res.data)) {
+        this.notifications = res.data;
+      } else {
+        this.notifications = NotificationAPI.getLocalNotifications();
+      }
+    } catch (_) {
+      this.notifications = NotificationAPI.getLocalNotifications();
+    }
+    this.render();
+  },
+
+  render() {
+    if (typeof document === 'undefined') return;
+    const unreadCount = this.notifications.filter(n => !n.isRead).length;
+    const badge = document.getElementById('notificationBadge');
+    const pill = document.getElementById('notifUnreadPill');
+    const bellBtn = document.getElementById('btnNotificationBell');
+
+    if (badge) {
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        badge.style.display = 'flex';
+        if (bellBtn) bellBtn.classList.add('has-unread');
+      } else {
+        badge.style.display = 'none';
+        if (bellBtn) bellBtn.classList.remove('has-unread');
+      }
+    }
+
+    if (pill) {
+      if (unreadCount > 0) {
+        pill.textContent = `${unreadCount} mới`;
+        pill.style.display = 'inline-block';
+      } else {
+        pill.style.display = 'none';
+      }
+    }
+
+    const listEl = document.getElementById('notificationList');
+    if (!listEl) return;
+
+    if (this.notifications.length === 0) {
+      listEl.innerHTML = `
+        <div class="notification-empty">
+          <div style="font-size: 28px; margin-bottom: 6px;">🔔</div>
+          <div style="font-size: 13px; font-weight: 600; color: #475569;">Bạn chưa có thông báo nào</div>
+          <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Các cập nhật đặt xe & chuyến đi sẽ xuất hiện tại đây tức thì</div>
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = this.notifications.map(n => {
+      const isUnread = !n.isRead;
+      const typeIcons = {
+        'RENTAL_REQUEST': { icon: '📥', bg: '#fef3c7', color: '#b45309' },
+        'RENTAL_APPROVED': { icon: '✅', bg: '#dcfce7', color: '#15803d' },
+        'RENTAL_REJECTED': { icon: '❌', bg: '#fee2e2', color: '#b91c1c' },
+        'RENTAL_CONFIRMED': { icon: '🚗', bg: '#dbeafe', color: '#1d4ed8' },
+        'INSPECTION_CHECK_IN': { icon: '🔑', bg: '#ede9fe', color: '#6d28d9' },
+        'INSPECTION_CHECK_OUT': { icon: '🏁', bg: '#fef08a', color: '#a16207' },
+        'INSPECTION_CONFIRMED': { icon: '🤝', bg: '#dcfce7', color: '#15803d' },
+        'INSPECTION_DISPUTED': { icon: '⚠️', bg: '#fee2e2', color: '#b91c1c' },
+        'REVIEW_RECEIVED': { icon: '⭐', bg: '#fef9c3', color: '#854d0e' },
+        'GENERAL': { icon: '🔔', bg: '#f1f5f9', color: '#475569' }
+      };
+      const iconMeta = typeIcons[n.type] || typeIcons['GENERAL'];
+      const timeAgo = this._formatTimeAgo(n.createdAt);
+      const notifId = n.id || n.notificationId;
+
+      return `
+        <div class="notification-item ${isUnread ? 'unread' : ''}" onclick="NotificationCenter.handleItemClick(${notifId})">
+          <div class="notif-icon-circle" style="background: ${iconMeta.bg}; color: ${iconMeta.color};">
+            ${iconMeta.icon}
+          </div>
+          <div class="notif-body">
+            <div class="notif-item-title">
+              <span>${this._escapeHtml(n.title)}</span>
+              ${isUnread ? '<span class="notif-unread-dot"></span>' : ''}
+            </div>
+            <div class="notif-item-content">${this._escapeHtml(n.content)}</div>
+            <div class="notif-item-time">${timeAgo}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  updateUnreadCount(count) {
+    if (typeof document === 'undefined') return;
+    const badge = document.getElementById('notificationBadge');
+    const pill = document.getElementById('notifUnreadPill');
+    const bellBtn = document.getElementById('btnNotificationBell');
+
+    const num = Math.max(0, parseInt(count, 10) || 0);
+
+    if (badge) {
+      if (num > 0) {
+        badge.textContent = num > 99 ? '99+' : num;
+        badge.style.display = 'flex';
+        if (bellBtn) bellBtn.classList.add('has-unread');
+      } else {
+        badge.style.display = 'none';
+        if (bellBtn) bellBtn.classList.remove('has-unread');
+      }
+    }
+
+    if (pill) {
+      if (num > 0) {
+        pill.textContent = `${num} mới`;
+        pill.style.display = 'inline-block';
+      } else {
+        pill.style.display = 'none';
+      }
+    }
+  },
+
+  playNotificationSound() {
+    try {
+      if (typeof window === 'undefined') return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1318.51, ctx.currentTime + 0.15);
+
+      gain.gain.setValueAtTime(0.22, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.45);
+    } catch (_) {}
+  },
+
+  handleIncomingNotification(data) {
+    if (!data || typeof data !== 'object') return;
+    console.log('[NotificationCenter] 🔔 Nhận thông báo realtime qua STOMP:', data);
+
+    const notifId = data.id || data.notificationId || Date.now();
+    const item = {
+      id: notifId,
+      notificationId: notifId,
+      title: data.title || 'Thông báo mới',
+      content: data.content || '',
+      type: data.type || 'GENERAL',
+      referenceId: data.referenceId || null,
+      isRead: false,
+      createdAt: data.createdAt || new Date().toISOString()
+    };
+
+    // Kiểm tra trùng lặp
+    const exists = this.notifications.some(n => (n.id && n.id === item.id) || (n.notificationId && n.notificationId === item.notificationId));
+    if (!exists) {
+      this.notifications.unshift(item);
+    }
+
+    // 1. Âm thanh chuông báo
+    this.playNotificationSound();
+
+    // 2. Chuông rung mạnh trên Navbar
+    if (typeof document !== 'undefined') {
+      const bellBtn = document.getElementById('btnNotificationBell');
+      if (bellBtn) {
+        bellBtn.classList.remove('ringing');
+        void bellBtn.offsetWidth;
+        bellBtn.classList.add('ringing');
+        setTimeout(() => {
+          if (bellBtn) bellBtn.classList.remove('ringing');
+        }, 3500);
+      }
+
+      // 3. Số đỏ nhảy nảy (bounce/pop)
+      const badge = document.getElementById('notificationBadge');
+      if (badge) {
+        badge.classList.remove('pop');
+        void badge.offsetWidth;
+        badge.classList.add('pop');
+        setTimeout(() => {
+          if (badge) badge.classList.remove('pop');
+        }, 1000);
+      }
+    }
+
+    // 4. Render lại dropdown list
+    this.render();
+
+    // 5. Toast Pop-up góc màn hình
+    let toastType = 'info';
+    if (['RENTAL_CONFIRMED', 'RENTAL_APPROVED', 'INSPECTION_CONFIRMED'].includes(item.type)) {
+      toastType = 'success';
+    } else if (['RENTAL_REJECTED', 'INSPECTION_DISPUTED'].includes(item.type)) {
+      toastType = 'warning';
+    }
+    if (typeof showToast === 'function') {
+      showToast(`🔔 <strong>${this._escapeHtml(item.title)}</strong><br>${this._escapeHtml(item.content)}`, toastType, 6000);
+    }
+
+    // 6. Tự động cập nhật giao diện thời gian thực KHÔNG CẦN F5:
+    // a) Chủ xe: Màn hình owner-cars.html
+    if (typeof window !== 'undefined' && typeof window.OwnerApp !== 'undefined') {
+      if (typeof window.OwnerApp.loadRentals === 'function') {
+        console.log('[Realtime] Cập nhật ngay danh sách đơn thuê của Chủ xe...');
+        window.OwnerApp.loadRentals();
+      }
+      if (typeof window.OwnerApp.renderBookings === 'function') {
+        window.OwnerApp.renderBookings();
+      }
+    }
+    // b) Khách thuê: Màn hình index.html
+    if (typeof window !== 'undefined' && typeof window.App !== 'undefined') {
+      if (typeof window.App.loadMyBookings === 'function') {
+        console.log('[Realtime] Cập nhật ngay danh sách chuyến đi của Khách...');
+        window.App.loadMyBookings();
+      }
+    }
+
+    // c) Phát custom event
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('driveshare:notification', { detail: item }));
+      } catch (_) {}
+    }
+  },
+
+  toggle() {
+    this.isOpen = !this.isOpen;
+    const dropdown = document.getElementById('notificationDropdown');
+    if (dropdown) {
+      dropdown.style.display = this.isOpen ? 'flex' : 'none';
+      if (this.isOpen) {
+        this.render();
+      }
+    }
+  },
+
+  close() {
+    this.isOpen = false;
+    const dropdown = document.getElementById('notificationDropdown');
+    if (dropdown) {
+      dropdown.style.display = 'none';
+    }
+  },
+
+  async handleItemClick(notifId) {
+    const item = this.notifications.find(n => n.id == notifId || n.notificationId == notifId);
+    if (!item) return;
+
+    if (!item.isRead) {
+      item.isRead = true;
+      await NotificationAPI.markAsRead(notifId);
+      this.render();
+    }
+
+    // Điều hướng theo loại thông báo
+    if (typeof window === 'undefined') return;
+    if (item.type === 'RENTAL_REQUEST') {
+      if (window.location.pathname.includes('owner-cars')) {
+        if (typeof window.OwnerApp !== 'undefined' && window.OwnerApp.switchTab) {
+          window.OwnerApp.switchTab('bookings');
+        }
+      } else {
+        window.location.href = 'owner-cars.html#bookings';
+      }
+      this.close();
+    } else if (item.type === 'REVIEW_RECEIVED' && item.referenceId) {
+      if (typeof App !== 'undefined' && App.showReviewPrompt) {
+        App.showReviewPrompt(item.referenceId);
+        this.close();
+      }
+    } else if (item.type === 'RENTAL_CONFIRMED' || item.type === 'RENTAL_APPROVED' || item.type === 'INSPECTION_CHECK_IN' || item.type === 'INSPECTION_CHECK_OUT') {
+      if (typeof App !== 'undefined' && App.showMyBookingsView) {
+        App.showMyBookingsView();
+        this.close();
+      } else {
+        window.location.href = 'index.html#my-bookings';
+      }
+    }
+  },
+
+  async markAllAsRead() {
+    this.notifications.forEach(n => n.isRead = true);
+    await NotificationAPI.markAllAsRead();
+    this.render();
+  },
+
+  _formatTimeAgo(dateStr) {
+    if (!dateStr) return 'Vừa xong';
+    const past = new Date(dateStr).getTime();
+    const now = Date.now();
+    const diffSec = Math.floor((now - past) / 1000);
+    if (isNaN(diffSec) || diffSec < 60) return 'Vừa xong';
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)} phút trước`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} giờ trước`;
+    return `${Math.floor(diffSec / 86400)} ngày trước`;
+  },
+
+  _escapeHtml(text) {
+    if (!text) return '';
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+};
+
+// Gắn toàn cục
+if (typeof window !== 'undefined') {
+  window.DriveShareSocket = DriveShareSocket;
+  window.NotificationCenter = NotificationCenter;
+}
+
+// Khởi chạy NotificationCenter khi DOM sẵn sàng
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => NotificationCenter.init());
+  } else {
+    NotificationCenter.init();
+  }
+}

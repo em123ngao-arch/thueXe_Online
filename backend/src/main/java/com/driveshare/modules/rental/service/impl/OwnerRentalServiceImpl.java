@@ -30,6 +30,8 @@ public class OwnerRentalServiceImpl implements OwnerRentalService {
 
     private final RentalRepository rentalRepository;
     private final CarRepository carRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.driveshare.modules.notification.service.NotificationService notificationService;
 
     private static final long SOFT_LOCK_MINUTES = 45;
 
@@ -98,6 +100,19 @@ public class OwnerRentalServiceImpl implements OwnerRentalService {
         }
 
         log.info("Duyệt thành công đơn rentalId={} sang WAITING_PAYMENT, hạn thanh toán: {}", rentalId, rental.getPaymentExpiresAt());
+        if (notificationService != null) {
+            try {
+                notificationService.sendNotification(
+                        rental.getRenterId(),
+                        "Đơn thuê xe được phê duyệt",
+                        "Chủ xe đã duyệt yêu cầu thuê xe đơn #" + rental.getRentalId() + ". Vui lòng thanh toán cọc trong vòng 45 phút để giữ chỗ.",
+                        "RENTAL_APPROVED",
+                        rental.getRentalId()
+                );
+            } catch (Exception e) {
+                log.warn("Không thể gửi thông báo duyệt đơn: {}", e.getMessage());
+            }
+        }
         return RentalSummaryResponse.fromEntity(rental);
     }
 
@@ -161,6 +176,19 @@ public class OwnerRentalServiceImpl implements OwnerRentalService {
         }
 
         log.info("Đã từ chối đơn rentalId={}, lý do: {}", rentalId, request.getReason());
+        if (notificationService != null) {
+            try {
+                notificationService.sendNotification(
+                        rental.getRenterId(),
+                        "Đơn thuê xe bị từ chối",
+                        "Chủ xe đã từ chối yêu cầu thuê xe đơn #" + rental.getRentalId() + (StringUtils.hasText(request.getReason()) ? ". Lý do: " + request.getReason() : "."),
+                        "RENTAL_REJECTED",
+                        rental.getRentalId()
+                );
+            } catch (Exception e) {
+                log.warn("Không thể gửi thông báo từ chối đơn: {}", e.getMessage());
+            }
+        }
         return RentalSummaryResponse.fromEntity(rental);
     }
 

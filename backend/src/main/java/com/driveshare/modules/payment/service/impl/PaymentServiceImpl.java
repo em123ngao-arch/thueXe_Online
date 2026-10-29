@@ -40,6 +40,8 @@ public class PaymentServiceImpl implements PaymentService {
     private final RentalRepository rentalRepository;
     private final CarRepository carRepository;
     private final UserRepository userRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.driveshare.modules.notification.service.NotificationService notificationService;
 
     @Override
     @Transactional
@@ -241,6 +243,29 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         log.info("Đơn rentalId={} đã được chuyển sang trạng thái CONFIRMED sau khi thanh toán", rental.getRentalId());
+        if (notificationService != null) {
+            try {
+                Car car = carRepository.findById(rental.getCarId()).orElse(null);
+                if (car != null) {
+                    notificationService.sendNotification(
+                            car.getOwnerId(),
+                            "Khách đã đặt cọc thành công",
+                            "Khách hàng đã thanh toán cọc cho đơn thuê #" + rental.getRentalId() + ". Đơn đã được chuyển sang ĐÃ CỌC (CONFIRMED)!",
+                            "RENTAL_CONFIRMED",
+                            rental.getRentalId()
+                    );
+                }
+                notificationService.sendNotification(
+                        rental.getRenterId(),
+                        "Thanh toán cọc thành công",
+                        "Bạn đã thanh toán cọc thành công cho đơn thuê #" + rental.getRentalId() + ". Chuyến đi đã sẵn sàng bàn giao!",
+                        "RENTAL_CONFIRMED",
+                        rental.getRentalId()
+                );
+            } catch (Exception e) {
+                log.warn("Không thể gửi thông báo thanh toán cọc: {}", e.getMessage());
+            }
+        }
         return toPaymentResponse(payment, rental);
     }
 

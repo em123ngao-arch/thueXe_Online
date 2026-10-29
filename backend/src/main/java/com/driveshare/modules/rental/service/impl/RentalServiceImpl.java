@@ -33,6 +33,8 @@ public class RentalServiceImpl implements RentalService {
     private final CarRepository carRepository;
     private final com.driveshare.modules.user.repository.RenterProfileRepository renterProfileRepository;
     private final com.driveshare.modules.user.repository.UserRepository userRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.driveshare.modules.notification.service.NotificationService notificationService;
 
     private static final int MAX_PENDING_RENTALS = 3;
     private static final BigDecimal DEPOSIT_PERCENTAGE = BigDecimal.valueOf(0.30);
@@ -195,6 +197,27 @@ public class RentalServiceImpl implements RentalService {
         Rental savedRental = rentalRepository.save(rental);
         log.info("Tạo yêu cầu thuê xe thành công: rentalId={}, carId={}, renterId={}, totalDays={}, totalPrice={}, withDriver={}, driverFee={}, status={}",
                 savedRental.getRentalId(), car.getCarId(), renterId, totalDays, totalPrice, isWithDriver, driverFee, savedRental.getStatus());
+
+        if (notificationService != null) {
+            try {
+                notificationService.sendNotification(
+                        car.getOwnerId(),
+                        "Yêu cầu thuê xe mới",
+                        "Khách hàng vừa gửi yêu cầu thuê xe " + car.getBrand() + " " + car.getModel() + " (" + car.getPlateNumber() + "). Mã đơn: #" + savedRental.getRentalId(),
+                        "RENTAL_REQUEST",
+                        savedRental.getRentalId()
+                );
+                notificationService.sendNotification(
+                        renterId,
+                        "Yêu cầu thuê xe đã gửi",
+                        "Bạn đã gửi yêu cầu thuê xe " + car.getBrand() + " " + car.getModel() + " thành công. Mã đơn: #" + savedRental.getRentalId() + ", đang chờ chủ xe duyệt.",
+                        "RENTAL_REQUEST",
+                        savedRental.getRentalId()
+                );
+            } catch (Exception e) {
+                log.warn("Không thể gửi thông báo đặt xe: {}", e.getMessage());
+            }
+        }
 
         return RentalResponse.from(savedRental);
     }

@@ -37,6 +37,8 @@ public class RentalInspectionServiceImpl implements RentalInspectionService {
     private final RentalInspectionRepository rentalInspectionRepository;
     private final CarRepository carRepository;
     private final RentalDisputeRepository rentalDisputeRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.driveshare.modules.notification.service.NotificationService notificationService;
 
     @Override
     @Transactional
@@ -89,6 +91,19 @@ public class RentalInspectionServiceImpl implements RentalInspectionService {
 
         log.info("Lập biên bản Check-in thành công đơn rentalId={}, inspectionId={}, chờ khách xác nhận",
                 rentalId, saved.getInspectionId());
+        if (notificationService != null) {
+            try {
+                notificationService.sendNotification(
+                        rental.getRenterId(),
+                        "Biên bản bàn giao nhận xe (Check-in)",
+                        "Chủ xe đã lập biên bản bàn giao cho đơn #" + rentalId + ". Vui lòng kiểm tra và ký nhận xe.",
+                        "INSPECTION_CHECK_IN",
+                        rentalId
+                );
+            } catch (Exception e) {
+                log.warn("Không thể gửi thông báo check-in: {}", e.getMessage());
+            }
+        }
         return RentalInspectionResponse.from(saved);
     }
 
@@ -145,6 +160,19 @@ public class RentalInspectionServiceImpl implements RentalInspectionService {
 
         log.info("Lập biên bản Check-out thành công đơn rentalId={}, inspectionId={}, chờ khách xác nhận",
                 rentalId, saved.getInspectionId());
+        if (notificationService != null) {
+            try {
+                notificationService.sendNotification(
+                        rental.getRenterId(),
+                        "Biên bản trả xe hoàn tất chuyến đi (Check-out)",
+                        "Chủ xe đã lập biên bản trả xe cho đơn #" + rentalId + ". Vui lòng kiểm tra và ký nhận hoàn tất.",
+                        "INSPECTION_CHECK_OUT",
+                        rentalId
+                );
+            } catch (Exception e) {
+                log.warn("Không thể gửi thông báo check-out: {}", e.getMessage());
+            }
+        }
         return RentalInspectionResponse.from(saved);
     }
 
@@ -230,6 +258,32 @@ public class RentalInspectionServiceImpl implements RentalInspectionService {
                     customerId, inspection.getInspectionType(), rentalId);
         }
 
+        if (notificationService != null) {
+            try {
+                Car carObj = carRepository.findById(rental.getCarId()).orElse(null);
+                if (carObj != null) {
+                    if (Boolean.TRUE.equals(request.agreed())) {
+                        notificationService.sendNotification(
+                                carObj.getOwnerId(),
+                                "Khách đã ký nhận bàn giao xe",
+                                "Khách hàng đã đồng ý ký nhận biên bản " + (inspection.getInspectionType() == com.driveshare.common.enums.EInspectionType.CHECK_IN ? "nhận xe" : "trả xe") + " đơn #" + rentalId + ".",
+                                "INSPECTION_CONFIRMED",
+                                rentalId
+                        );
+                    } else {
+                        notificationService.sendNotification(
+                                carObj.getOwnerId(),
+                                "Khách khiếu nại bàn giao xe",
+                                "Khách hàng khiếu nại sai lệch biên bản đơn #" + rentalId + ". Lý do: " + request.disputeReason(),
+                                "INSPECTION_DISPUTED",
+                                rentalId
+                        );
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Không thể gửi thông báo xác nhận biên bản: {}", e.getMessage());
+            }
+        }
         return RentalInspectionResponse.from(inspection);
     }
 
