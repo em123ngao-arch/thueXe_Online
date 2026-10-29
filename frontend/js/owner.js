@@ -2528,28 +2528,80 @@ const OwnerService = {
             </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
               <!-- Ô 1: Đầu xe -->
-              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 8px; background: #fafafa; text-align: center;">
+              <div class="inspection-drop-box"
+                   ondragover="OwnerService.handleInspectionDragOver(event, this)" 
+                   ondragleave="OwnerService.handleInspectionDragLeave(event, this)" 
+                   ondrop="OwnerService.handleInspectionDrop(event, 'checkInImg1', 'prevIn1', this)"
+                   style="border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center; transition: all 0.2s ease;">
                 <div style="font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 4px;">1. Đầu xe</div>
-                <input type="text" id="checkInImg1" class="form-control" placeholder="URL ảnh..." style="font-size: 0.75rem; padding: 4px 6px; margin-bottom: 6px;" onchange="OwnerService.previewThumb(this, 'prevIn1')" />
-                <img id="prevIn1" src="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 75px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" alt="Đầu xe" />
+                <div style="position: relative; cursor: pointer; margin-bottom: 4px;" onclick="document.getElementById('checkInFile1').click()" title="Bấm để tải từ máy hoặc kéo thả ảnh vào đây">
+                  <img id="prevIn1" src="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 75px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; display: block;" alt="Đầu xe" />
+                  <div style="position: absolute; bottom: 3px; right: 3px; background: rgba(15,23,42,0.75); color: #fff; font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; pointer-events: none;">
+                    <i class="fa fa-camera"></i> Đổi
+                  </div>
+                </div>
+                <input type="file" id="checkInFile1" accept="image/*" style="display:none;" onchange="OwnerService.handleInspectionFileSelect(this, 'checkInImg1', 'prevIn1')" />
+                <button type="button" class="btn btn-xs" style="width: 100%; font-size: 0.7rem; padding: 2px 4px; margin-bottom: 4px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 4px; font-weight: 600;" onclick="document.getElementById('checkInFile1').click()">
+                  <i class="fa fa-upload"></i> Tải từ máy
+                </button>
+                <input type="text" id="checkInImg1" class="form-control" placeholder="Hoặc dán URL..." style="font-size: 0.7rem; padding: 2px 5px;" onchange="OwnerService.previewThumb(this, 'prevIn1')" />
               </div>
               <!-- Ô 2: Đuôi xe -->
-              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 8px; background: #fafafa; text-align: center;">
+              <div class="inspection-drop-box"
+                   ondragover="OwnerService.handleInspectionDragOver(event, this)" 
+                   ondragleave="OwnerService.handleInspectionDragLeave(event, this)" 
+                   ondrop="OwnerService.handleInspectionDrop(event, 'checkInImg2', 'prevIn2', this)"
+                   style="border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center; transition: all 0.2s ease;">
                 <div style="font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 4px;">2. Đuôi xe</div>
-                <input type="text" id="checkInImg2" class="form-control" placeholder="URL ảnh..." style="font-size: 0.75rem; padding: 4px 6px; margin-bottom: 6px;" onchange="OwnerService.previewThumb(this, 'prevIn2')" />
-                <img id="prevIn2" src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 75px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" alt="Đuôi xe" />
+                <div style="position: relative; cursor: pointer; margin-bottom: 4px;" onclick="document.getElementById('checkInFile2').click()" title="Bấm để tải từ máy hoặc kéo thả ảnh vào đây">
+                  <img id="prevIn2" src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 75px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; display: block;" alt="Đuôi xe" />
+                  <div style="position: absolute; bottom: 3px; right: 3px; background: rgba(15,23,42,0.75); color: #fff; font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; pointer-events: none;">
+                    <i class="fa fa-camera"></i> Đổi
+                  </div>
+                </div>
+                <input type="file" id="checkInFile2" accept="image/*" style="display:none;" onchange="OwnerService.handleInspectionFileSelect(this, 'checkInImg2', 'prevIn2')" />
+                <button type="button" class="btn btn-xs" style="width: 100%; font-size: 0.7rem; padding: 2px 4px; margin-bottom: 4px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 4px; font-weight: 600;" onclick="document.getElementById('checkInFile2').click()">
+                  <i class="fa fa-upload"></i> Tải từ máy
+                </button>
+                <input type="text" id="checkInImg2" class="form-control" placeholder="Hoặc dán URL..." style="font-size: 0.7rem; padding: 2px 5px;" onchange="OwnerService.previewThumb(this, 'prevIn2')" />
               </div>
               <!-- Ô 3: Sườn trái -->
-              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 8px; background: #fafafa; text-align: center;">
+              <div class="inspection-drop-box"
+                   ondragover="OwnerService.handleInspectionDragOver(event, this)" 
+                   ondragleave="OwnerService.handleInspectionDragLeave(event, this)" 
+                   ondrop="OwnerService.handleInspectionDrop(event, 'checkInImg3', 'prevIn3', this)"
+                   style="border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center; transition: all 0.2s ease;">
                 <div style="font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 4px;">3. Sườn trái</div>
-                <input type="text" id="checkInImg3" class="form-control" placeholder="URL ảnh..." style="font-size: 0.75rem; padding: 4px 6px; margin-bottom: 6px;" onchange="OwnerService.previewThumb(this, 'prevIn3')" />
-                <img id="prevIn3" src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 75px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" alt="Sườn trái" />
+                <div style="position: relative; cursor: pointer; margin-bottom: 4px;" onclick="document.getElementById('checkInFile3').click()" title="Bấm để tải từ máy hoặc kéo thả ảnh vào đây">
+                  <img id="prevIn3" src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 75px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; display: block;" alt="Sườn trái" />
+                  <div style="position: absolute; bottom: 3px; right: 3px; background: rgba(15,23,42,0.75); color: #fff; font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; pointer-events: none;">
+                    <i class="fa fa-camera"></i> Đổi
+                  </div>
+                </div>
+                <input type="file" id="checkInFile3" accept="image/*" style="display:none;" onchange="OwnerService.handleInspectionFileSelect(this, 'checkInImg3', 'prevIn3')" />
+                <button type="button" class="btn btn-xs" style="width: 100%; font-size: 0.7rem; padding: 2px 4px; margin-bottom: 4px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 4px; font-weight: 600;" onclick="document.getElementById('checkInFile3').click()">
+                  <i class="fa fa-upload"></i> Tải từ máy
+                </button>
+                <input type="text" id="checkInImg3" class="form-control" placeholder="Hoặc dán URL..." style="font-size: 0.7rem; padding: 2px 5px;" onchange="OwnerService.previewThumb(this, 'prevIn3')" />
               </div>
               <!-- Ô 4: Sườn phải -->
-              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 8px; background: #fafafa; text-align: center;">
+              <div class="inspection-drop-box"
+                   ondragover="OwnerService.handleInspectionDragOver(event, this)" 
+                   ondragleave="OwnerService.handleInspectionDragLeave(event, this)" 
+                   ondrop="OwnerService.handleInspectionDrop(event, 'checkInImg4', 'prevIn4', this)"
+                   style="border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center; transition: all 0.2s ease;">
                 <div style="font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 4px;">4. Sườn phải</div>
-                <input type="text" id="checkInImg4" class="form-control" placeholder="URL ảnh..." style="font-size: 0.75rem; padding: 4px 6px; margin-bottom: 6px;" onchange="OwnerService.previewThumb(this, 'prevIn4')" />
-                <img id="prevIn4" src="https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 75px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" alt="Sườn phải" />
+                <div style="position: relative; cursor: pointer; margin-bottom: 4px;" onclick="document.getElementById('checkInFile4').click()" title="Bấm để tải từ máy hoặc kéo thả ảnh vào đây">
+                  <img id="prevIn4" src="https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 75px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; display: block;" alt="Sườn phải" />
+                  <div style="position: absolute; bottom: 3px; right: 3px; background: rgba(15,23,42,0.75); color: #fff; font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; pointer-events: none;">
+                    <i class="fa fa-camera"></i> Đổi
+                  </div>
+                </div>
+                <input type="file" id="checkInFile4" accept="image/*" style="display:none;" onchange="OwnerService.handleInspectionFileSelect(this, 'checkInImg4', 'prevIn4')" />
+                <button type="button" class="btn btn-xs" style="width: 100%; font-size: 0.7rem; padding: 2px 4px; margin-bottom: 4px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 4px; font-weight: 600;" onclick="document.getElementById('checkInFile4').click()">
+                  <i class="fa fa-upload"></i> Tải từ máy
+                </button>
+                <input type="text" id="checkInImg4" class="form-control" placeholder="Hoặc dán URL..." style="font-size: 0.7rem; padding: 2px 5px;" onchange="OwnerService.previewThumb(this, 'prevIn4')" />
               </div>
             </div>
           </div>
@@ -2604,6 +2656,88 @@ const OwnerService = {
     if (img && input.value.trim()) {
       img.src = input.value.trim();
     }
+  },
+
+  handleInspectionDragOver(e, container) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (container) {
+      container.style.borderColor = '#0d9488';
+      container.style.backgroundColor = '#f0fdfa';
+    }
+  },
+
+  handleInspectionDragLeave(e, container) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (container) {
+      container.style.borderColor = '#cbd5e1';
+      container.style.backgroundColor = '#fafafa';
+    }
+  },
+
+  handleInspectionDrop(e, inputId, imgId, container) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (container) {
+      container.style.borderColor = '#cbd5e1';
+      container.style.backgroundColor = '#fafafa';
+    }
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      this.processInspectionImageFile(files[0], inputId, imgId);
+    }
+  },
+
+  handleInspectionFileSelect(input, inputId, imgId) {
+    if (input.files && input.files.length > 0) {
+      this.processInspectionImageFile(input.files[0], inputId, imgId);
+    }
+  },
+
+  processInspectionImageFile(file, inputId, imgId) {
+    if (!file.type.startsWith('image/')) {
+      alert('Vui lòng chọn tệp hình ảnh hợp lệ (JPG, PNG, WEBP)!');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const rawBase64 = e.target.result;
+      const img = new Image();
+      img.onload = () => {
+        const maxWidth = 1024;
+        const maxHeight = 1024;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+        const targetInput = document.getElementById(inputId);
+        const targetImg = document.getElementById(imgId);
+        if (targetInput) targetInput.value = compressedDataUrl;
+        if (targetImg) targetImg.src = compressedDataUrl;
+      };
+      img.src = rawBase64;
+    };
+    reader.readAsDataURL(file);
   },
 
   appendNote(textareaId, text) {
@@ -2790,25 +2924,81 @@ const OwnerService = {
               </button>
             </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
-              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center;">
+              <!-- Ô 1: Đầu xe -->
+              <div class="inspection-drop-box"
+                   ondragover="OwnerService.handleInspectionDragOver(event, this)" 
+                   ondragleave="OwnerService.handleInspectionDragLeave(event, this)" 
+                   ondrop="OwnerService.handleInspectionDrop(event, 'checkOutImg1', 'prevOut1', this)"
+                   style="border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center; transition: all 0.2s ease;">
                 <div style="font-size: 0.72rem; font-weight: 700; color: #475569; margin-bottom: 3px;">Đầu xe</div>
-                <input type="text" id="checkOutImg1" class="form-control" placeholder="URL..." style="font-size: 0.72rem; padding: 3px 6px; margin-bottom: 4px;" onchange="OwnerService.previewThumb(this, 'prevOut1')" />
-                <img id="prevOut1" src="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 65px; object-fit: cover; border-radius: 4px;" />
+                <div style="position: relative; cursor: pointer; margin-bottom: 4px;" onclick="document.getElementById('checkOutFile1').click()" title="Bấm để tải từ máy hoặc kéo thả ảnh vào đây">
+                  <img id="prevOut1" src="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 65px; object-fit: cover; border-radius: 4px; display: block;" alt="Đầu xe" />
+                  <div style="position: absolute; bottom: 3px; right: 3px; background: rgba(15,23,42,0.75); color: #fff; font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; pointer-events: none;">
+                    <i class="fa fa-camera"></i> Đổi
+                  </div>
+                </div>
+                <input type="file" id="checkOutFile1" accept="image/*" style="display:none;" onchange="OwnerService.handleInspectionFileSelect(this, 'checkOutImg1', 'prevOut1')" />
+                <button type="button" class="btn btn-xs" style="width: 100%; font-size: 0.7rem; padding: 2px 4px; margin-bottom: 4px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 4px; font-weight: 600;" onclick="document.getElementById('checkOutFile1').click()">
+                  <i class="fa fa-upload"></i> Tải từ máy
+                </button>
+                <input type="text" id="checkOutImg1" class="form-control" placeholder="Hoặc URL..." style="font-size: 0.7rem; padding: 2px 5px;" onchange="OwnerService.previewThumb(this, 'prevOut1')" />
               </div>
-              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center;">
+              <!-- Ô 2: Đuôi xe -->
+              <div class="inspection-drop-box"
+                   ondragover="OwnerService.handleInspectionDragOver(event, this)" 
+                   ondragleave="OwnerService.handleInspectionDragLeave(event, this)" 
+                   ondrop="OwnerService.handleInspectionDrop(event, 'checkOutImg2', 'prevOut2', this)"
+                   style="border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center; transition: all 0.2s ease;">
                 <div style="font-size: 0.72rem; font-weight: 700; color: #475569; margin-bottom: 3px;">Đuôi xe</div>
-                <input type="text" id="checkOutImg2" class="form-control" placeholder="URL..." style="font-size: 0.72rem; padding: 3px 6px; margin-bottom: 4px;" onchange="OwnerService.previewThumb(this, 'prevOut2')" />
-                <img id="prevOut2" src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 65px; object-fit: cover; border-radius: 4px;" />
+                <div style="position: relative; cursor: pointer; margin-bottom: 4px;" onclick="document.getElementById('checkOutFile2').click()" title="Bấm để tải từ máy hoặc kéo thả ảnh vào đây">
+                  <img id="prevOut2" src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 65px; object-fit: cover; border-radius: 4px; display: block;" alt="Đuôi xe" />
+                  <div style="position: absolute; bottom: 3px; right: 3px; background: rgba(15,23,42,0.75); color: #fff; font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; pointer-events: none;">
+                    <i class="fa fa-camera"></i> Đổi
+                  </div>
+                </div>
+                <input type="file" id="checkOutFile2" accept="image/*" style="display:none;" onchange="OwnerService.handleInspectionFileSelect(this, 'checkOutImg2', 'prevOut2')" />
+                <button type="button" class="btn btn-xs" style="width: 100%; font-size: 0.7rem; padding: 2px 4px; margin-bottom: 4px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 4px; font-weight: 600;" onclick="document.getElementById('checkOutFile2').click()">
+                  <i class="fa fa-upload"></i> Tải từ máy
+                </button>
+                <input type="text" id="checkOutImg2" class="form-control" placeholder="Hoặc URL..." style="font-size: 0.7rem; padding: 2px 5px;" onchange="OwnerService.previewThumb(this, 'prevOut2')" />
               </div>
-              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center;">
+              <!-- Ô 3: Sườn xe -->
+              <div class="inspection-drop-box"
+                   ondragover="OwnerService.handleInspectionDragOver(event, this)" 
+                   ondragleave="OwnerService.handleInspectionDragLeave(event, this)" 
+                   ondrop="OwnerService.handleInspectionDrop(event, 'checkOutImg3', 'prevOut3', this)"
+                   style="border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center; transition: all 0.2s ease;">
                 <div style="font-size: 0.72rem; font-weight: 700; color: #475569; margin-bottom: 3px;">Sườn xe</div>
-                <input type="text" id="checkOutImg3" class="form-control" placeholder="URL..." style="font-size: 0.72rem; padding: 3px 6px; margin-bottom: 4px;" onchange="OwnerService.previewThumb(this, 'prevOut3')" />
-                <img id="prevOut3" src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 65px; object-fit: cover; border-radius: 4px;" />
+                <div style="position: relative; cursor: pointer; margin-bottom: 4px;" onclick="document.getElementById('checkOutFile3').click()" title="Bấm để tải từ máy hoặc kéo thả ảnh vào đây">
+                  <img id="prevOut3" src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 65px; object-fit: cover; border-radius: 4px; display: block;" alt="Sườn xe" />
+                  <div style="position: absolute; bottom: 3px; right: 3px; background: rgba(15,23,42,0.75); color: #fff; font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; pointer-events: none;">
+                    <i class="fa fa-camera"></i> Đổi
+                  </div>
+                </div>
+                <input type="file" id="checkOutFile3" accept="image/*" style="display:none;" onchange="OwnerService.handleInspectionFileSelect(this, 'checkOutImg3', 'prevOut3')" />
+                <button type="button" class="btn btn-xs" style="width: 100%; font-size: 0.7rem; padding: 2px 4px; margin-bottom: 4px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 4px; font-weight: 600;" onclick="document.getElementById('checkOutFile3').click()">
+                  <i class="fa fa-upload"></i> Tải từ máy
+                </button>
+                <input type="text" id="checkOutImg3" class="form-control" placeholder="Hoặc URL..." style="font-size: 0.7rem; padding: 2px 5px;" onchange="OwnerService.previewThumb(this, 'prevOut3')" />
               </div>
-              <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center;">
+              <!-- Ô 4: Taplo ODO -->
+              <div class="inspection-drop-box"
+                   ondragover="OwnerService.handleInspectionDragOver(event, this)" 
+                   ondragleave="OwnerService.handleInspectionDragLeave(event, this)" 
+                   ondrop="OwnerService.handleInspectionDrop(event, 'checkOutImg4', 'prevOut4', this)"
+                   style="border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 6px; background: #fafafa; text-align: center; transition: all 0.2s ease;">
                 <div style="font-size: 0.72rem; font-weight: 700; color: #475569; margin-bottom: 3px;">Taplo ODO</div>
-                <input type="text" id="checkOutImg4" class="form-control" placeholder="URL..." style="font-size: 0.72rem; padding: 3px 6px; margin-bottom: 4px;" onchange="OwnerService.previewThumb(this, 'prevOut4')" />
-                <img id="prevOut4" src="https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 65px; object-fit: cover; border-radius: 4px;" />
+                <div style="position: relative; cursor: pointer; margin-bottom: 4px;" onclick="document.getElementById('checkOutFile4').click()" title="Bấm để tải từ máy hoặc kéo thả ảnh vào đây">
+                  <img id="prevOut4" src="https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=300&q=80" style="width: 100%; height: 65px; object-fit: cover; border-radius: 4px; display: block;" alt="Taplo ODO" />
+                  <div style="position: absolute; bottom: 3px; right: 3px; background: rgba(15,23,42,0.75); color: #fff; font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; pointer-events: none;">
+                    <i class="fa fa-camera"></i> Đổi
+                  </div>
+                </div>
+                <input type="file" id="checkOutFile4" accept="image/*" style="display:none;" onchange="OwnerService.handleInspectionFileSelect(this, 'checkOutImg4', 'prevOut4')" />
+                <button type="button" class="btn btn-xs" style="width: 100%; font-size: 0.7rem; padding: 2px 4px; margin-bottom: 4px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 4px; font-weight: 600;" onclick="document.getElementById('checkOutFile4').click()">
+                  <i class="fa fa-upload"></i> Tải từ máy
+                </button>
+                <input type="text" id="checkOutImg4" class="form-control" placeholder="Hoặc URL..." style="font-size: 0.7rem; padding: 2px 5px;" onchange="OwnerService.previewThumb(this, 'prevOut4')" />
               </div>
             </div>
           </div>
