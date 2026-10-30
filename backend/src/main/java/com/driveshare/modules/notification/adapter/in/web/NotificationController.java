@@ -1,8 +1,8 @@
-package com.driveshare.modules.notification.controller;
+package com.driveshare.modules.notification.adapter.in.web;
 
 import com.driveshare.common.dto.ApiResponse;
+import com.driveshare.modules.notification.application.port.in.NotificationUseCase;
 import com.driveshare.modules.notification.dto.NotificationDto;
-import com.driveshare.modules.notification.repository.NotificationRepository;
 import com.driveshare.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,7 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotificationController {
 
-    private final NotificationRepository notificationRepository;
+    private final NotificationUseCase notificationUseCase;
 
     @Operation(summary = "Lấy danh sách thông báo của người dùng hiện tại")
     @GetMapping("/my-notifications")
@@ -29,10 +29,7 @@ public class NotificationController {
         if (userDetails == null) {
             return ResponseEntity.ok(ApiResponse.success(List.of()));
         }
-        List<NotificationDto> list = notificationRepository.findByUserIdOrderByCreatedAtDesc(userDetails.getUserId())
-                .stream()
-                .map(NotificationDto::from)
-                .toList();
+        List<NotificationDto> list = notificationUseCase.getMyNotifications(userDetails.getUserId());
         return ResponseEntity.ok(ApiResponse.success(list));
     }
 
@@ -42,12 +39,9 @@ public class NotificationController {
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        notificationRepository.findById(id).ifPresent(n -> {
-            if (userDetails != null && n.getUserId().equals(userDetails.getUserId())) {
-                n.setIsRead(true);
-                notificationRepository.save(n);
-            }
-        });
+        if (userDetails != null) {
+            notificationUseCase.markAsRead(id, userDetails.getUserId());
+        }
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

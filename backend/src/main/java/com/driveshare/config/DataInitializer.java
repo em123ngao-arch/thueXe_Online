@@ -29,7 +29,7 @@ import com.driveshare.common.enums.ETransmission;
 import com.driveshare.modules.car.entity.Car;
 import com.driveshare.common.enums.EInspectionType;
 import com.driveshare.modules.car.repository.CarRepository;
-import com.driveshare.modules.notification.entity.Notification;
+import com.driveshare.modules.notification.adapter.out.persistence.Notification;
 import com.driveshare.modules.notification.repository.NotificationRepository;
 import com.driveshare.modules.rental.entity.Rental;
 import com.driveshare.modules.rental.entity.RentalInspection;

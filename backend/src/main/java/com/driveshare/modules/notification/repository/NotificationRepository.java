@@ -1,19 +1,9 @@
 package com.driveshare.modules.notification.repository;
 
-import com.driveshare.modules.notification.entity.Notification;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.driveshare.modules.notification.adapter.out.persistence.NotificationJpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
+// Backward-compatible repository shim
 @Repository
-public interface NotificationRepository extends JpaRepository<Notification, Long> {
-
-    List<Notification> findByUserIdOrderByCreatedAtDesc(Long userId);
-
-    Page<Notification> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
-
-    long countByUserIdAndIsReadFalse(Long userId);
+public interface NotificationRepository extends NotificationJpaRepository {
 }

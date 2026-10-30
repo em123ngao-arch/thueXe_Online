@@ -8,7 +8,7 @@ import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.common.service.CloudinaryService;
 import com.driveshare.modules.car.entity.Car;
 import com.driveshare.modules.car.repository.CarRepository;
-import com.driveshare.modules.notification.entity.Notification;
+import com.driveshare.modules.notification.adapter.out.persistence.Notification;
 import com.driveshare.modules.notification.repository.NotificationRepository;
 import com.driveshare.modules.payment.entity.Payment;
 import com.driveshare.modules.payment.repository.PaymentRepository;

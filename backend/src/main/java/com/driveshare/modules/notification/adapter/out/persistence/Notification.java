@@ -1,4 +1,4 @@
-package com.driveshare.modules.notification.entity;
+package com.driveshare.modules.notification.adapter.out.persistence;
 
 import com.driveshare.modules.user.adapter.out.persistence.User;
 import jakarta.persistence.*;
@@ -16,7 +16,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "Notification")
 @Table(
         name = "notifications",
         indexes = {
