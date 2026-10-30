@@ -1,4 +1,4 @@
-package com.driveshare.modules.admin.controller;
+package com.driveshare.modules.admin.adapter.in.web;
 
 import com.driveshare.common.dto.ApiResponse;
 import com.driveshare.common.dto.PageResponse;
@@ -170,3 +170,4 @@ public class AdminCarController {
         return ResponseEntity.ok(ApiResponse.success(message, doc));
     }
 }
+

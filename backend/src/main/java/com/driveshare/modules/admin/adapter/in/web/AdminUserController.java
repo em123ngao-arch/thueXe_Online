@@ -1,4 +1,4 @@
-package com.driveshare.modules.admin.controller;
+package com.driveshare.modules.admin.adapter.in.web;
 
 import com.driveshare.common.dto.ApiResponse;
 import com.driveshare.common.dto.PageResponse;
@@ -7,6 +7,7 @@ import com.driveshare.modules.admin.dto.request.ApproveLicenseRequest;
 import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
 import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
 import com.driveshare.modules.admin.dto.response.PendingCccdResponse;
+import com.driveshare.modules.admin.dto.response.PendingLicenseResponse;
 import com.driveshare.modules.admin.dto.response.UserItemResponse;
 import com.driveshare.modules.admin.service.AdminUserService;
 import com.driveshare.security.CustomUserDetails;
@@ -19,6 +20,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin/users")
@@ -58,16 +62,16 @@ public class AdminUserController {
     @GetMapping("/pending-cccd")
     @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
     @Operation(summary = "Lấy danh sách hồ sơ CMND/CCCD chờ xét duyệt (BR-02-4)")
-    public ResponseEntity<ApiResponse<java.util.List<PendingCccdResponse>>> getPendingCccdUsers() {
-        java.util.List<PendingCccdResponse> list = adminUserService.getPendingCccdUsers();
+    public ResponseEntity<ApiResponse<List<PendingCccdResponse>>> getPendingCccdUsers() {
+        List<PendingCccdResponse> list = adminUserService.getPendingCccdUsers();
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách CCCD chờ duyệt thành công", list));
     }
 
     @GetMapping("/pending-licenses")
     @PreAuthorize("!isAuthenticated() or hasAnyRole('ADMIN', 'STAFF')")
     @Operation(summary = "Lấy danh sách hồ sơ GPLX của khách thuê cần xác thực")
-    public ResponseEntity<ApiResponse<java.util.List<com.driveshare.modules.admin.dto.response.PendingLicenseResponse>>> getPendingLicenses() {
-        java.util.List<com.driveshare.modules.admin.dto.response.PendingLicenseResponse> list = adminUserService.getPendingLicenses();
+    public ResponseEntity<ApiResponse<List<PendingLicenseResponse>>> getPendingLicenses() {
+        List<PendingLicenseResponse> list = adminUserService.getPendingLicenses();
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách GPLX cần duyệt thành công", list));
     }
 
@@ -76,7 +80,7 @@ public class AdminUserController {
     @Operation(summary = "Phê duyệt hoặc từ chối hồ sơ CMND/CCCD (BR-02-5, BR-02-6)")
     public ResponseEntity<ApiResponse<Void>> verifyCccd(
             @PathVariable Long userId,
-            @RequestBody java.util.Map<String, String> body,
+            @RequestBody Map<String, String> body,
             Authentication authentication
     ) {
         String status = body != null ? body.get("status") : null;
@@ -170,3 +174,4 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success(message, user));
     }
 }
+

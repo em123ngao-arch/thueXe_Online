@@ -1,4 +1,4 @@
-package com.driveshare.modules.admin.entity;
+package com.driveshare.modules.admin.adapter.out.persistence;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,7 +10,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "AuditLog")
 @Table(name = "audit_logs")
 public class AuditLog {
 
@@ -41,3 +41,4 @@ public class AuditLog {
     @Builder.Default
     private Instant createdAt = Instant.now();
 }
+

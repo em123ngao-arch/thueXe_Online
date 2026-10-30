@@ -1,9 +1,9 @@
-package com.driveshare.modules.admin.controller;
+package com.driveshare.modules.admin.adapter.in.web;
 
 import com.driveshare.common.dto.ApiResponse;
+import com.driveshare.modules.ai.application.port.in.AiAdvisorInboundPort;
 import com.driveshare.modules.ai.dto.ChatMessageDto;
 import com.driveshare.modules.ai.dto.response.ChatSessionSummaryDto;
-import com.driveshare.modules.ai.service.AiChatService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,7 +22,7 @@ import java.util.List;
 @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
 public class AdminChatController {
 
-    private final AiChatService aiChatService;
+    private final AiAdvisorInboundPort aiChatService;
 
     @GetMapping
     @Operation(summary = "Lấy toàn bộ lịch sử các phiên chat có bộ lọc theo vai trò (ROLE_RENTER, ROLE_OWNER, GUEST, ALL) và tìm kiếm")
@@ -43,3 +43,4 @@ public class AdminChatController {
         return ResponseEntity.ok(ApiResponse.success("Nội dung hội thoại chi tiết", messages));
     }
 }
+

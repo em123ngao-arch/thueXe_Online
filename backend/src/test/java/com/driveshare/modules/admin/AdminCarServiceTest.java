@@ -14,7 +14,7 @@ import com.driveshare.modules.admin.dto.request.ApproveCarRequest;
 import com.driveshare.modules.admin.dto.response.AdminCarDetailResponse;
 import com.driveshare.modules.admin.dto.response.AdminCarItemResponse;
 import com.driveshare.modules.admin.dto.response.CarDocumentResponse;
-import com.driveshare.modules.admin.entity.AuditLog;
+import com.driveshare.modules.admin.adapter.out.persistence.AuditLog;
 import com.driveshare.modules.admin.repository.AuditLogRepository;
 import com.driveshare.modules.admin.service.impl.AdminCarServiceImpl;
 import com.driveshare.modules.car.adapter.out.persistence.Car;

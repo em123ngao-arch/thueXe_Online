@@ -1,7 +1,7 @@
 package com.driveshare.modules.admin;
 
 import com.driveshare.common.dto.ApiResponse;
-import com.driveshare.modules.admin.controller.AdminChatController;
+import com.driveshare.modules.admin.adapter.in.web.AdminChatController;
 import com.driveshare.modules.ai.dto.ChatMessageDto;
 import com.driveshare.modules.ai.dto.response.ChatSessionSummaryDto;
 import com.driveshare.modules.ai.service.AiChatService;

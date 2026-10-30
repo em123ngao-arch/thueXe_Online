@@ -1,4 +1,4 @@
-package com.driveshare.modules.admin.controller;
+package com.driveshare.modules.admin.adapter.in.web;
 
 import com.driveshare.common.dto.ApiResponse;
 import com.driveshare.modules.admin.dto.response.AdminStatsResponse;
@@ -29,3 +29,4 @@ public class AdminStatsController {
         return ResponseEntity.ok(ApiResponse.success("Lấy thống kê thành công", adminUserService.getAdminStats()));
     }
 }
+

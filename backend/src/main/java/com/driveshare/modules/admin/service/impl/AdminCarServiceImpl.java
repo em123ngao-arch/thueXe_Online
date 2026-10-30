@@ -12,7 +12,7 @@ import com.driveshare.modules.admin.dto.response.AdminCarDetailResponse;
 import com.driveshare.modules.admin.dto.response.AdminCarItemResponse;
 import com.driveshare.modules.admin.dto.response.CarDocumentResponse;
 import com.driveshare.modules.admin.dto.response.CarImageResponse;
-import com.driveshare.modules.admin.entity.AuditLog;
+import com.driveshare.modules.admin.adapter.out.persistence.AuditLog;
 import com.driveshare.modules.admin.repository.AuditLogRepository;
 import com.driveshare.modules.admin.service.AdminCarService;
 import com.driveshare.modules.admin.specification.CarSpecification;

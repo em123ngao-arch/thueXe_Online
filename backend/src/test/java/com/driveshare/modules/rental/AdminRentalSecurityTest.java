@@ -4,7 +4,7 @@ import com.driveshare.common.dto.ErrorResponse;
 import com.driveshare.common.enums.EDisputeStatus;
 import com.driveshare.common.enums.ERole;
 import com.driveshare.common.enums.EUserStatus;
-import com.driveshare.modules.admin.controller.AdminRentalController;
+import com.driveshare.modules.admin.adapter.in.web.AdminRentalController;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.oauth2.adapter.in.web.OAuth2SuccessHandler;
 import com.driveshare.modules.rental.dto.ResolveDisputeRequest;

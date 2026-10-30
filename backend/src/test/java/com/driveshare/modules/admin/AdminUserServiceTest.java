@@ -32,7 +32,7 @@ import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
 import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
-import com.driveshare.modules.admin.entity.AuditLog;
+import com.driveshare.modules.admin.adapter.out.persistence.AuditLog;
 import com.driveshare.modules.admin.repository.AuditLogRepository;
 
 import static org.junit.jupiter.api.Assertions.*;

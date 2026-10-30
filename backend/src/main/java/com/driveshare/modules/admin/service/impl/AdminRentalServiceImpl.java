@@ -4,6 +4,7 @@ import com.driveshare.common.enums.EInspectionType;
 import com.driveshare.common.enums.ERentalStatus;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
+import com.driveshare.modules.admin.dto.response.AdminRentalResponse;
 import com.driveshare.modules.admin.dto.response.OverdueRentalResponse;
 import com.driveshare.modules.admin.dto.response.ViolationDossierResponse;
 import com.driveshare.modules.admin.service.AdminRentalService;
@@ -23,6 +24,7 @@ import com.driveshare.modules.user.repository.RenterProfileRepository;
 import com.driveshare.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +48,102 @@ public class AdminRentalServiceImpl implements AdminRentalService {
     private final OwnerProfileRepository ownerProfileRepository;
     private final PaymentRepository paymentRepository;
     private final RentalInspectionRepository rentalInspectionRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AdminRentalResponse> getAllRentals(String status) {
+        List<Rental> rentals = rentalRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        if (status != null && !status.equalsIgnoreCase("all") && !status.trim().isEmpty()) {
+            rentals = rentals.stream()
+                    .filter(r -> r.getStatus() != null && r.getStatus().name().equalsIgnoreCase(status))
+                    .toList();
+        }
+
+        return rentals.stream().map(r -> {
+            String carName = "Xe #" + r.getCarId();
+            String carPlate = "N/A";
+            Car car = carRepository.findById(r.getCarId()).orElse(null);
+            if (car != null) {
+                String brand = car.getBrand() != null ? car.getBrand() : "";
+                String model = car.getModel() != null ? car.getModel() : "";
+                carName = (brand + " " + model).trim();
+                carPlate = car.getPlateNumber() != null ? car.getPlateNumber() : "N/A";
+            }
+
+            String renterName = "Khách #" + r.getRenterId();
+            String renterPhone = "N/A";
+            User renter = userRepository.findById(r.getRenterId()).orElse(null);
+            if (renter != null) {
+                renterName = renter.getFullName() != null ? renter.getFullName() : renter.getUsername();
+                renterPhone = renter.getPhone() != null ? renter.getPhone() : "N/A";
+            }
+
+            Long ownerId = (car != null) ? car.getOwnerId() : null;
+            String ownerName = "Chủ xe #" + ownerId;
+            String ownerPhone = "N/A";
+            String ownerBankName = "MBBank (Quân Đội)";
+            String ownerBankAccount = "998877665544";
+            if (ownerId != null) {
+                User owner = userRepository.findById(ownerId).orElse(null);
+                if (owner != null) {
+                    ownerName = owner.getFullName() != null ? owner.getFullName() : owner.getUsername();
+                    ownerPhone = owner.getPhone() != null ? owner.getPhone() : "N/A";
+                    if (owner.getOwnerProfile() != null) {
+                        if (owner.getOwnerProfile().getBankName() != null && !owner.getOwnerProfile().getBankName().isBlank()) {
+                            ownerBankName = owner.getOwnerProfile().getBankName();
+                        }
+                        if (owner.getOwnerProfile().getBankAccountNumber() != null && !owner.getOwnerProfile().getBankAccountNumber().isBlank()) {
+                            ownerBankAccount = owner.getOwnerProfile().getBankAccountNumber();
+                        }
+                    }
+                }
+            }
+
+            BigDecimal totalPrice = r.getTotalPrice() != null ? r.getTotalPrice() : BigDecimal.ZERO;
+            BigDecimal platformFee = totalPrice.multiply(new BigDecimal("0.10"));
+            BigDecimal ownerPayoutAmount = totalPrice.subtract(platformFee);
+
+            String payoutStatus = "CHỜ_ĐỐI_SOÁT";
+            if (r.getStatus() == ERentalStatus.COMPLETED) {
+                payoutStatus = "ĐÃ_GIẢI_NGÂN";
+            } else if (r.getStatus() == ERentalStatus.CONFIRMED || r.getStatus() == ERentalStatus.IN_PROGRESS) {
+                payoutStatus = "ĐÃ_CỌC_30%";
+            } else if (r.getStatus() == ERentalStatus.CANCELLED || r.getStatus() == ERentalStatus.REJECTED) {
+                payoutStatus = "ĐÃ_HỦY";
+            } else if (r.getStatus() == ERentalStatus.WAITING_PAYMENT || r.getStatus() == ERentalStatus.APPROVED || r.getStatus() == ERentalStatus.PENDING) {
+                payoutStatus = "CHỜ_CỌC";
+            }
+
+            return AdminRentalResponse.builder()
+                    .rentalId(r.getRentalId())
+                    .carId(r.getCarId())
+                    .carName(carName)
+                    .carPlate(carPlate)
+                    .renterId(r.getRenterId())
+                    .renterName(renterName)
+                    .renterPhone(renterPhone)
+                    .startDate(r.getStartDate())
+                    .endDate(r.getEndDate())
+                    .totalDays(r.getTotalDays())
+                    .pricePerDay(r.getPricePerDay())
+                    .totalPrice(r.getTotalPrice())
+                    .depositAmount(r.getDepositAmount())
+                    .status(r.getStatus())
+                    .rejectReason(r.getRejectReason())
+                    .note(r.getNote())
+                    .createdAt(r.getCreatedAt())
+                    .ownerId(ownerId)
+                    .ownerName(ownerName)
+                    .ownerPhone(ownerPhone)
+                    .ownerBankName(ownerBankName)
+                    .ownerBankAccount(ownerBankAccount)
+                    .platformFee(platformFee)
+                    .ownerPayoutAmount(ownerPayoutAmount)
+                    .payoutStatus(payoutStatus)
+                    .build();
+        }).toList();
+    }
 
     @Override
     @Transactional(readOnly = true)

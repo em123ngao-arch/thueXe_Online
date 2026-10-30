@@ -1,12 +1,11 @@
 package com.driveshare.modules.admin.repository;
 
-import com.driveshare.modules.admin.entity.AuditLog;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.driveshare.modules.admin.adapter.out.persistence.AuditLogJpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
+/**
+ * Backward compatibility bridge extending AuditLogJpaRepository.
+ */
 @Repository
-public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
-    List<AuditLog> findByTargetTypeAndTargetId(String targetType, Long targetId);
+public interface AuditLogRepository extends AuditLogJpaRepository {
 }

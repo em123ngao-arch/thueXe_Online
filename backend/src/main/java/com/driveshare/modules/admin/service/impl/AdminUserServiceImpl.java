@@ -28,7 +28,7 @@ import com.driveshare.common.enums.EVerificationStatus;
 import com.driveshare.modules.admin.dto.request.ApproveLicenseRequest;
 import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
 import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
-import com.driveshare.modules.admin.entity.AuditLog;
+import com.driveshare.modules.admin.adapter.out.persistence.AuditLog;
 import com.driveshare.modules.admin.repository.AuditLogRepository;
 import lombok.extern.slf4j.Slf4j;
 
