@@ -2,7 +2,10 @@ package com.driveshare.modules.oauth2.domain.model;
 
 import java.util.List;
 
-public record OAuth2AccountDto(
+/**
+ * Domain record representing an OAuth2 account.
+ */
+public record OAuth2AccountRecord(
         Long userId,
         String username,
         String email,
@@ -13,3 +16,4 @@ public record OAuth2AccountDto(
         List<String> roles
 ) {
 }
+

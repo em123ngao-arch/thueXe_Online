@@ -4,7 +4,7 @@ import com.driveshare.common.enums.EUserStatus;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.oauth2.application.port.out.OAuth2TokenPort;
-import com.driveshare.modules.oauth2.domain.model.OAuth2AccountDto;
+import com.driveshare.modules.oauth2.domain.model.OAuth2AccountRecord;
 import com.driveshare.security.CustomUserDetails;
 import com.driveshare.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
@@ -70,13 +70,13 @@ public class OAuth2TokenAdapter implements OAuth2TokenPort {
     }
 
     @Override
-    public String generateAccessToken(OAuth2AccountDto account) {
+    public String generateAccessToken(OAuth2AccountRecord account) {
         CustomUserDetails userDetails = toUserDetails(account);
         return jwtTokenProvider.generateAccessToken(userDetails);
     }
 
     @Override
-    public String generateRefreshToken(OAuth2AccountDto account) {
+    public String generateRefreshToken(OAuth2AccountRecord account) {
         CustomUserDetails userDetails = toUserDetails(account);
         return jwtTokenProvider.generateRefreshToken(userDetails);
     }
@@ -86,7 +86,7 @@ public class OAuth2TokenAdapter implements OAuth2TokenPort {
         return jwtTokenProvider.getClaims(token);
     }
 
-    private CustomUserDetails toUserDetails(OAuth2AccountDto account) {
+    private CustomUserDetails toUserDetails(OAuth2AccountRecord account) {
         List<SimpleGrantedAuthority> authorities = account.roles().stream()
                 .map(SimpleGrantedAuthority::new)
                 .toList();

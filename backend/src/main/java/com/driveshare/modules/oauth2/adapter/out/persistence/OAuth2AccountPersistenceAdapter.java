@@ -7,7 +7,7 @@ import com.driveshare.common.enums.EVerificationStatus;
 import com.driveshare.modules.auth.adapter.out.persistence.AuthSessionJpaEntity;
 import com.driveshare.modules.auth.repository.AuthSessionRepository;
 import com.driveshare.modules.oauth2.application.port.out.OAuth2AccountPort;
-import com.driveshare.modules.oauth2.domain.model.OAuth2AccountDto;
+import com.driveshare.modules.oauth2.domain.model.OAuth2AccountRecord;
 import com.driveshare.modules.oauth2.domain.model.OAuth2UserRecord;
 import com.driveshare.modules.user.adapter.out.persistence.OwnerProfile;
 import com.driveshare.modules.user.adapter.out.persistence.RenterProfile;
@@ -39,7 +39,7 @@ public class OAuth2AccountPersistenceAdapter implements OAuth2AccountPort {
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public Optional<OAuth2AccountDto> findByEmail(String email) {
+    public Optional<OAuth2AccountRecord> findByEmail(String email) {
         return userRepository.findByEmail(email).map(this::toAccountDto);
     }
 
@@ -49,9 +49,10 @@ public class OAuth2AccountPersistenceAdapter implements OAuth2AccountPort {
     }
 
     @Override
-    public OAuth2AccountDto createGoogleUser(OAuth2UserRecord record, String username, String roleName) {
+    public OAuth2AccountRecord createGoogleUser(OAuth2UserRecord record, String username, String roleName) {
         ERole targetRole = "ROLE_OWNER".equalsIgnoreCase(roleName) || "OWNER".equalsIgnoreCase(roleName)
-                ? ERole.ROLE_OWNER : ERole.ROLE_RENTER;
+                ? ERole.ROLE_OWNER
+                : ERole.ROLE_RENTER;
         EUserStatus targetStatus = targetRole == ERole.ROLE_OWNER ? EUserStatus.PENDING : EUserStatus.ACTIVE;
 
         Role role = roleRepository.findByRoleName(targetRole)
@@ -99,8 +100,8 @@ public class OAuth2AccountPersistenceAdapter implements OAuth2AccountPort {
                 .build());
     }
 
-    private OAuth2AccountDto toAccountDto(User user) {
-        return new OAuth2AccountDto(
+    private OAuth2AccountRecord toAccountDto(User user) {
+        return new OAuth2AccountRecord(
                 user.getUserId(),
                 user.getUsername(),
                 user.getEmail(),
@@ -108,7 +109,6 @@ public class OAuth2AccountPersistenceAdapter implements OAuth2AccountPort {
                 user.getAvatarUrl(),
                 user.getAuthProvider() != null ? user.getAuthProvider().name() : "LOCAL",
                 user.getTokenVersion(),
-                user.getRoles().stream().map(r -> r.getRoleName().name()).toList()
-        );
+                user.getRoles().stream().map(r -> r.getRoleName().name()).toList());
     }
 }

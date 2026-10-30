@@ -1,6 +1,6 @@
 package com.driveshare.modules.oauth2.application.port.out;
 
-import com.driveshare.modules.oauth2.domain.model.OAuth2AccountDto;
+import com.driveshare.modules.oauth2.domain.model.OAuth2AccountRecord;
 import io.jsonwebtoken.Claims;
 
 public interface OAuth2TokenPort {
@@ -9,10 +9,9 @@ public interface OAuth2TokenPort {
 
     Claims parseTempGoogleToken(String tempToken);
 
-    String generateAccessToken(OAuth2AccountDto account);
+    String generateAccessToken(OAuth2AccountRecord account);
 
-    String generateRefreshToken(OAuth2AccountDto account);
+    String generateRefreshToken(OAuth2AccountRecord account);
 
     Claims getClaims(String token);
 }
-

@@ -6,7 +6,7 @@ import com.driveshare.modules.auth.dto.AuthResponse;
 import com.driveshare.modules.oauth2.application.port.in.OAuth2UseCase;
 import com.driveshare.modules.oauth2.application.port.out.OAuth2AccountPort;
 import com.driveshare.modules.oauth2.application.port.out.OAuth2TokenPort;
-import com.driveshare.modules.oauth2.domain.model.OAuth2AccountDto;
+import com.driveshare.modules.oauth2.domain.model.OAuth2AccountRecord;
 import com.driveshare.modules.oauth2.domain.model.OAuth2LoginResult;
 import com.driveshare.modules.oauth2.domain.model.OAuth2UserRecord;
 import com.driveshare.modules.oauth2.domain.policy.OAuth2Policy;
@@ -41,10 +41,10 @@ public class OAuth2UseCaseImpl implements OAuth2UseCase, OAuth2Service {
 
     @Override
     public OAuth2LoginResult processOAuth2Login(String googleId, String email, String name, String picture) {
-        Optional<OAuth2AccountDto> existingAccountOpt = accountPort.findByEmail(email);
+        Optional<OAuth2AccountRecord> existingAccountOpt = accountPort.findByEmail(email);
 
         if (existingAccountOpt.isPresent()) {
-            OAuth2AccountDto existingAccount = existingAccountOpt.get();
+            OAuth2AccountRecord existingAccount = existingAccountOpt.get();
 
             if ("LOCAL".equalsIgnoreCase(existingAccount.authProvider())) {
                 log.warn("Email {} đã đăng ký bằng tài khoản Local, từ chối đăng nhập Google", email);
@@ -76,9 +76,9 @@ public class OAuth2UseCaseImpl implements OAuth2UseCase, OAuth2Service {
         String name = claims.get("name", String.class);
         String picture = claims.get("picture", String.class);
 
-        Optional<OAuth2AccountDto> existingOpt = accountPort.findByEmail(email);
+        Optional<OAuth2AccountRecord> existingOpt = accountPort.findByEmail(email);
         if (existingOpt.isPresent()) {
-            OAuth2AccountDto existingAccount = existingOpt.get();
+            OAuth2AccountRecord existingAccount = existingOpt.get();
             if ("LOCAL".equalsIgnoreCase(existingAccount.authProvider())) {
                 throw new AppException(ErrorCode.EMAIL_EXISTED, "Email này đã được đăng ký bằng mật khẩu. Vui lòng đăng nhập bằng mật khẩu!");
             }
@@ -114,7 +114,7 @@ public class OAuth2UseCaseImpl implements OAuth2UseCase, OAuth2Service {
         }
 
         OAuth2UserRecord userRecord = new OAuth2UserRecord(googleId, email, name, picture);
-        OAuth2AccountDto savedAccount = accountPort.createGoogleUser(userRecord, uniqueUsername, targetRole);
+        OAuth2AccountRecord savedAccount = accountPort.createGoogleUser(userRecord, uniqueUsername, targetRole);
 
         String accessToken = tokenPort.generateAccessToken(savedAccount);
         String refreshToken = tokenPort.generateRefreshToken(savedAccount);
