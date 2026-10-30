@@ -9,7 +9,7 @@ import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.payment.dto.response.OwnerEarningsResponse;
 import com.driveshare.modules.payment.dto.response.PaymentResponse;
-import com.driveshare.modules.payment.entity.Payment;
+import com.driveshare.modules.payment.adapter.out.persistence.Payment;
 import com.driveshare.modules.payment.repository.PaymentRepository;
 import com.driveshare.modules.payment.service.impl.PaymentServiceImpl;
 import com.driveshare.modules.rental.entity.Rental;

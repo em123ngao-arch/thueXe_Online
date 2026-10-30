@@ -11,7 +11,7 @@ import com.driveshare.modules.payment.dto.request.CreatePaymentRequest;
 import com.driveshare.modules.payment.dto.response.OwnerEarningsResponse;
 import com.driveshare.modules.payment.dto.response.PaymentResponse;
 import com.driveshare.modules.payment.dto.response.PaymentTransactionDto;
-import com.driveshare.modules.payment.entity.Payment;
+import com.driveshare.modules.payment.adapter.out.persistence.Payment;
 import com.driveshare.modules.payment.repository.PaymentRepository;
 import com.driveshare.modules.payment.service.PaymentService;
 import com.driveshare.modules.payment.util.VietQrUtils;

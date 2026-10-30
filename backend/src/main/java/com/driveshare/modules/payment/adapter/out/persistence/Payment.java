@@ -1,4 +1,4 @@
-package com.driveshare.modules.payment.entity;
+package com.driveshare.modules.payment.adapter.out.persistence;
 
 import com.driveshare.common.entity.BaseEntity;
 import com.driveshare.common.enums.EPaymentMethod;
@@ -15,7 +15,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "Payment")
 @Table(
         name = "payments",
         indexes = {
@@ -63,3 +63,4 @@ public class Payment extends BaseEntity {
     @Column(name = "paid_at")
     private Instant paidAt;
 }
+

@@ -8,7 +8,7 @@ import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.notification.repository.NotificationRepository;
-import com.driveshare.modules.payment.entity.Payment;
+import com.driveshare.modules.payment.adapter.out.persistence.Payment;
 import com.driveshare.modules.payment.repository.PaymentRepository;
 import com.driveshare.modules.rental.dto.ResolveDisputeRequest;
 import com.driveshare.modules.rental.entity.Rental;

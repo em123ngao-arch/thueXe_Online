@@ -1,4 +1,4 @@
-package com.driveshare.modules.payment.controller;
+package com.driveshare.modules.payment.adapter.in.web;
 
 import com.driveshare.common.dto.ApiResponse;
 import com.driveshare.common.exception.AppException;
