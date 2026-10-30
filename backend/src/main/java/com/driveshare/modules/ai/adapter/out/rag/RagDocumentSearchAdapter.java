@@ -29,12 +29,12 @@ public class RagDocumentSearchAdapter implements DocumentSearchPort {
             return Collections.emptyList();
         }
         try {
-            float[] queryVector = geminiEmbeddingService.getEmbedding(query);
+            float[] queryVector = geminiEmbeddingService.embedText(query);
             List<RamVectorStore.ScoredChunk> topDocs = ramVectorStore.searchTopK(queryVector, topK);
             return topDocs.stream()
                     .filter(c -> c.score() >= 0.50)
                     .map(c -> String.format("[%s (Trang %d)] %s",
-                            c.chunk().getDocumentName(), c.chunk().getPageNumber(), c.chunk().getText()))
+                            c.chunk().getDocumentName(), c.chunk().getPageNumber(), c.chunk().getContent()))
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.warn("Không thể truy vấn RAG document: {}", e.getMessage());

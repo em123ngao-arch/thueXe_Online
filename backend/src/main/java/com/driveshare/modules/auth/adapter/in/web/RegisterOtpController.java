@@ -1,9 +1,9 @@
-package com.driveshare.modules.auth.controller;
+package com.driveshare.modules.auth.adapter.in.web;
 
 import com.driveshare.common.dto.ApiResponse;
+import com.driveshare.modules.auth.application.port.in.RegisterOtpUseCase;
 import com.driveshare.modules.auth.dto.ResendOtpRequest;
 import com.driveshare.modules.auth.dto.VerifyOtpRequest;
-import com.driveshare.modules.auth.service.RegisterOtpService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -15,17 +15,17 @@ import java.util.Map;
 @RequestMapping("/api/v1/auth/register/otp")
 @RequiredArgsConstructor
 public class RegisterOtpController {
-    private final RegisterOtpService registerOtpService;
+    private final RegisterOtpUseCase registerOtpUseCase;
 
     @PostMapping("/send")
     public ApiResponse<Void> send(@Valid @RequestBody ResendOtpRequest request) {
-        registerOtpService.sendOtp(request.getEmail());
+        registerOtpUseCase.sendOtp(request.getEmail());
         return ApiResponse.success("Mã OTP đã được gửi tới email của bạn.", null);
     }
 
     @PostMapping("/verify")
     public ApiResponse<Map<String, String>> verify(@Valid @RequestBody VerifyOtpRequest request) {
-        String ticket = registerOtpService.verifyOtp(request.getEmail(), request.getOtp());
+        String ticket = registerOtpUseCase.verifyOtp(request.getEmail(), request.getOtp());
         return ApiResponse.success("Xác thực email thành công.", Map.of("otpTicket", ticket));
     }
 }

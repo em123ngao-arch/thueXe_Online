@@ -64,7 +64,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
             // Lưu session vào DB để JwtAuthenticationFilter xác thực được
             io.jsonwebtoken.Claims claims = jwtTokenProvider.getClaims(accessToken);
-            authSessionRepository.save(com.driveshare.modules.auth.entity.AuthSession.builder()
+            authSessionRepository.save(com.driveshare.modules.auth.adapter.out.persistence.AuthSessionJpaEntity.builder()
                     .jti(claims.getId())
                     .userId(existingUser.getUserId())
                     .tokenVersion(existingUser.getTokenVersion())

@@ -6,7 +6,7 @@ import com.driveshare.modules.auth.dto.OtpSendRequest;
 import com.driveshare.modules.auth.dto.OtpSendResponse;
 import com.driveshare.modules.auth.dto.OtpVerifyRequest;
 import com.driveshare.modules.auth.dto.OtpVerifyResponse;
-import com.driveshare.modules.auth.entity.EmailOtp;
+import com.driveshare.modules.auth.adapter.out.persistence.EmailOtpJpaEntity;
 import com.driveshare.modules.auth.repository.EmailOtpRepository;
 import com.driveshare.modules.auth.service.AuthService;
 import com.driveshare.modules.auth.service.OtpService;
@@ -67,7 +67,7 @@ public class OtpServiceImpl implements OtpService {
         Instant now = Instant.now();
         Instant expiresAt = now.plusSeconds(TTL_SECONDS);
 
-        EmailOtp emailOtp = EmailOtp.builder()
+        EmailOtpJpaEntity emailOtp = EmailOtpJpaEntity.builder()
                 .email(cleanEmail)
                 .purpose(purpose)
                 .otpHash(hash)
@@ -130,7 +130,7 @@ public class OtpServiceImpl implements OtpService {
         String hash = AuthService.sha256(rawOtp);
 
         Instant now = Instant.now();
-        EmailOtp emailOtp = EmailOtp.builder()
+        EmailOtpJpaEntity emailOtp = EmailOtpJpaEntity.builder()
                 .email(cleanEmail)
                 .purpose(purpose)
                 .otpHash(hash)
@@ -155,7 +155,7 @@ public class OtpServiceImpl implements OtpService {
     public boolean verify(String email, String purpose, String rawOtp) {
         String cleanEmail = normalize(email);
         String inputHash = AuthService.sha256(rawOtp != null ? rawOtp.trim() : "");
-        EmailOtp otp = emailOtpRepository.findTopByEmailAndPurposeAndOtpHashAndUsedFalseOrderByIdDesc(cleanEmail, purpose, inputHash)
+        EmailOtpJpaEntity otp = emailOtpRepository.findTopByEmailAndPurposeAndOtpHashAndUsedFalseOrderByIdDesc(cleanEmail, purpose, inputHash)
                 .orElseGet(() -> emailOtpRepository.findTopByEmailAndPurposeOrderByIdDesc(cleanEmail, purpose)
                         .orElseThrow(() -> new AppException(ErrorCode.OTP_EXPIRED, "Mã OTP không tồn tại hoặc đã hết hạn.")));
 

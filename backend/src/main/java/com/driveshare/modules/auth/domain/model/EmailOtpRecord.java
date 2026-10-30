@@ -1,53 +1,37 @@
-package com.driveshare.modules.auth.entity;
+package com.driveshare.modules.auth.domain.model;
 
-import jakarta.persistence.*;
-import lombok.*;
+import com.driveshare.modules.auth.domain.policy.AuthSecurityPolicy;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.Instant;
 
+/**
+ * Domain model representing an email OTP.
+ */
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name = "email_otps", indexes = {
-        @Index(name = "idx_email_otp_lookup", columnList = "email, purpose")
-})
-public class EmailOtp {
-
+public class EmailOtpRecord {
     public static final String PURPOSE_REGISTER = "REGISTER";
     public static final String PURPOSE_REGISTER_PRE = "REGISTER_PRE";
     public static final String PURPOSE_RESET_PASSWORD = "RESET_PASSWORD";
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(name = "email", length = 150, nullable = false)
     private String email;
-
-    @Column(name = "purpose", length = 50, nullable = false)
     private String purpose;
-
-    @Column(name = "otp_hash", length = 255, nullable = false)
     private String otpHash;
-
-    @Column(name = "attempts", nullable = false)
     @Builder.Default
     private int attempts = 0;
-
-    @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
-
-    @Column(name = "cooldown_until")
     private Instant cooldownUntil;
-
-    @Column(name = "used", nullable = false)
     @Builder.Default
     private boolean used = false;
-
-    @Column(name = "created_at", nullable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();
 
@@ -56,7 +40,6 @@ public class EmailOtp {
     }
 
     public boolean isUsable() {
-        return !used && !isExpired();
+        return AuthSecurityPolicy.isOtpUsable(used, expiresAt);
     }
 }
-

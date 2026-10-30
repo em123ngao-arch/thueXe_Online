@@ -109,7 +109,7 @@ public class OAuth2ServiceImpl implements OAuth2Service {
 
             // Lưu session vào DB để JwtAuthenticationFilter xác thực được
             io.jsonwebtoken.Claims accessClaims = jwtTokenProvider.getClaims(accessToken);
-            authSessionRepository.save(com.driveshare.modules.auth.entity.AuthSession.builder()
+            authSessionRepository.save(com.driveshare.modules.auth.adapter.out.persistence.AuthSessionJpaEntity.builder()
                     .jti(accessClaims.getId())
                     .userId(existingUser.getUserId())
                     .tokenVersion(existingUser.getTokenVersion())
@@ -178,7 +178,7 @@ public class OAuth2ServiceImpl implements OAuth2Service {
 
         // Lưu session vào DB để JwtAuthenticationFilter xác thực được
         io.jsonwebtoken.Claims newAccessClaims = jwtTokenProvider.getClaims(accessToken);
-        authSessionRepository.save(com.driveshare.modules.auth.entity.AuthSession.builder()
+        authSessionRepository.save(com.driveshare.modules.auth.adapter.out.persistence.AuthSessionJpaEntity.builder()
                 .jti(newAccessClaims.getId())
                 .userId(savedUser.getUserId())
                 .tokenVersion(savedUser.getTokenVersion())
