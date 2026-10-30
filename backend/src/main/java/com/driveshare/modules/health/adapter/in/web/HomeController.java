@@ -1,8 +1,10 @@
-package com.driveshare.modules.health;
+package com.driveshare.modules.health.adapter.in.web;
 
 import com.driveshare.common.dto.ApiResponse;
+import com.driveshare.modules.health.application.port.in.HealthCheckUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,8 +13,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
+@RequiredArgsConstructor
 @Tag(name = "Root & Home", description = "Trang chỉ mục và điều hướng hệ thống")
 public class HomeController {
+
+    private final HealthCheckUseCase healthCheckUseCase;
 
     @GetMapping(value = "/", produces = MediaType.TEXT_HTML_VALUE)
     @Operation(summary = "Trang chào mừng và cổng điều hướng hệ thống Backend / Frontend")
@@ -172,12 +177,7 @@ public class HomeController {
     @GetMapping(value = "/", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Thông tin dịch vụ Backend khi gọi dạng JSON")
     public ResponseEntity<ApiResponse<Map<String, Object>>> homeJson() {
-        return ResponseEntity.ok(ApiResponse.success("DriveShare Backend Service is running", Map.of(
-                "status", "UP",
-                "frontend_url", "http://localhost:3000",
-                "swagger_docs", "/swagger-ui.html",
-                "langfuse_status", "/api/v1/chat/langfuse-status",
-                "health_check", "/api/v1/health"
-        )));
+        return ResponseEntity.ok(ApiResponse.success("DriveShare Backend Service is running", healthCheckUseCase.getHomeInfo()));
     }
 }
+
