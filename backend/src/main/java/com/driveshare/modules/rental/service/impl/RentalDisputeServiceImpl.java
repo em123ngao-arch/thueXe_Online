@@ -19,7 +19,7 @@ import com.driveshare.modules.rental.entity.RentalDispute;
 import com.driveshare.modules.rental.repository.RentalDisputeRepository;
 import com.driveshare.modules.rental.repository.RentalRepository;
 import com.driveshare.modules.rental.service.RentalDisputeService;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.driveshare.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

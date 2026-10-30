@@ -147,7 +147,7 @@ class RentalExpirationSchedulerTest {
                 .isBlacklistedTriggered(false)
                 .build();
 
-        com.driveshare.modules.user.entity.User user = com.driveshare.modules.user.entity.User.builder()
+        com.driveshare.modules.user.adapter.out.persistence.User user = com.driveshare.modules.user.adapter.out.persistence.User.builder()
                 .userId(77L)
                 .username("violating_renter")
                 .status(com.driveshare.common.enums.EUserStatus.ACTIVE)

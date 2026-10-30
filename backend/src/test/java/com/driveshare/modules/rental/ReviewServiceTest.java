@@ -14,7 +14,7 @@ import com.driveshare.modules.rental.entity.Review;
 import com.driveshare.modules.rental.repository.RentalRepository;
 import com.driveshare.modules.rental.repository.ReviewRepository;
 import com.driveshare.modules.rental.service.impl.ReviewServiceImpl;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

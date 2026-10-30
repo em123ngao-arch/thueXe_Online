@@ -2,7 +2,7 @@ package com.driveshare.modules.admin.specification;
 
 import com.driveshare.common.enums.ECarStatus;
 import com.driveshare.modules.car.entity.Car;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;

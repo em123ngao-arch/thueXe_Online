@@ -3,7 +3,7 @@ package com.driveshare.modules.rental.entity;
 import com.driveshare.common.entity.BaseEntity;
 import com.driveshare.common.enums.ERentalStatus;
 import com.driveshare.modules.car.entity.Car;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import jakarta.persistence.*;
 import lombok.*;
 

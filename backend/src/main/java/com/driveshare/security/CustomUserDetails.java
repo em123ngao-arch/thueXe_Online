@@ -1,7 +1,7 @@
 package com.driveshare.security;
 
 import com.driveshare.common.enums.EUserStatus;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;

@@ -2,7 +2,7 @@ package com.driveshare.modules.oauth2.handler;
 
 import com.driveshare.common.enums.EAuthProvider;
 import com.driveshare.modules.oauth2.service.OAuth2Service;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.driveshare.modules.user.repository.UserRepository;
 import com.driveshare.security.CustomUserDetails;
 import com.driveshare.security.JwtTokenProvider;

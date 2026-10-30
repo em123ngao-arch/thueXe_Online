@@ -22,7 +22,7 @@ import com.driveshare.modules.car.entity.CarDocument;
 import com.driveshare.modules.car.entity.CarImage;
 import com.driveshare.modules.car.repository.CarDocumentRepository;
 import com.driveshare.modules.car.repository.CarRepository;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

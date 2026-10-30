@@ -4,7 +4,7 @@ import com.driveshare.common.entity.BaseEntity;
 import com.driveshare.common.enums.ECarStatus;
 import com.driveshare.common.enums.EFuelType;
 import com.driveshare.common.enums.ETransmission;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import jakarta.persistence.*;
 import lombok.*;
 

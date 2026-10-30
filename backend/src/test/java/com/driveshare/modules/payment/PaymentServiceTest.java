@@ -14,7 +14,7 @@ import com.driveshare.modules.payment.repository.PaymentRepository;
 import com.driveshare.modules.payment.service.impl.PaymentServiceImpl;
 import com.driveshare.modules.rental.entity.Rental;
 import com.driveshare.modules.rental.repository.RentalRepository;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.driveshare.modules.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

@@ -85,11 +85,11 @@ class RentalDisputeControllerTest {
 
     @org.junit.jupiter.api.BeforeEach
     void setUpSecurity() {
-        com.driveshare.modules.user.entity.Role adminRole = com.driveshare.modules.user.entity.Role.builder()
+        com.driveshare.modules.user.adapter.out.persistence.Role adminRole = com.driveshare.modules.user.adapter.out.persistence.Role.builder()
                 .roleId(1L)
                 .roleName(com.driveshare.common.enums.ERole.ROLE_ADMIN)
                 .build();
-        com.driveshare.modules.user.entity.User mockUser = com.driveshare.modules.user.entity.User.builder()
+        com.driveshare.modules.user.adapter.out.persistence.User mockUser = com.driveshare.modules.user.adapter.out.persistence.User.builder()
                 .userId(100L)
                 .username("admin01")
                 .email("admin01@example.com")

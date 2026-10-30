@@ -6,7 +6,7 @@ import com.driveshare.modules.car.entity.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.rental.entity.Rental;
 import com.driveshare.modules.rental.repository.RentalRepository;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.driveshare.modules.user.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

@@ -17,7 +17,7 @@ import com.driveshare.modules.payment.service.PaymentService;
 import com.driveshare.modules.payment.util.VietQrUtils;
 import com.driveshare.modules.rental.entity.Rental;
 import com.driveshare.modules.rental.repository.RentalRepository;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.driveshare.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

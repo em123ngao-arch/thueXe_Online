@@ -1,4 +1,4 @@
-package com.driveshare.modules.user.controller;
+package com.driveshare.modules.user.adapter.in.web;
 
 import com.driveshare.common.dto.ApiResponse;
 import com.driveshare.modules.user.dto.request.OwnerProfileUpdateRequest;

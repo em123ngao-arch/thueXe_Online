@@ -12,7 +12,7 @@ import com.driveshare.modules.car.dto.response.CarResponse;
 import com.driveshare.modules.car.entity.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.car.service.CarService;
-import com.driveshare.modules.user.entity.OwnerProfile;
+import com.driveshare.modules.user.adapter.out.persistence.OwnerProfile;
 import com.driveshare.modules.user.repository.OwnerProfileRepository;
 import com.driveshare.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;

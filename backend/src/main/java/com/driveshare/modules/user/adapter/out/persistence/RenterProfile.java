@@ -1,4 +1,4 @@
-package com.driveshare.modules.user.entity;
+package com.driveshare.modules.user.adapter.out.persistence;
 
 import com.driveshare.common.entity.BaseEntity;
 import com.driveshare.common.enums.EVerificationStatus;
@@ -13,7 +13,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "RenterProfile")
 @Table(name = "renter_profiles")
 public class RenterProfile extends BaseEntity {
 

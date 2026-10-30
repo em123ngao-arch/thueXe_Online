@@ -1,6 +1,6 @@
 package com.driveshare.modules.notification.entity;
 
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import jakarta.persistence.*;
 import lombok.*;
 

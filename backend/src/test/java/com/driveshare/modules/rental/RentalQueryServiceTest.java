@@ -11,7 +11,7 @@ import com.driveshare.modules.rental.dto.response.RentalSummaryResponse;
 import com.driveshare.modules.rental.entity.Rental;
 import com.driveshare.modules.rental.repository.RentalRepository;
 import com.driveshare.modules.rental.service.impl.RentalQueryServiceImpl;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.driveshare.security.CustomUserDetails;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

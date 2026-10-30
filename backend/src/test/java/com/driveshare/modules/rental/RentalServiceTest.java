@@ -68,7 +68,7 @@ class RentalServiceTest {
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         org.mockito.Mockito.lenient().when(userRepository.findById(RENTER_ID))
-                .thenReturn(Optional.of(com.driveshare.modules.user.entity.User.builder()
+                .thenReturn(Optional.of(com.driveshare.modules.user.adapter.out.persistence.User.builder()
                         .userId(RENTER_ID)
                         .username("renter_test")
                         .status(EUserStatus.ACTIVE)
@@ -378,7 +378,7 @@ class RentalServiceTest {
     @DisplayName("TC-Q04: User bị BLOCKED gửi request tạo đơn mới -> Nhận lỗi 403 USER_BLOCKED_OVERDUE_VIOLATION")
     void createRentalRequest_BlockedUser_ThrowsUSER_BLOCKED_OVERDUE_VIOLATION() {
         when(userRepository.findById(RENTER_ID)).thenReturn(Optional.of(
-                com.driveshare.modules.user.entity.User.builder()
+                com.driveshare.modules.user.adapter.out.persistence.User.builder()
                         .userId(RENTER_ID)
                         .username("blocked_renter")
                         .status(EUserStatus.BLOCKED)

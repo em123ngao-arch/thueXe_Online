@@ -1,4 +1,4 @@
-package com.driveshare.modules.user.entity;
+package com.driveshare.modules.user.adapter.out.persistence;
 
 import com.driveshare.common.entity.BaseEntity;
 import com.driveshare.common.enums.EAuthProvider;
@@ -14,7 +14,7 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "User")
 @Table(name = "users")
 public class User extends BaseEntity {
 
@@ -54,6 +54,7 @@ public class User extends BaseEntity {
     public boolean hasVerifiedEmail() {
         return Boolean.TRUE.equals(this.emailVerified);
     }
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
     @Builder.Default

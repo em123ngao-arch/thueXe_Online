@@ -21,7 +21,7 @@ import com.driveshare.modules.car.entity.CarDocument;
 import com.driveshare.modules.car.entity.CarImage;
 import com.driveshare.modules.car.repository.CarDocumentRepository;
 import com.driveshare.modules.car.repository.CarRepository;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

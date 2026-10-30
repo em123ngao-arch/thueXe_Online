@@ -1,4 +1,4 @@
-package com.driveshare.modules.user.entity;
+package com.driveshare.modules.user.adapter.out.persistence;
 
 import com.driveshare.common.enums.ERole;
 import jakarta.persistence.*;
@@ -9,7 +9,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "Role")
 @Table(name = "roles")
 public class Role {
 
@@ -18,6 +18,7 @@ public class Role {
     @Column(name = "role_id")
     private Long roleId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "role_name", length = 30, unique = true, nullable = false)
     private ERole roleName;
 }

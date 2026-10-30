@@ -2,8 +2,8 @@ package com.driveshare.modules.admin.specification;
 
 import com.driveshare.common.enums.ERole;
 import com.driveshare.common.enums.EUserStatus;
-import com.driveshare.modules.user.entity.Role;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.Role;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
