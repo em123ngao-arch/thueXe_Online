@@ -39,3 +39,4 @@ public class EmailChangeTokenJpaEntity {
         return usedAt == null && expiresAt != null && expiresAt.isAfter(Instant.now());
     }
 }
+

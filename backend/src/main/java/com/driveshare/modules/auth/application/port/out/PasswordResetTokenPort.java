@@ -8,3 +8,4 @@ public interface PasswordResetTokenPort {
     Optional<PasswordResetTokenRecord> findByTokenHash(String tokenHash);
     PasswordResetTokenRecord save(PasswordResetTokenRecord token);
 }
+

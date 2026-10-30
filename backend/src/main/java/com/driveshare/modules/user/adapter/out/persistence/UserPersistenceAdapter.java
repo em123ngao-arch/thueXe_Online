@@ -69,3 +69,4 @@ public class UserPersistenceAdapter implements UserPersistencePort {
                 .build());
     }
 }
+

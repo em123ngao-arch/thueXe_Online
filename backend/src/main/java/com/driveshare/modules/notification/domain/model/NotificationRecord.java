@@ -21,3 +21,4 @@ public class NotificationRecord {
     @Builder.Default
     private Instant createdAt = Instant.now();
 }
+

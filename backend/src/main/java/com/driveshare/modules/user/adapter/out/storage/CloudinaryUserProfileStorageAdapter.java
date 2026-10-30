@@ -27,3 +27,4 @@ public class CloudinaryUserProfileStorageAdapter implements UserProfileStoragePo
         return cloudinaryService.uploadImage(file, "driveshare/gplx", 10 * 1024 * 1024L);
     }
 }
+

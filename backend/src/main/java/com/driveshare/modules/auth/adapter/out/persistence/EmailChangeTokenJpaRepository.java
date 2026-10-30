@@ -11,3 +11,4 @@ import java.util.Optional;
 public interface EmailChangeTokenJpaRepository extends JpaRepository<EmailChangeTokenJpaEntity, Long> {
     Optional<EmailChangeTokenJpaEntity> findByTokenHash(String tokenHash);
 }
+

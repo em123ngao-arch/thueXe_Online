@@ -39,3 +39,4 @@ public class AuthSessionJpaEntity {
         return revokedAt == null && expiresAt != null && expiresAt.isAfter(Instant.now());
     }
 }
+

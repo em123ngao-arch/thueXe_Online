@@ -5,3 +5,4 @@ public interface RegisterOtpUseCase {
     String verifyOtp(String rawEmail, String otp);
     boolean redeem(String ticket, String rawEmail);
 }
+

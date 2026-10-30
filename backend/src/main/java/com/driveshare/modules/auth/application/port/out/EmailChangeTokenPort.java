@@ -8,3 +8,4 @@ public interface EmailChangeTokenPort {
     Optional<EmailChangeTokenRecord> findByTokenHash(String tokenHash);
     EmailChangeTokenRecord save(EmailChangeTokenRecord token);
 }
+

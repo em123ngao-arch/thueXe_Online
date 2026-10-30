@@ -68,3 +68,4 @@ public class NotificationPersistenceAdapter implements NotificationPersistencePo
                 .build();
     }
 }
+

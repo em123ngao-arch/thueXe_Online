@@ -29,3 +29,4 @@ public class EmailChangeTokenRecord {
         return AuthSecurityPolicy.isTokenUsable(expiresAt, usedAt);
     }
 }
+

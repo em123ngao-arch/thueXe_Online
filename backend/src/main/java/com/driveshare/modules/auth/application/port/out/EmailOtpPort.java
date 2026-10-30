@@ -11,3 +11,4 @@ public interface EmailOtpPort {
     EmailOtpRecord save(EmailOtpRecord record);
     void deleteByExpiresAtBefore(Instant now);
 }
+

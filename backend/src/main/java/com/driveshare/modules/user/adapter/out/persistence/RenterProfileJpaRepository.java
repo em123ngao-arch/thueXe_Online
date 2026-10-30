@@ -12,3 +12,4 @@ public interface RenterProfileJpaRepository extends JpaRepository<RenterProfile,
     Optional<RenterProfile> findByLicenseNumber(String licenseNumber);
     boolean existsByLicenseNumber(String licenseNumber);
 }
+

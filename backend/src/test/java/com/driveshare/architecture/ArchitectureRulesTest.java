@@ -85,6 +85,7 @@ public class ArchitectureRulesTest {
                         boolean validPortAccess = targetPkg.contains(".application.port.in")
                                 || targetPkg.contains(".application.command")
                                 || targetPkg.contains(".application.result")
+                                || targetPkg.endsWith(".dto")
                                 || targetPkg.contains(".dto."); // Cho phép DTO chung trong quá trình chuyển tiếp
                         if (!validPortAccess) {
                             String message = String.format("Vi phạm ranh giới: %s phụ thuộc trái phép vào %s",

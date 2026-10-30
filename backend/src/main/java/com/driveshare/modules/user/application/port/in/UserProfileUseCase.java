@@ -19,3 +19,4 @@ public interface UserProfileUseCase {
     UploadCccdResponse uploadCccd(MultipartFile frontImage, MultipartFile backImage, CustomUserDetails currentUser);
     UploadGplxResponse uploadGplx(MultipartFile licenseImage, CustomUserDetails currentUser);
 }
+

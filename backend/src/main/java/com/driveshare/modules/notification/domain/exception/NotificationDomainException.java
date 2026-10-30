@@ -12,3 +12,4 @@ public class NotificationDomainException extends RuntimeException {
         super(message, cause);
     }
 }
+

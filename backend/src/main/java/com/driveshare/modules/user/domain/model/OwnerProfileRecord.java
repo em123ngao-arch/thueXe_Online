@@ -20,3 +20,4 @@ public class OwnerProfileRecord {
     private Long verifiedBy;
     private Instant verifiedAt;
 }
+

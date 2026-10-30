@@ -22,3 +22,4 @@ public class Role {
     @Column(name = "role_name", length = 30, unique = true, nullable = false)
     private ERole roleName;
 }
+

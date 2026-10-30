@@ -11,3 +11,4 @@ public interface UserPersistencePort {
     Optional<OwnerProfileRecord> findOwnerProfileById(Long userId);
     Optional<RenterProfileRecord> findRenterProfileById(Long userId);
 }
+

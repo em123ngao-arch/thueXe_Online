@@ -36,3 +36,4 @@ public class PasswordResetTokenJpaEntity {
         return usedAt == null && expiresAt != null && expiresAt.isAfter(Instant.now());
     }
 }
+

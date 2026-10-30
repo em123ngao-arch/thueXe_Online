@@ -57,3 +57,4 @@ public class Notification {
     @Builder.Default
     private Instant createdAt = Instant.now();
 }
+

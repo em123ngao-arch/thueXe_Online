@@ -24,3 +24,4 @@ public interface AuthSessionJpaRepository extends JpaRepository<AuthSessionJpaEn
 
     Optional<AuthSessionJpaEntity> findByIdAndUserId(Long id, Long userId);
 }
+

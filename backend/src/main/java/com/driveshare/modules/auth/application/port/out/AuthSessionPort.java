@@ -12,3 +12,4 @@ public interface AuthSessionPort {
     List<AuthSessionRecord> findActiveByUserId(Long userId);
     Optional<AuthSessionRecord> findByIdAndUserId(Long sessionId, Long userId);
 }
+

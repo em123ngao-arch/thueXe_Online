@@ -28,3 +28,4 @@ public class PasswordResetTokenRecord {
         return AuthSecurityPolicy.isTokenUsable(expiresAt, usedAt);
     }
 }
+

@@ -18,3 +18,4 @@ public interface NotificationJpaRepository extends JpaRepository<Notification, L
 
     long countByUserIdAndIsReadFalse(Long userId);
 }
+

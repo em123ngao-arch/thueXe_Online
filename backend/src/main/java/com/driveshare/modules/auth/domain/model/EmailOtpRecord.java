@@ -43,3 +43,4 @@ public class EmailOtpRecord {
         return AuthSecurityPolicy.isOtpUsable(used, expiresAt);
     }
 }
+

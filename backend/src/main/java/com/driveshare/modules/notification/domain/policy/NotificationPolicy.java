@@ -17,3 +17,4 @@ public final class NotificationPolicy {
                 && type != null && !type.isBlank();
     }
 }
+

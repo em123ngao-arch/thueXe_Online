@@ -24,3 +24,4 @@ public class RenterProfileRecord {
     private EVerificationStatus verificationStatus;
     private EVerificationStatus licenseVerificationStatus;
 }
+

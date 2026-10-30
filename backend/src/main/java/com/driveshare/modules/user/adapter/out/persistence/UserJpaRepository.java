@@ -18,3 +18,4 @@ public interface UserJpaRepository extends JpaRepository<User, Long>, JpaSpecifi
     boolean existsByPhone(String phone);
     boolean existsByIdCardNumber(String idCardNumber);
 }
+

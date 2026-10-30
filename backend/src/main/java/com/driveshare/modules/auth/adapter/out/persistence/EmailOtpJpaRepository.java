@@ -14,3 +14,4 @@ public interface EmailOtpJpaRepository extends JpaRepository<EmailOtpJpaEntity, 
     Optional<EmailOtpJpaEntity> findTopByEmailAndPurposeAndOtpHashAndUsedFalseOrderByIdDesc(String email, String purpose, String otpHash);
     void deleteByExpiresAtBefore(Instant now);
 }
+

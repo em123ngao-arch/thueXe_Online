@@ -12,3 +12,4 @@ public class UserDomainException extends RuntimeException {
         super(message, cause);
     }
 }
+

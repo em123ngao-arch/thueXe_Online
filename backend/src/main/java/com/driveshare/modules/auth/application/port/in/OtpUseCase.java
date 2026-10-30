@@ -12,3 +12,4 @@ public interface OtpUseCase {
     boolean verify(String email, String purpose, String rawOtp);
     boolean isInCooldown(String email, String purpose);
 }
+

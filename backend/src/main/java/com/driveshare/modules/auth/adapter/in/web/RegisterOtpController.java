@@ -29,3 +29,4 @@ public class RegisterOtpController {
         return ApiResponse.success("Xác thực email thành công.", Map.of("otpTicket", ticket));
     }
 }
+

@@ -7,3 +7,4 @@ public interface UserProfileStoragePort {
     String uploadCccd(MultipartFile file);
     String uploadGplx(MultipartFile file);
 }
+

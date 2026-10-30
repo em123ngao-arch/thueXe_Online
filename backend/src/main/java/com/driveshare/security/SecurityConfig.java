@@ -1,6 +1,6 @@
 package com.driveshare.security;
 
-import com.driveshare.modules.oauth2.handler.OAuth2SuccessHandler;
+import com.driveshare.modules.oauth2.adapter.in.web.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;

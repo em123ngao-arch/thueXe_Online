@@ -97,3 +97,4 @@ public class User extends BaseEntity {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private RenterProfile renterProfile;
 }
+

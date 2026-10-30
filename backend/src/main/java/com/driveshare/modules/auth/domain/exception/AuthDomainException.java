@@ -12,3 +12,4 @@ public class AuthDomainException extends RuntimeException {
         super(message, cause);
     }
 }
+

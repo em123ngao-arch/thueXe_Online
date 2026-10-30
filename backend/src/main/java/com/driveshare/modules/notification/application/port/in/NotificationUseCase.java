@@ -9,3 +9,4 @@ public interface NotificationUseCase {
     void markAsRead(Long notificationId, Long userId);
     void sendNotification(Long userId, String title, String content, String type, Long referenceId);
 }
+

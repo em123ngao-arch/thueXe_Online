@@ -35,3 +35,4 @@ public class OtpController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
+

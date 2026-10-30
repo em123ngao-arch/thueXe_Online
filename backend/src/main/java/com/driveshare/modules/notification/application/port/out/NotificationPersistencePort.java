@@ -11,3 +11,4 @@ public interface NotificationPersistencePort {
     NotificationRecord save(NotificationRecord record);
     long countUnread(Long userId);
 }
+

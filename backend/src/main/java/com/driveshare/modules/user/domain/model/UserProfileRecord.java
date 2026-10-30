@@ -27,3 +27,4 @@ public class UserProfileRecord {
     private Set<String> roles;
     private Instant createdAt;
 }
+
