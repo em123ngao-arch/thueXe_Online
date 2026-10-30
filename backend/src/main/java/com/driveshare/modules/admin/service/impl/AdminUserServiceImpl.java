@@ -508,7 +508,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                             || u.getRenterProfile().getLicenseVerificationStatus() == null))
                 .count();
 
-        List<com.driveshare.modules.rental.entity.Rental> allRentals = rentalRepository.findAll();
+        List<com.driveshare.modules.rental.adapter.out.persistence.Rental> allRentals = rentalRepository.findAll();
         java.time.LocalDate today = java.time.LocalDate.now();
         java.time.Instant startOfDay = today.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
 

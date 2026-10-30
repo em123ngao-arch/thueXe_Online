@@ -3,7 +3,7 @@ package com.driveshare.modules.rental;
 import com.driveshare.common.enums.EDisputeStatus;
 import com.driveshare.modules.admin.controller.AdminRentalController;
 import com.driveshare.modules.car.repository.CarRepository;
-import com.driveshare.modules.rental.controller.RentalController;
+import com.driveshare.modules.rental.adapter.in.web.RentalController;
 import com.driveshare.modules.rental.dto.ResolveDisputeRequest;
 import com.driveshare.modules.rental.dto.response.RentalDisputeResponse;
 import com.driveshare.modules.rental.repository.RentalRepository;

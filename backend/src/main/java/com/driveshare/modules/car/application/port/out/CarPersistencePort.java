@@ -1,6 +1,6 @@
 package com.driveshare.modules.car.application.port.out;
 
-import com.driveshare.modules.car.domain.model.CarLockResult;
+import com.driveshare.modules.car.application.result.CarLockResult;
 
 import java.util.Optional;
 

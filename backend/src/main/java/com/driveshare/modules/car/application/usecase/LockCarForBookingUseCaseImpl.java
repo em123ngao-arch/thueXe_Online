@@ -4,7 +4,7 @@ import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.car.application.port.in.LockCarForBookingUseCase;
 import com.driveshare.modules.car.application.port.out.CarPersistencePort;
-import com.driveshare.modules.car.domain.model.CarLockResult;
+import com.driveshare.modules.car.application.result.CarLockResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

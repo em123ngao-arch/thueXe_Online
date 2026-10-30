@@ -1,7 +1,7 @@
 package com.driveshare.modules.car.adapter.out.persistence;
 
 import com.driveshare.modules.car.application.port.out.CarPersistencePort;
-import com.driveshare.modules.car.domain.model.CarLockResult;
+import com.driveshare.modules.car.application.result.CarLockResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

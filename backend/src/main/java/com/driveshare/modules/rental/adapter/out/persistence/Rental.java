@@ -1,4 +1,4 @@
-package com.driveshare.modules.rental.entity;
+package com.driveshare.modules.rental.adapter.out.persistence;
 
 import com.driveshare.common.entity.BaseEntity;
 import com.driveshare.common.enums.ERentalStatus;
@@ -16,7 +16,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "Rental")
 @Table(
         name = "rentals",
         indexes = {
@@ -107,3 +107,4 @@ public class Rental extends BaseEntity {
     @Builder.Default
     private Boolean isBlacklistedTriggered = false;
 }
+

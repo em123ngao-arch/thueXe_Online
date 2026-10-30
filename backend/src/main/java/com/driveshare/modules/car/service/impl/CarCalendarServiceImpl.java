@@ -12,7 +12,7 @@ import com.driveshare.modules.car.adapter.out.persistence.CarCalendarBlock;
 import com.driveshare.modules.car.repository.CarCalendarBlockRepository;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.car.service.CarCalendarService;
-import com.driveshare.modules.rental.entity.Rental;
+import com.driveshare.modules.rental.adapter.out.persistence.Rental;
 import com.driveshare.modules.rental.repository.RentalRepository;
 import com.driveshare.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;

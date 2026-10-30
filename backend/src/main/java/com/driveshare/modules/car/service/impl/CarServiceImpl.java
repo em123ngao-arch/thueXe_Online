@@ -303,14 +303,14 @@ public class CarServiceImpl implements CarService {
                 com.driveshare.common.enums.ERentalStatus.CONFIRMED,
                 com.driveshare.common.enums.ERentalStatus.IN_PROGRESS
         );
-        java.util.List<com.driveshare.modules.rental.entity.Rental> activeRentals =
+        java.util.List<com.driveshare.modules.rental.adapter.out.persistence.Rental> activeRentals =
                 rentalRepository.findActiveRentalsForCar(carId, activeStatuses, today);
 
         java.util.List<com.driveshare.modules.car.adapter.out.persistence.CarCalendarBlock> blocks =
                 carCalendarBlockRepository.findByCarIdAndEndDateGreaterThanEqualAndDeletedAtIsNullOrderByStartDateAsc(carId, today);
 
         java.util.Set<java.time.LocalDate> unavailableDatesSet = new java.util.TreeSet<>();
-        for (com.driveshare.modules.rental.entity.Rental r : activeRentals) {
+        for (com.driveshare.modules.rental.adapter.out.persistence.Rental r : activeRentals) {
             java.time.LocalDate cur = r.getStartDate().isBefore(today) ? today : r.getStartDate();
             while (!cur.isAfter(r.getEndDate())) {
                 unavailableDatesSet.add(cur);
@@ -412,7 +412,7 @@ public class CarServiceImpl implements CarService {
                 com.driveshare.common.enums.ERentalStatus.IN_PROGRESS
         );
 
-        java.util.List<com.driveshare.modules.rental.entity.Rental> activeRentals =
+        java.util.List<com.driveshare.modules.rental.adapter.out.persistence.Rental> activeRentals =
                 rentalRepository.findActiveRentalsForCars(carIds, activeStatuses, today);
 
         java.util.List<com.driveshare.modules.car.adapter.out.persistence.CarCalendarBlock> blocks =
@@ -424,7 +424,7 @@ public class CarServiceImpl implements CarService {
         }
 
         if (activeRentals != null) {
-            for (com.driveshare.modules.rental.entity.Rental r : activeRentals) {
+            for (com.driveshare.modules.rental.adapter.out.persistence.Rental r : activeRentals) {
                 java.time.LocalDate cur = r.getStartDate().isBefore(today) ? today : r.getStartDate();
                 java.util.Set<java.time.LocalDate> set = datesMap.computeIfAbsent(r.getCarId(), k -> new java.util.TreeSet<>());
                 while (!cur.isAfter(r.getEndDate())) {

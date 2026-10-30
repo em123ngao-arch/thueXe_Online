@@ -12,7 +12,7 @@ import com.driveshare.modules.payment.dto.response.PaymentResponse;
 import com.driveshare.modules.payment.adapter.out.persistence.Payment;
 import com.driveshare.modules.payment.repository.PaymentRepository;
 import com.driveshare.modules.payment.service.impl.PaymentServiceImpl;
-import com.driveshare.modules.rental.entity.Rental;
+import com.driveshare.modules.rental.adapter.out.persistence.Rental;
 import com.driveshare.modules.rental.repository.RentalRepository;
 import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.driveshare.modules.user.repository.UserRepository;

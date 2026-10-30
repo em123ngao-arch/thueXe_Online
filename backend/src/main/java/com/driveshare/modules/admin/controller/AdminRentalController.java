@@ -4,7 +4,7 @@ import com.driveshare.common.dto.ApiResponse;
 import com.driveshare.modules.admin.dto.response.AdminRentalResponse;
 import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
-import com.driveshare.modules.rental.entity.Rental;
+import com.driveshare.modules.rental.adapter.out.persistence.Rental;
 import com.driveshare.modules.rental.repository.RentalRepository;
 import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.driveshare.modules.user.repository.UserRepository;

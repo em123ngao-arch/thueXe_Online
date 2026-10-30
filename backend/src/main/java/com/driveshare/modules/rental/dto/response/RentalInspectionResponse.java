@@ -2,7 +2,7 @@ package com.driveshare.modules.rental.dto.response;
 
 import com.driveshare.common.enums.EInspectionStatus;
 import com.driveshare.common.enums.EInspectionType;
-import com.driveshare.modules.rental.entity.RentalInspection;
+import com.driveshare.modules.rental.adapter.out.persistence.RentalInspection;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

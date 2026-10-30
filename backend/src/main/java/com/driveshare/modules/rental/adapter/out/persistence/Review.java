@@ -1,4 +1,4 @@
-package com.driveshare.modules.rental.entity;
+package com.driveshare.modules.rental.adapter.out.persistence;
 
 import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.user.adapter.out.persistence.User;
@@ -17,7 +17,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "Review")
 @Table(
         name = "reviews",
         indexes = {
@@ -63,3 +63,4 @@ public class Review {
     @Builder.Default
     private Instant createdAt = Instant.now();
 }
+

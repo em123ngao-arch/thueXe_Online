@@ -1,4 +1,4 @@
-package com.driveshare.modules.rental.controller;
+package com.driveshare.modules.rental.adapter.in.web;
 
 import com.driveshare.common.dto.ApiResponse;
 import com.driveshare.common.dto.PageResponse;

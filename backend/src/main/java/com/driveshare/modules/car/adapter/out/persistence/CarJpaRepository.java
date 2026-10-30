@@ -33,7 +33,7 @@ public interface CarJpaRepository extends JpaRepository<Car, Long>, JpaSpecifica
 
     @Query("""
             SELECT CASE WHEN COUNT(r) > 0 THEN TRUE ELSE FALSE END
-            FROM com.driveshare.modules.rental.entity.Rental r
+            FROM com.driveshare.modules.rental.adapter.out.persistence.Rental r
             WHERE r.carId = :carId
               AND r.status IN (
                   com.driveshare.common.enums.ERentalStatus.PENDING,

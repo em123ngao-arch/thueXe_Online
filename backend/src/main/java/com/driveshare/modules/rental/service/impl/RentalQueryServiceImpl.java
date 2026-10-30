@@ -6,7 +6,7 @@ import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.rental.dto.response.RentalSummaryResponse;
-import com.driveshare.modules.rental.entity.Rental;
+import com.driveshare.modules.rental.adapter.out.persistence.Rental;
 import com.driveshare.modules.rental.repository.RentalRepository;
 import com.driveshare.modules.rental.service.RentalQueryService;
 import com.driveshare.security.CustomUserDetails;

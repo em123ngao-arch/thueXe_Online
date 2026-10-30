@@ -3,7 +3,7 @@ package com.driveshare.modules.payment.adapter.out.persistence;
 import com.driveshare.common.entity.BaseEntity;
 import com.driveshare.common.enums.EPaymentMethod;
 import com.driveshare.common.enums.EPaymentStatus;
-import com.driveshare.modules.rental.entity.Rental;
+import com.driveshare.modules.rental.adapter.out.persistence.Rental;
 import jakarta.persistence.*;
 import lombok.*;
 

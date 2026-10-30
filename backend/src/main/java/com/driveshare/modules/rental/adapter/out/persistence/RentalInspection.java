@@ -1,4 +1,4 @@
-package com.driveshare.modules.rental.entity;
+package com.driveshare.modules.rental.adapter.out.persistence;
 
 import com.driveshare.common.enums.EInspectionStatus;
 import com.driveshare.common.enums.EInspectionType;
@@ -20,7 +20,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "RentalInspection")
 @Table(
         name = "rental_inspections",
         indexes = {
@@ -81,3 +81,4 @@ public class RentalInspection {
     @Builder.Default
     private Instant createdAt = Instant.now();
 }
+

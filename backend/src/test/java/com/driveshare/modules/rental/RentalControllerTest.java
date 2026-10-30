@@ -1,7 +1,7 @@
 package com.driveshare.modules.rental;
 
 import com.driveshare.common.enums.ERentalStatus;
-import com.driveshare.modules.rental.controller.RentalController;
+import com.driveshare.modules.rental.adapter.in.web.RentalController;
 import com.driveshare.modules.rental.dto.CreateRentalRequest;
 import com.driveshare.modules.rental.dto.RentalResponse;
 import com.driveshare.modules.rental.service.RentalService;

@@ -1,4 +1,4 @@
-package com.driveshare.modules.rental.entity;
+package com.driveshare.modules.rental.adapter.out.persistence;
 
 import com.driveshare.common.entity.BaseEntity;
 import com.driveshare.common.enums.EDisputeStatus;
@@ -14,7 +14,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "RentalDispute")
 @Table(
         name = "rental_disputes",
         indexes = {
@@ -76,3 +76,4 @@ public class RentalDispute extends BaseEntity {
     @Column(name = "resolved_at")
     private Instant resolvedAt;
 }
+

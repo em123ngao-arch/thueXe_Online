@@ -1,4 +1,4 @@
-package com.driveshare.modules.car.domain.model;
+package com.driveshare.modules.car.application.result;
 
 import com.driveshare.common.enums.ECarStatus;
 

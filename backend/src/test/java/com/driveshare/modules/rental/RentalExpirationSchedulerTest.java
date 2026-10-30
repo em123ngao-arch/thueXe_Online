@@ -1,7 +1,7 @@
 package com.driveshare.modules.rental;
 
 import com.driveshare.common.enums.ERentalStatus;
-import com.driveshare.modules.rental.entity.Rental;
+import com.driveshare.modules.rental.adapter.out.persistence.Rental;
 import com.driveshare.modules.rental.repository.RentalRepository;
 import com.driveshare.modules.rental.scheduler.RentalExpirationScheduler;
 import org.junit.jupiter.api.DisplayName;
