@@ -1,6 +1,6 @@
 package com.driveshare.modules.notification.dto;
 
-import com.driveshare.modules.notification.entity.Notification;
+import com.driveshare.modules.notification.adapter.out.persistence.Notification;
 
 import java.time.Instant;
 

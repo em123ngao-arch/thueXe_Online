@@ -1,9 +1,9 @@
 package com.driveshare.modules.user.repository;
 
-import com.driveshare.modules.user.entity.OwnerProfile;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.driveshare.modules.user.adapter.out.persistence.OwnerProfileJpaRepository;
 import org.springframework.stereotype.Repository;
 
+// Backward-compatible repository shim
 @Repository
-public interface OwnerProfileRepository extends JpaRepository<OwnerProfile, Long> {
+public interface OwnerProfileRepository extends OwnerProfileJpaRepository {
 }

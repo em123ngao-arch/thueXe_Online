@@ -1,5 +1,6 @@
 package com.driveshare.modules.auth.service;
 
+import com.driveshare.modules.auth.application.port.in.RegisterOtpUseCase;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.user.repository.UserRepository;
@@ -24,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Service
 @RequiredArgsConstructor
-public class RegisterOtpService {
+public class RegisterOtpService implements RegisterOtpUseCase {
     /** Purpose riêng, không đụng tới OTP của luồng cũ (REGISTER) hay quên mật khẩu. */
     public static final String PURPOSE_REGISTER_PRE = "REGISTER_PRE";
     static final long TICKET_TTL_SECONDS = 15 * 60;

@@ -5,7 +5,7 @@ import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.car.dto.request.CarSearchFilterRequest;
 import com.driveshare.modules.car.dto.response.CarResponse;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.car.service.CarSearchService;
 import com.driveshare.modules.car.specification.CarSpecification;

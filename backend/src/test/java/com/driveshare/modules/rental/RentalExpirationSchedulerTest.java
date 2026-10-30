@@ -1,7 +1,7 @@
 package com.driveshare.modules.rental;
 
 import com.driveshare.common.enums.ERentalStatus;
-import com.driveshare.modules.rental.entity.Rental;
+import com.driveshare.modules.rental.adapter.out.persistence.Rental;
 import com.driveshare.modules.rental.repository.RentalRepository;
 import com.driveshare.modules.rental.scheduler.RentalExpirationScheduler;
 import org.junit.jupiter.api.DisplayName;
@@ -147,7 +147,7 @@ class RentalExpirationSchedulerTest {
                 .isBlacklistedTriggered(false)
                 .build();
 
-        com.driveshare.modules.user.entity.User user = com.driveshare.modules.user.entity.User.builder()
+        com.driveshare.modules.user.adapter.out.persistence.User user = com.driveshare.modules.user.adapter.out.persistence.User.builder()
                 .userId(77L)
                 .username("violating_renter")
                 .status(com.driveshare.common.enums.EUserStatus.ACTIVE)

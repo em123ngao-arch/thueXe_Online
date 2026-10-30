@@ -8,7 +8,7 @@ import com.driveshare.modules.ai.dto.response.ChatReplyResponse;
 import com.driveshare.modules.ai.repository.ChatMemoryRepository;
 import com.driveshare.modules.ai.service.GeminiService;
 import com.driveshare.modules.ai.service.impl.AiChatServiceImpl;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -193,7 +193,7 @@ class AiChatServiceImplTest {
     @Test
     @DisplayName("Admin transcript: Admin can retrieve full transcript of any session regardless of logged-in user")
     void testGetSessionTranscriptForAdmin() {
-        com.driveshare.modules.ai.entity.ChatMemoryEntity entity = com.driveshare.modules.ai.entity.ChatMemoryEntity.builder()
+        com.driveshare.modules.ai.adapter.out.persistence.ChatMemoryJpaEntity entity = com.driveshare.modules.ai.adapter.out.persistence.ChatMemoryJpaEntity.builder()
                 .sessionId("sess-admin-1")
                 .userId(99L)
                 .messages("[{\"role\":\"USER\",\"content\":\"Xin chào\"},{\"role\":\"ASSISTANT\",\"content\":\"Chào bạn!\"}]")

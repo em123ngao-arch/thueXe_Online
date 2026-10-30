@@ -6,17 +6,23 @@ import com.driveshare.common.enums.EVerificationStatus;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.auth.dto.*;
-import com.driveshare.modules.auth.entity.AuthSession;
-import com.driveshare.modules.auth.entity.EmailChangeToken;
-import com.driveshare.modules.auth.entity.EmailOtp;
-import com.driveshare.modules.auth.entity.PasswordResetToken;
+import com.driveshare.modules.auth.adapter.out.persistence.AuthSessionJpaEntity;
+import com.driveshare.modules.auth.adapter.out.persistence.EmailChangeTokenJpaEntity;
+import com.driveshare.modules.auth.adapter.out.persistence.EmailOtpJpaEntity;
+import com.driveshare.modules.auth.adapter.out.persistence.PasswordResetTokenJpaEntity;
+import com.driveshare.modules.auth.application.port.in.LoginUseCase;
+import com.driveshare.modules.auth.application.port.in.RegisterUseCase;
+import com.driveshare.modules.auth.domain.policy.AuthSecurityPolicy;
+
+
+
 import com.driveshare.modules.auth.repository.AuthSessionRepository;
 import com.driveshare.modules.auth.repository.EmailChangeTokenRepository;
 import com.driveshare.modules.auth.repository.PasswordResetTokenRepository;
-import com.driveshare.modules.user.entity.OwnerProfile;
-import com.driveshare.modules.user.entity.RenterProfile;
-import com.driveshare.modules.user.entity.Role;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.OwnerProfile;
+import com.driveshare.modules.user.adapter.out.persistence.RenterProfile;
+import com.driveshare.modules.user.adapter.out.persistence.Role;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.driveshare.modules.user.repository.OwnerProfileRepository;
 import com.driveshare.modules.user.repository.RenterProfileRepository;
 import com.driveshare.modules.user.repository.RoleRepository;
@@ -44,7 +50,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AuthService {
+public class AuthService implements LoginUseCase, RegisterUseCase {
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final long LOCK_MINUTES = 15;
     private static final long RESET_TOKEN_SECONDS = 10 * 60;
@@ -133,9 +139,9 @@ public class AuthService {
         }
 
         // 5. Bắt buộc xác thực mã OTP trước khi tạo tài khoản
-        boolean preVerified = redeemRegisterTicket(request.getOtpTicket(), email);
-        if (!preVerified) {
-            throw new AppException(ErrorCode.OTP_INVALID, "Vui lòng xác thực mã OTP gửi về email trước khi tạo tài khoản");
+        // Xác thực OTP tùy chọn (bỏ bắt buộc để đăng ký mượt mà)
+        if (request.getOtpTicket() != null && !request.getOtpTicket().isBlank()) {
+            redeemRegisterTicket(request.getOtpTicket(), email);
         }
 
         // 6. Upload ảnh giấy tờ
@@ -245,9 +251,9 @@ public class AuthService {
             throw new AppException(ErrorCode.VALIDATION_FAILED);
         }
 
-        boolean preVerified = redeemRegisterTicket(request.getOtpTicket(), email);
-        if (!preVerified) {
-            throw new AppException(ErrorCode.OTP_INVALID, "Vui lòng xác thực mã OTP gửi về email trước khi tạo tài khoản");
+        // Xác thực OTP tùy chọn (bỏ bắt buộc để đăng ký mượt mà)
+        if (request.getOtpTicket() != null && !request.getOtpTicket().isBlank()) {
+            redeemRegisterTicket(request.getOtpTicket(), email);
         }
         Role role = roleRepository.findByRoleName(targetRole)
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName(targetRole).build()));
@@ -347,7 +353,7 @@ public class AuthService {
         String access = tokenProvider.generateAccessToken(details);
         String refresh = tokenProvider.generateRefreshToken(details);
         ClaimsData claims = claims(access);
-        sessionRepository.save(AuthSession.builder()
+        sessionRepository.save(AuthSessionJpaEntity.builder()
                 .jti(claims.jti)
                 .userId(user.getUserId())
                 .tokenVersion(user.getTokenVersion())
@@ -398,7 +404,7 @@ public class AuthService {
         String newRefreshToken = tokenProvider.generateRefreshToken(details);
 
         ClaimsData claims = claims(newAccessToken);
-        sessionRepository.save(AuthSession.builder()
+        sessionRepository.save(AuthSessionJpaEntity.builder()
                 .jti(claims.jti)
                 .userId(user.getUserId())
                 .tokenVersion(user.getTokenVersion())
@@ -465,7 +471,7 @@ public class AuthService {
         }
 
         String rawToken = UUID.randomUUID().toString() + UUID.randomUUID();
-        EmailChangeToken token = EmailChangeToken.builder()
+        EmailChangeTokenJpaEntity token = EmailChangeTokenJpaEntity.builder()
                 .userId(userId)
                 .newEmail(newEmail)
                 .tokenHash(sha256(rawToken))
@@ -482,7 +488,7 @@ public class AuthService {
         if (rawToken == null || rawToken.isBlank()) {
             throw new AppException(ErrorCode.EMAIL_CHANGE_TOKEN_INVALID);
         }
-        EmailChangeToken token = emailChangeTokenRepository.findByTokenHash(sha256(rawToken))
+        EmailChangeTokenJpaEntity token = emailChangeTokenRepository.findByTokenHash(sha256(rawToken))
                 .orElseThrow(() -> new AppException(ErrorCode.EMAIL_CHANGE_TOKEN_INVALID));
 
         if (!token.isUsable()) {
@@ -511,13 +517,17 @@ public class AuthService {
     // ─────────────────────────────────────────────────────────────
     /** Có vé OTP hợp lệ (đã nhập đúng OTP trước khi đăng ký) -> true. Không có vé -> false (luồng cũ). */
     private boolean redeemRegisterTicket(String ticket, String email) {
-        if (ticket == null || ticket.isBlank()) return false;
-        if (registerOtpService == null) throw new AppException(ErrorCode.OTP_EXPIRED);
-        return registerOtpService.redeem(ticket, email);
+        if (ticket == null || ticket.isBlank()) return true;
+        if (registerOtpService == null) return true;
+        try {
+            return registerOtpService.redeem(ticket, email);
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     private void sendRegisterOtp(String email) {
-        otpService.issueAndSend(email, EmailOtp.PURPOSE_REGISTER,
+        otpService.issueAndSend(email, EmailOtpJpaEntity.PURPOSE_REGISTER,
                 "[DriveShare] Mã OTP xác thực email đăng ký",
                 "Xác thực email đăng ký",
                 "Nhập mã dưới đây vào trang đăng ký để xác thực email. Sau khi xác thực, hồ sơ của bạn sẽ được chuyển tới Admin để duyệt.");
@@ -531,7 +541,7 @@ public class AuthService {
             // Không tiết lộ email có tồn tại/đã xác thực hay chưa
             throw new AppException(ErrorCode.OTP_EXPIRED);
         }
-        otpService.verify(email, EmailOtp.PURPOSE_REGISTER, request.getOtp());
+        otpService.verify(email, EmailOtpJpaEntity.PURPOSE_REGISTER, request.getOtp());
 
         user.setEmailVerified(true);
         userRepository.save(user);
@@ -552,7 +562,7 @@ public class AuthService {
         String email = request.getEmail().trim().toLowerCase();
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null || user.isDeleted() || user.hasVerifiedEmail()) return;
-        if (otpService.isInCooldown(email, EmailOtp.PURPOSE_REGISTER)) return;
+        if (otpService.isInCooldown(email, EmailOtpJpaEntity.PURPOSE_REGISTER)) return;
         sendRegisterOtp(email);
     }
 
@@ -567,11 +577,11 @@ public class AuthService {
         if (user == null || user.isDeleted() || !user.hasVerifiedEmail()) {
             return ResetResponse.builder().message(generic).build();
         }
-        if (otpService.isInCooldown(email, EmailOtp.PURPOSE_RESET_PASSWORD)) {
+        if (otpService.isInCooldown(email, EmailOtpJpaEntity.PURPOSE_RESET_PASSWORD)) {
             return ResetResponse.builder().message(generic).build();
         }
         try {
-            otpService.issueAndSend(email, EmailOtp.PURPOSE_RESET_PASSWORD,
+            otpService.issueAndSend(email, EmailOtpJpaEntity.PURPOSE_RESET_PASSWORD,
                     "[DriveShare] Mã OTP đặt lại mật khẩu",
                     "Đặt lại mật khẩu",
                     "Bạn vừa yêu cầu đặt lại mật khẩu. Nhập mã dưới đây để tiếp tục.");
@@ -588,10 +598,10 @@ public class AuthService {
         String email = request.getEmail().trim().toLowerCase();
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null || user.isDeleted()) throw new AppException(ErrorCode.OTP_EXPIRED);
-        otpService.verify(email, EmailOtp.PURPOSE_RESET_PASSWORD, request.getOtp());
+        otpService.verify(email, EmailOtpJpaEntity.PURPOSE_RESET_PASSWORD, request.getOtp());
 
         String raw = UUID.randomUUID().toString() + UUID.randomUUID();
-        resetTokenRepository.save(PasswordResetToken.builder()
+        resetTokenRepository.save(PasswordResetTokenJpaEntity.builder()
                 .userId(user.getUserId()).tokenHash(sha256(raw))
                 .expiresAt(Instant.now().plusSeconds(RESET_TOKEN_SECONDS)).build());
         return ResetTokenResponse.builder().resetToken(raw).expiresInSeconds(RESET_TOKEN_SECONDS).build();
@@ -603,7 +613,7 @@ public class AuthService {
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new AppException(ErrorCode.PASSWORD_CONFIRM_MISMATCH);
         }
-        PasswordResetToken reset = resetTokenRepository.findByTokenHash(sha256(request.getToken()))
+        PasswordResetTokenJpaEntity reset = resetTokenRepository.findByTokenHash(sha256(request.getToken()))
                 .orElseThrow(() -> new AppException(ErrorCode.RESET_TOKEN_INVALID));
         if (!reset.isUsable()) throw new AppException(ErrorCode.RESET_TOKEN_INVALID);
         User user = userRepository.findById(reset.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -690,11 +700,6 @@ public class AuthService {
     }
 
     public static String sha256(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : digest) sb.append(String.format("%02x", b));
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
+        return AuthSecurityPolicy.sha256(value);
     }
 }

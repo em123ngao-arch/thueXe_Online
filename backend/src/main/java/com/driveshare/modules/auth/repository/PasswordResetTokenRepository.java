@@ -1,9 +1,9 @@
 package com.driveshare.modules.auth.repository;
 
-import com.driveshare.modules.auth.entity.PasswordResetToken;
-import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.Optional;
+import com.driveshare.modules.auth.adapter.out.persistence.PasswordResetTokenJpaRepository;
+import org.springframework.stereotype.Repository;
 
-public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, Long> {
-    Optional<PasswordResetToken> findByTokenHash(String tokenHash);
+// Backward-compatible repository shim
+@Repository
+public interface PasswordResetTokenRepository extends PasswordResetTokenJpaRepository {
 }

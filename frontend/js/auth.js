@@ -26,7 +26,7 @@ const API_BASE = (() => {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return 'http://localhost:8080/api/v1';
   }
-  return 'https://driveshare-backend-9ppk.onrender.com/api/v1';
+  return 'https://driveshare-backend-frug.onrender.com/api/v1';
 })();
 
 

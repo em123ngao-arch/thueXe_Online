@@ -3,7 +3,7 @@ package com.driveshare.modules.car.dto.response;
 import com.driveshare.common.enums.ECarStatus;
 import com.driveshare.common.enums.EFuelType;
 import com.driveshare.common.enums.ETransmission;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import lombok.Builder;
 import lombok.Data;
 

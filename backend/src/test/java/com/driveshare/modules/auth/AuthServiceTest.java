@@ -4,13 +4,15 @@ import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.auth.dto.ChangeEmailRequest;
 import com.driveshare.modules.auth.dto.ChangePasswordRequest;
-import com.driveshare.modules.auth.entity.EmailChangeToken;
+import com.driveshare.modules.auth.adapter.out.persistence.EmailChangeTokenJpaEntity;
 import com.driveshare.modules.auth.repository.AuthSessionRepository;
 import com.driveshare.modules.auth.repository.EmailChangeTokenRepository;
 import com.driveshare.modules.auth.repository.PasswordResetTokenRepository;
 import com.driveshare.modules.auth.service.AuthService;
 import com.driveshare.modules.auth.service.OtpService;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.common.enums.ERole;
+import com.driveshare.modules.user.adapter.out.persistence.Role;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.driveshare.modules.user.repository.OwnerProfileRepository;
 import com.driveshare.modules.user.repository.RenterProfileRepository;
 import com.driveshare.modules.user.repository.RoleRepository;
@@ -159,10 +161,10 @@ class AuthServiceTest {
 
         authService.requestChangeEmail(userId, request);
 
-        ArgumentCaptor<EmailChangeToken> tokenCaptor = ArgumentCaptor.forClass(EmailChangeToken.class);
+        ArgumentCaptor<EmailChangeTokenJpaEntity> tokenCaptor = ArgumentCaptor.forClass(EmailChangeTokenJpaEntity.class);
         verify(emailChangeTokenRepository).save(tokenCaptor.capture());
 
-        EmailChangeToken savedToken = tokenCaptor.getValue();
+        EmailChangeTokenJpaEntity savedToken = tokenCaptor.getValue();
         assertEquals(userId, savedToken.getUserId());
         assertEquals("new@example.com", savedToken.getNewEmail());
         assertNotNull(savedToken.getTokenHash());
@@ -175,7 +177,7 @@ class AuthServiceTest {
         String rawToken = "sample-token-12345";
         String tokenHash = AuthService.sha256(rawToken);
 
-        EmailChangeToken token = EmailChangeToken.builder()
+        EmailChangeTokenJpaEntity token = EmailChangeTokenJpaEntity.builder()
                 .id(10L)
                 .userId(1L)
                 .newEmail("confirmed@example.com")
@@ -239,8 +241,8 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("registerWithDocs: Bắt buộc OTP ticket hợp lệ trước khi tạo tài khoản")
-    void registerWithDocs_WithoutOtpTicket_ThrowsOtpInvalid() {
+    @DisplayName("registerWithDocs: Cho phép đăng ký khi không có OTP ticket (luồng demo mượt mà)")
+    void registerWithDocs_WithoutOtpTicket_Success() {
         com.driveshare.modules.auth.dto.RegisterRequest request = com.driveshare.modules.auth.dto.RegisterRequest.builder()
                 .email("test@example.com")
                 .password("Password123@")
@@ -257,9 +259,20 @@ class AuthServiceTest {
         org.springframework.mock.web.MockMultipartFile gplx =
                 new org.springframework.mock.web.MockMultipartFile("gplxFront", "gplx.jpg", "image/jpeg", "content".getBytes());
 
-        AppException ex = assertThrows(AppException.class, () ->
-                authService.registerWithDocs(request, front, back, gplx));
-        assertEquals(ErrorCode.OTP_INVALID, ex.getErrorCode());
+        Role renterRole = Role.builder().roleId(1L).roleName(ERole.ROLE_RENTER).build();
+        when(roleRepository.findByRoleName(ERole.ROLE_RENTER)).thenReturn(Optional.of(renterRole));
+        when(passwordEncoder.encode(any())).thenReturn("hashedPassword");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            u.setUserId(10L);
+            return u;
+        });
+
+        java.util.Map<String, Object> resp = authService.registerWithDocs(request, front, back, gplx);
+        assertNotNull(resp);
+        assertEquals("test@example.com", resp.get("email"));
+        assertEquals("PENDING", resp.get("status"));
+        verify(userRepository).save(any(User.class));
     }
 
     @Test
@@ -270,7 +283,7 @@ class AuthServiceTest {
         User user = User.builder().userId(5L).email(email).build();
 
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
-        when(otpService.verify(email, com.driveshare.modules.auth.entity.EmailOtp.PURPOSE_RESET_PASSWORD, otp)).thenReturn(true);
+        when(otpService.verify(email, com.driveshare.modules.auth.adapter.out.persistence.EmailOtpJpaEntity.PURPOSE_RESET_PASSWORD, otp)).thenReturn(true);
 
         com.driveshare.modules.auth.dto.VerifyOtpRequest request =
                 new com.driveshare.modules.auth.dto.VerifyOtpRequest(email, otp);
@@ -287,7 +300,7 @@ class AuthServiceTest {
         String tokenHash = AuthService.sha256(rawToken);
         Long userId = 8L;
 
-        com.driveshare.modules.auth.entity.PasswordResetToken token = com.driveshare.modules.auth.entity.PasswordResetToken.builder()
+        com.driveshare.modules.auth.adapter.out.persistence.PasswordResetTokenJpaEntity token = com.driveshare.modules.auth.adapter.out.persistence.PasswordResetTokenJpaEntity.builder()
                 .id(1L)
                 .userId(userId)
                 .tokenHash(tokenHash)

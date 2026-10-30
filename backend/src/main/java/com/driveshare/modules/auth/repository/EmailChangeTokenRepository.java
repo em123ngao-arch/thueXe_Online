@@ -1,10 +1,9 @@
 package com.driveshare.modules.auth.repository;
 
-import com.driveshare.modules.auth.entity.EmailChangeToken;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.driveshare.modules.auth.adapter.out.persistence.EmailChangeTokenJpaRepository;
+import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
-
-public interface EmailChangeTokenRepository extends JpaRepository<EmailChangeToken, Long> {
-    Optional<EmailChangeToken> findByTokenHash(String tokenHash);
+// Backward-compatible repository shim
+@Repository
+public interface EmailChangeTokenRepository extends EmailChangeTokenJpaRepository {
 }

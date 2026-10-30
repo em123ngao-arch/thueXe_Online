@@ -1,9 +1,9 @@
 package com.driveshare.modules.rental;
 
 import com.driveshare.common.enums.EDisputeStatus;
-import com.driveshare.modules.admin.controller.AdminRentalController;
+import com.driveshare.modules.admin.adapter.in.web.AdminRentalController;
 import com.driveshare.modules.car.repository.CarRepository;
-import com.driveshare.modules.rental.controller.RentalController;
+import com.driveshare.modules.rental.adapter.in.web.RentalController;
 import com.driveshare.modules.rental.dto.ResolveDisputeRequest;
 import com.driveshare.modules.rental.dto.response.RentalDisputeResponse;
 import com.driveshare.modules.rental.repository.RentalRepository;
@@ -85,11 +85,11 @@ class RentalDisputeControllerTest {
 
     @org.junit.jupiter.api.BeforeEach
     void setUpSecurity() {
-        com.driveshare.modules.user.entity.Role adminRole = com.driveshare.modules.user.entity.Role.builder()
+        com.driveshare.modules.user.adapter.out.persistence.Role adminRole = com.driveshare.modules.user.adapter.out.persistence.Role.builder()
                 .roleId(1L)
                 .roleName(com.driveshare.common.enums.ERole.ROLE_ADMIN)
                 .build();
-        com.driveshare.modules.user.entity.User mockUser = com.driveshare.modules.user.entity.User.builder()
+        com.driveshare.modules.user.adapter.out.persistence.User mockUser = com.driveshare.modules.user.adapter.out.persistence.User.builder()
                 .userId(100L)
                 .username("admin01")
                 .email("admin01@example.com")

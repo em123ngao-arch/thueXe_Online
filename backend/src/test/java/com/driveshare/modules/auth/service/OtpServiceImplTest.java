@@ -6,7 +6,7 @@ import com.driveshare.modules.auth.dto.OtpSendRequest;
 import com.driveshare.modules.auth.dto.OtpSendResponse;
 import com.driveshare.modules.auth.dto.OtpVerifyRequest;
 import com.driveshare.modules.auth.dto.OtpVerifyResponse;
-import com.driveshare.modules.auth.entity.EmailOtp;
+import com.driveshare.modules.auth.adapter.out.persistence.EmailOtpJpaEntity;
 import com.driveshare.modules.auth.repository.EmailOtpRepository;
 import com.driveshare.modules.auth.service.impl.OtpServiceImpl;
 import org.junit.jupiter.api.DisplayName;
@@ -44,7 +44,7 @@ class OtpServiceImplTest {
     @Test
     @DisplayName("1. Gửi OTP thành công: sinh mã 6 số, trả về masked format 123*** và TTL 120s")
     void sendOtp_Success_GeneratesMaskedFormatAndSaves() {
-        when(emailOtpRepository.save(any(EmailOtp.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(emailOtpRepository.save(any(EmailOtpJpaEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         OtpSendRequest request = OtpSendRequest.builder()
                 .email(TEST_EMAIL)
@@ -60,9 +60,9 @@ class OtpServiceImplTest {
         assertTrue(response.getMaskedOtp().matches("^[0-9]{3}\\*\\*\\*$"), 
                 "Masked OTP phải có dạng 3 số đầu kèm *** (vd: 123***)");
 
-        ArgumentCaptor<EmailOtp> captor = ArgumentCaptor.forClass(EmailOtp.class);
+        ArgumentCaptor<EmailOtpJpaEntity> captor = ArgumentCaptor.forClass(EmailOtpJpaEntity.class);
         verify(emailOtpRepository).save(captor.capture());
-        EmailOtp saved = captor.getValue();
+        EmailOtpJpaEntity saved = captor.getValue();
         assertEquals(TEST_EMAIL, saved.getEmail());
         assertEquals(0, saved.getAttempts());
         assertFalse(saved.isUsed());
@@ -73,7 +73,7 @@ class OtpServiceImplTest {
     @DisplayName("2. Xác thực thành công: mã đúng -> trả về verified = true và đánh dấu used")
     void verifyOtp_CorrectCode_Success() {
         String hash = AuthService.sha256(RAW_OTP);
-        EmailOtp otp = EmailOtp.builder()
+        EmailOtpJpaEntity otp = EmailOtpJpaEntity.builder()
                 .email(TEST_EMAIL)
                 .purpose(PURPOSE)
                 .otpHash(hash)
@@ -102,7 +102,7 @@ class OtpServiceImplTest {
     @DisplayName("3. Xác thực thất bại: mã sai -> ném OTP_INVALID và tăng số lần thử")
     void verifyOtp_WrongCode_ThrowsOtpInvalidAndIncrementsAttempts() {
         String hash = AuthService.sha256(RAW_OTP);
-        EmailOtp otp = EmailOtp.builder()
+        EmailOtpJpaEntity otp = EmailOtpJpaEntity.builder()
                 .email(TEST_EMAIL)
                 .purpose(PURPOSE)
                 .otpHash(hash)
@@ -130,7 +130,7 @@ class OtpServiceImplTest {
     @DisplayName("4. Xác thực thất bại: mã hết hạn (quá TTL 120s) -> ném OTP_EXPIRED")
     void verifyOtp_ExpiredCode_ThrowsOtpExpired() {
         String hash = AuthService.sha256(RAW_OTP);
-        EmailOtp otp = EmailOtp.builder()
+        EmailOtpJpaEntity otp = EmailOtpJpaEntity.builder()
                 .email(TEST_EMAIL)
                 .purpose(PURPOSE)
                 .otpHash(hash)
@@ -156,7 +156,7 @@ class OtpServiceImplTest {
     @DisplayName("5. Chống Brute-force: Khóa mã nếu đã nhập sai quá 3 lần -> ném RATE_LIMITED")
     void verifyOtp_MaxAttemptsExceeded_ThrowsRateLimited() {
         String hash = AuthService.sha256(RAW_OTP);
-        EmailOtp otp = EmailOtp.builder()
+        EmailOtpJpaEntity otp = EmailOtpJpaEntity.builder()
                 .email(TEST_EMAIL)
                 .purpose(PURPOSE)
                 .otpHash(hash)
@@ -182,7 +182,7 @@ class OtpServiceImplTest {
     @DisplayName("6. Chống Brute-force: Nhập sai lần thứ 3 liên tiếp -> khóa mã ngay lập tức")
     void verifyOtp_ThirdConsecutiveFailure_LocksAndThrowsRateLimited() {
         String hash = AuthService.sha256(RAW_OTP);
-        EmailOtp otp = EmailOtp.builder()
+        EmailOtpJpaEntity otp = EmailOtpJpaEntity.builder()
                 .email(TEST_EMAIL)
                 .purpose(PURPOSE)
                 .otpHash(hash)

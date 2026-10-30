@@ -1,6 +1,6 @@
 package com.driveshare.security;
 
-import com.driveshare.modules.auth.entity.AuthSession;
+import com.driveshare.modules.auth.adapter.out.persistence.AuthSessionJpaEntity;
 import com.driveshare.modules.auth.repository.AuthSessionRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -36,7 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
                 String jti = tokenProvider.getJtiFromToken(jwt);
                 Long tokenVersion = tokenProvider.getTokenVersionFromToken(jwt);
-                AuthSession session = sessionRepository.findByJti(jti).orElse(null);
+                AuthSessionJpaEntity session = sessionRepository.findByJti(jti).orElse(null);
                 if (session != null && session.isActive() && session.getTokenVersion() == tokenVersion) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(tokenProvider.getUsernameFromToken(jwt));
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());

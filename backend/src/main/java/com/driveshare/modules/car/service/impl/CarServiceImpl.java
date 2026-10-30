@@ -9,10 +9,10 @@ import com.driveshare.modules.car.dto.request.CarCreateRequest;
 import com.driveshare.modules.car.dto.request.CarStatusUpdateRequest;
 import com.driveshare.modules.car.dto.request.CarUpdateRequest;
 import com.driveshare.modules.car.dto.response.CarResponse;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.car.service.CarService;
-import com.driveshare.modules.user.entity.OwnerProfile;
+import com.driveshare.modules.user.adapter.out.persistence.OwnerProfile;
 import com.driveshare.modules.user.repository.OwnerProfileRepository;
 import com.driveshare.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -303,21 +303,21 @@ public class CarServiceImpl implements CarService {
                 com.driveshare.common.enums.ERentalStatus.CONFIRMED,
                 com.driveshare.common.enums.ERentalStatus.IN_PROGRESS
         );
-        java.util.List<com.driveshare.modules.rental.entity.Rental> activeRentals =
+        java.util.List<com.driveshare.modules.rental.adapter.out.persistence.Rental> activeRentals =
                 rentalRepository.findActiveRentalsForCar(carId, activeStatuses, today);
 
-        java.util.List<com.driveshare.modules.car.entity.CarCalendarBlock> blocks =
+        java.util.List<com.driveshare.modules.car.adapter.out.persistence.CarCalendarBlock> blocks =
                 carCalendarBlockRepository.findByCarIdAndEndDateGreaterThanEqualAndDeletedAtIsNullOrderByStartDateAsc(carId, today);
 
         java.util.Set<java.time.LocalDate> unavailableDatesSet = new java.util.TreeSet<>();
-        for (com.driveshare.modules.rental.entity.Rental r : activeRentals) {
+        for (com.driveshare.modules.rental.adapter.out.persistence.Rental r : activeRentals) {
             java.time.LocalDate cur = r.getStartDate().isBefore(today) ? today : r.getStartDate();
             while (!cur.isAfter(r.getEndDate())) {
                 unavailableDatesSet.add(cur);
                 cur = cur.plusDays(1);
             }
         }
-        for (com.driveshare.modules.car.entity.CarCalendarBlock b : blocks) {
+        for (com.driveshare.modules.car.adapter.out.persistence.CarCalendarBlock b : blocks) {
             java.time.LocalDate cur = b.getStartDate().isBefore(today) ? today : b.getStartDate();
             while (!cur.isAfter(b.getEndDate())) {
                 unavailableDatesSet.add(cur);
@@ -412,10 +412,10 @@ public class CarServiceImpl implements CarService {
                 com.driveshare.common.enums.ERentalStatus.IN_PROGRESS
         );
 
-        java.util.List<com.driveshare.modules.rental.entity.Rental> activeRentals =
+        java.util.List<com.driveshare.modules.rental.adapter.out.persistence.Rental> activeRentals =
                 rentalRepository.findActiveRentalsForCars(carIds, activeStatuses, today);
 
-        java.util.List<com.driveshare.modules.car.entity.CarCalendarBlock> blocks =
+        java.util.List<com.driveshare.modules.car.adapter.out.persistence.CarCalendarBlock> blocks =
                 carCalendarBlockRepository.findByCarIdInAndEndDateGreaterThanEqualAndDeletedAtIsNullOrderByStartDateAsc(carIds, today);
 
         java.util.Map<Long, java.util.Set<java.time.LocalDate>> datesMap = new java.util.HashMap<>();
@@ -424,7 +424,7 @@ public class CarServiceImpl implements CarService {
         }
 
         if (activeRentals != null) {
-            for (com.driveshare.modules.rental.entity.Rental r : activeRentals) {
+            for (com.driveshare.modules.rental.adapter.out.persistence.Rental r : activeRentals) {
                 java.time.LocalDate cur = r.getStartDate().isBefore(today) ? today : r.getStartDate();
                 java.util.Set<java.time.LocalDate> set = datesMap.computeIfAbsent(r.getCarId(), k -> new java.util.TreeSet<>());
                 while (!cur.isAfter(r.getEndDate())) {
@@ -435,7 +435,7 @@ public class CarServiceImpl implements CarService {
         }
 
         if (blocks != null) {
-            for (com.driveshare.modules.car.entity.CarCalendarBlock b : blocks) {
+            for (com.driveshare.modules.car.adapter.out.persistence.CarCalendarBlock b : blocks) {
                 java.time.LocalDate cur = b.getStartDate().isBefore(today) ? today : b.getStartDate();
                 java.util.Set<java.time.LocalDate> set = datesMap.computeIfAbsent(b.getCarId(), k -> new java.util.TreeSet<>());
                 while (!cur.isAfter(b.getEndDate())) {

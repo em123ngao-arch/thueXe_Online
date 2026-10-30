@@ -1,31 +1,9 @@
 package com.driveshare.modules.admin.service;
 
-import com.driveshare.common.dto.PageResponse;
-import com.driveshare.modules.admin.dto.request.AdminUserFilterRequest;
-import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
-import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
-import com.driveshare.modules.admin.dto.response.PendingCccdResponse;
-import com.driveshare.modules.admin.dto.response.UserItemResponse;
+import com.driveshare.modules.admin.application.port.in.AdminUserUseCase;
 
-import java.util.List;
-
-public interface AdminUserService {
-
-    PageResponse<UserItemResponse> getUsers(AdminUserFilterRequest request);
-
-    UserItemResponse getUserById(Long userId);
-
-    UserItemResponse approveOwner(Long userId, ApproveOwnerRequest request, Long actorId, String actorUsername);
-
-    UserItemResponse approveLicense(Long userId, com.driveshare.modules.admin.dto.request.ApproveLicenseRequest request, Long actorId, String actorUsername);
-
-    UserItemResponse updateUserStatus(Long userId, UpdateUserStatusRequest request, Long actorId, String actorUsername);
-
-    List<PendingCccdResponse> getPendingCccdUsers();
-
-    void verifyCccd(Long userId, String status, String reason, Long actorId, String actorUsername);
-
-    java.util.List<com.driveshare.modules.admin.dto.response.PendingLicenseResponse> getPendingLicenses();
-
-    com.driveshare.modules.admin.dto.response.AdminStatsResponse getAdminStats();
+/**
+ * Backward compatibility interface extending AdminUserUseCase.
+ */
+public interface AdminUserService extends AdminUserUseCase {
 }

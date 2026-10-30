@@ -5,18 +5,18 @@ import com.driveshare.common.enums.EPaymentStatus;
 import com.driveshare.common.enums.ERentalStatus;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.notification.repository.NotificationRepository;
-import com.driveshare.modules.payment.entity.Payment;
+import com.driveshare.modules.payment.adapter.out.persistence.Payment;
 import com.driveshare.modules.payment.repository.PaymentRepository;
 import com.driveshare.modules.rental.dto.ResolveDisputeRequest;
-import com.driveshare.modules.rental.entity.Rental;
-import com.driveshare.modules.rental.entity.RentalDispute;
+import com.driveshare.modules.rental.adapter.out.persistence.Rental;
+import com.driveshare.modules.rental.adapter.out.persistence.RentalDispute;
 import com.driveshare.modules.rental.repository.RentalDisputeRepository;
 import com.driveshare.modules.rental.repository.RentalRepository;
 import com.driveshare.modules.rental.service.impl.RentalDisputeServiceImpl;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.driveshare.modules.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -122,7 +122,7 @@ class ConcurrencyDisputeRefundTest {
         User adminUser = User.builder()
                 .userId(adminId)
                 .username("admin_test")
-                .roles(java.util.Set.of(com.driveshare.modules.user.entity.Role.builder()
+                .roles(java.util.Set.of(com.driveshare.modules.user.adapter.out.persistence.Role.builder()
                         .roleName(com.driveshare.common.enums.ERole.ROLE_ADMIN)
                         .build()))
                 .build();

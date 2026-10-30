@@ -2,7 +2,7 @@ package com.driveshare.modules.user;
 
 import com.driveshare.common.enums.EUserStatus;
 import com.driveshare.common.enums.EVerificationStatus;
-import com.driveshare.modules.user.controller.UserProfileController;
+import com.driveshare.modules.user.adapter.in.web.UserProfileController;
 import com.driveshare.modules.user.dto.request.OwnerProfileUpdateRequest;
 import com.driveshare.modules.user.dto.response.OwnerProfileResponse;
 import com.driveshare.modules.user.service.UserProfileService;

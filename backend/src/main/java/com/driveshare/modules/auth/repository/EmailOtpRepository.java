@@ -1,15 +1,9 @@
 package com.driveshare.modules.auth.repository;
 
-import com.driveshare.modules.auth.entity.EmailOtp;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.driveshare.modules.auth.adapter.out.persistence.EmailOtpJpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.time.Instant;
-import java.util.Optional;
-
+// Backward-compatible repository shim
 @Repository
-public interface EmailOtpRepository extends JpaRepository<EmailOtp, Long> {
-    Optional<EmailOtp> findTopByEmailAndPurposeOrderByIdDesc(String email, String purpose);
-    void deleteByExpiresAtBefore(Instant now);
+public interface EmailOtpRepository extends EmailOtpJpaRepository {
 }
-

@@ -5,11 +5,11 @@ import com.driveshare.common.enums.ERentalStatus;
 import com.driveshare.common.enums.EUserStatus;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.rental.dto.CreateRentalRequest;
 import com.driveshare.modules.rental.dto.RentalResponse;
-import com.driveshare.modules.rental.entity.Rental;
+import com.driveshare.modules.rental.adapter.out.persistence.Rental;
 import com.driveshare.modules.rental.repository.RentalRepository;
 import com.driveshare.modules.rental.service.impl.RentalServiceImpl;
 import com.driveshare.security.CustomUserDetails;
@@ -68,7 +68,7 @@ class RentalServiceTest {
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         org.mockito.Mockito.lenient().when(userRepository.findById(RENTER_ID))
-                .thenReturn(Optional.of(com.driveshare.modules.user.entity.User.builder()
+                .thenReturn(Optional.of(com.driveshare.modules.user.adapter.out.persistence.User.builder()
                         .userId(RENTER_ID)
                         .username("renter_test")
                         .status(EUserStatus.ACTIVE)
@@ -378,7 +378,7 @@ class RentalServiceTest {
     @DisplayName("TC-Q04: User bị BLOCKED gửi request tạo đơn mới -> Nhận lỗi 403 USER_BLOCKED_OVERDUE_VIOLATION")
     void createRentalRequest_BlockedUser_ThrowsUSER_BLOCKED_OVERDUE_VIOLATION() {
         when(userRepository.findById(RENTER_ID)).thenReturn(Optional.of(
-                com.driveshare.modules.user.entity.User.builder()
+                com.driveshare.modules.user.adapter.out.persistence.User.builder()
                         .userId(RENTER_ID)
                         .username("blocked_renter")
                         .status(EUserStatus.BLOCKED)

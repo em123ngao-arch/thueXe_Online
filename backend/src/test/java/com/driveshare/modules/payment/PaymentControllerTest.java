@@ -4,7 +4,7 @@ import com.driveshare.common.enums.EPaymentMethod;
 import com.driveshare.common.enums.EPaymentStatus;
 import com.driveshare.common.enums.ERentalStatus;
 import com.driveshare.common.enums.EUserStatus;
-import com.driveshare.modules.payment.controller.PaymentController;
+import com.driveshare.modules.payment.adapter.in.web.PaymentController;
 import com.driveshare.modules.payment.dto.response.OwnerEarningsResponse;
 import com.driveshare.modules.payment.dto.response.PaymentResponse;
 import com.driveshare.modules.payment.dto.response.PaymentTransactionDto;

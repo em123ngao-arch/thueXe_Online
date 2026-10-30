@@ -7,20 +7,20 @@ import com.driveshare.common.enums.ERole;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.common.service.CloudinaryService;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.notification.repository.NotificationRepository;
-import com.driveshare.modules.payment.entity.Payment;
+import com.driveshare.modules.payment.adapter.out.persistence.Payment;
 import com.driveshare.modules.payment.repository.PaymentRepository;
 import com.driveshare.modules.rental.dto.ResolveDisputeRequest;
 import com.driveshare.modules.rental.dto.response.RentalDisputeResponse;
-import com.driveshare.modules.rental.entity.Rental;
-import com.driveshare.modules.rental.entity.RentalDispute;
+import com.driveshare.modules.rental.adapter.out.persistence.Rental;
+import com.driveshare.modules.rental.adapter.out.persistence.RentalDispute;
 import com.driveshare.modules.rental.repository.RentalDisputeRepository;
 import com.driveshare.modules.rental.repository.RentalRepository;
 import com.driveshare.modules.rental.service.impl.RentalDisputeServiceImpl;
-import com.driveshare.modules.user.entity.Role;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.Role;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.driveshare.modules.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -125,7 +125,7 @@ class RentalDisputeServiceTest {
                 .status(EPaymentStatus.SUCCESS)
                 .build();
 
-        com.driveshare.modules.user.entity.Role adminRole = com.driveshare.modules.user.entity.Role.builder()
+        com.driveshare.modules.user.adapter.out.persistence.Role adminRole = com.driveshare.modules.user.adapter.out.persistence.Role.builder()
                 .roleId(1L)
                 .roleName(com.driveshare.common.enums.ERole.ROLE_ADMIN)
                 .build();
@@ -303,7 +303,7 @@ class RentalDisputeServiceTest {
     @Test
     @DisplayName("Ca 7b: Edge Case 1 - Người không có quyền Admin/Staff giải quyết khiếu nại -> Ném 403 UNAUTHORIZED")
     void resolveDispute_NonAdmin_ThrowsUnauthorized() {
-        com.driveshare.modules.user.entity.Role customerRole = com.driveshare.modules.user.entity.Role.builder()
+        com.driveshare.modules.user.adapter.out.persistence.Role customerRole = com.driveshare.modules.user.adapter.out.persistence.Role.builder()
                 .roleId(2L)
                 .roleName(com.driveshare.common.enums.ERole.ROLE_RENTER)
                 .build();

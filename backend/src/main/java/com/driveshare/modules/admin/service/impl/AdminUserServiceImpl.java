@@ -10,9 +10,9 @@ import com.driveshare.modules.admin.dto.response.RenterProfileSummaryResponse;
 import com.driveshare.modules.admin.dto.response.UserItemResponse;
 import com.driveshare.modules.admin.service.AdminUserService;
 import com.driveshare.modules.admin.specification.UserSpecification;
-import com.driveshare.modules.user.entity.OwnerProfile;
-import com.driveshare.modules.user.entity.RenterProfile;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.user.adapter.out.persistence.OwnerProfile;
+import com.driveshare.modules.user.adapter.out.persistence.RenterProfile;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.driveshare.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,7 +28,7 @@ import com.driveshare.common.enums.EVerificationStatus;
 import com.driveshare.modules.admin.dto.request.ApproveLicenseRequest;
 import com.driveshare.modules.admin.dto.request.ApproveOwnerRequest;
 import com.driveshare.modules.admin.dto.request.UpdateUserStatusRequest;
-import com.driveshare.modules.admin.entity.AuditLog;
+import com.driveshare.modules.admin.adapter.out.persistence.AuditLog;
 import com.driveshare.modules.admin.repository.AuditLogRepository;
 import lombok.extern.slf4j.Slf4j;
 
@@ -508,7 +508,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                             || u.getRenterProfile().getLicenseVerificationStatus() == null))
                 .count();
 
-        List<com.driveshare.modules.rental.entity.Rental> allRentals = rentalRepository.findAll();
+        List<com.driveshare.modules.rental.adapter.out.persistence.Rental> allRentals = rentalRepository.findAll();
         java.time.LocalDate today = java.time.LocalDate.now();
         java.time.Instant startOfDay = today.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
 

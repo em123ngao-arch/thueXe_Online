@@ -1,7 +1,7 @@
 package com.driveshare.modules.rental;
 
 import com.driveshare.common.dto.PageResponse;
-import com.driveshare.modules.rental.controller.ReviewController;
+import com.driveshare.modules.rental.adapter.in.web.ReviewController;
 import com.driveshare.modules.rental.dto.CreateReviewRequest;
 import com.driveshare.modules.rental.dto.response.ReviewResponse;
 import com.driveshare.modules.rental.service.ReviewService;

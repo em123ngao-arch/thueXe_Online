@@ -1,5 +1,7 @@
 package com.driveshare.modules.car.controller;
 
+import com.driveshare.modules.car.adapter.in.web.PublicCarController;
+
 import com.driveshare.common.dto.PageResponse;
 import com.driveshare.common.enums.ECarStatus;
 import com.driveshare.common.enums.EFuelType;

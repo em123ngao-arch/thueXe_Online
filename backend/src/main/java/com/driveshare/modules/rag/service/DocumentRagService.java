@@ -1,17 +1,7 @@
 package com.driveshare.modules.rag.service;
 
-import com.driveshare.modules.rag.dto.RagAskRequest;
-import com.driveshare.modules.rag.dto.RagAskResponse;
-import com.driveshare.modules.rag.dto.RagDocumentDto;
-import org.springframework.web.multipart.MultipartFile;
+import com.driveshare.modules.rag.application.port.in.AskDocumentRagUseCase;
+import com.driveshare.modules.rag.application.port.in.ManageDocumentUseCase;
 
-import java.util.List;
-import java.util.Map;
-
-public interface DocumentRagService {
-    RagDocumentDto uploadAndIndex(MultipartFile file);
-    RagAskResponse ask(RagAskRequest request);
-    List<RagDocumentDto> getAllDocuments();
-    void clearStore();
-    Map<String, Object> getStats();
+public interface DocumentRagService extends AskDocumentRagUseCase, ManageDocumentUseCase {
 }

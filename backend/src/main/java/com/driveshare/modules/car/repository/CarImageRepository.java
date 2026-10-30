@@ -1,13 +1,8 @@
 package com.driveshare.modules.car.repository;
 
-import com.driveshare.modules.car.entity.CarImage;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.driveshare.modules.car.adapter.out.persistence.CarImageJpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
 @Repository
-public interface CarImageRepository extends JpaRepository<CarImage, Long> {
-
-    List<CarImage> findByCar_CarId(Long carId);
+public interface CarImageRepository extends CarImageJpaRepository {
 }

@@ -1,7 +1,7 @@
 package com.driveshare.modules.rental.dto.response;
 
-import com.driveshare.modules.rental.entity.Review;
-import com.driveshare.modules.user.entity.User;
+import com.driveshare.modules.rental.adapter.out.persistence.Review;
+import com.driveshare.modules.user.adapter.out.persistence.User;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;

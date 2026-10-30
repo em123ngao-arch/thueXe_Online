@@ -1,7 +1,7 @@
 package com.driveshare.modules.rental.dto;
 
 import com.driveshare.common.enums.ERentalStatus;
-import com.driveshare.modules.rental.entity.Rental;
+import com.driveshare.modules.rental.adapter.out.persistence.Rental;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
