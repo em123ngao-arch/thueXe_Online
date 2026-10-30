@@ -1,0 +1,87 @@
+<mxfile host="app.diagrams.net" modified="2026-10-26T01:27:00.000Z" agent="DriveShare-Arch" version="24.0.0">
+  <diagram id="erd_workbench" name="Database ERD — DriveShare PostgreSQL 16">
+    <mxGraphModel dx="1600" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1600" background="#f8fafc">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Table: USERS -->
+        <mxCell id="tbl_users" value="users" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fixedRows=1;rowLines=1;fontStyle=1;align=center;resizeLast=1;fillColor=#2b579a;strokeColor=#1e3a8a;fontColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="60" y="360" width="320" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="u_row1" value="PK  user_id : BIGINT" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#ffffff;fontStyle=1;align=left;spacingLeft=10;" vertex="1" parent="tbl_users">
+          <mxGeometry y="30" width="320" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="u_row2" value="UK  username : VARCHAR(50)" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#f8fafc;align=left;spacingLeft=10;" vertex="1" parent="tbl_users">
+          <mxGeometry y="54" width="320" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="u_row3" value="UK  email : VARCHAR(150)" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#ffffff;align=left;spacingLeft=10;" vertex="1" parent="tbl_users">
+          <mxGeometry y="78" width="320" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="u_row4" value="    password_hash : VARCHAR(255)" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#f8fafc;align=left;spacingLeft=10;" vertex="1" parent="tbl_users">
+          <mxGeometry y="102" width="320" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="u_row5" value="    full_name : VARCHAR(150)" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#ffffff;align=left;spacingLeft=10;" vertex="1" parent="tbl_users">
+          <mxGeometry y="126" width="320" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="u_row6" value="    status : VARCHAR(20)" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#f8fafc;align=left;spacingLeft=10;" vertex="1" parent="tbl_users">
+          <mxGeometry y="150" width="320" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- Table: CARS -->
+        <mxCell id="tbl_cars" value="cars" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fixedRows=1;rowLines=1;fontStyle=1;align=center;resizeLast=1;fillColor=#2b579a;strokeColor=#1e3a8a;fontColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="480" y="80" width="320" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="c_row1" value="PK  car_id : BIGINT" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#ffffff;fontStyle=1;align=left;spacingLeft=10;" vertex="1" parent="tbl_cars">
+          <mxGeometry y="30" width="320" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="c_row2" value="FK  owner_id : BIGINT" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#f8fafc;fontStyle=1;align=left;spacingLeft=10;" vertex="1" parent="tbl_cars">
+          <mxGeometry y="54" width="320" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="c_row3" value="    brand : VARCHAR(50)" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#ffffff;align=left;spacingLeft=10;" vertex="1" parent="tbl_cars">
+          <mxGeometry y="78" width="320" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="c_row4" value="    model : VARCHAR(100)" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#f8fafc;align=left;spacingLeft=10;" vertex="1" parent="tbl_cars">
+          <mxGeometry y="102" width="320" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="c_row5" value="UK  license_plate : VARCHAR(20)" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#ffffff;align=left;spacingLeft=10;" vertex="1" parent="tbl_cars">
+          <mxGeometry y="126" width="320" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="c_row6" value="    price_per_day : NUMERIC(12,2)" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#f8fafc;align=left;spacingLeft=10;" vertex="1" parent="tbl_cars">
+          <mxGeometry y="150" width="320" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- Table: RENTALS -->
+        <mxCell id="tbl_rentals" value="rentals" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fixedRows=1;rowLines=1;fontStyle=1;align=center;resizeLast=1;fillColor=#0f766e;strokeColor=#042f2e;fontColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="900" y="80" width="360" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="r_row1" value="PK  rental_id : BIGINT" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#ffffff;fontStyle=1;align=left;spacingLeft=10;" vertex="1" parent="tbl_rentals">
+          <mxGeometry y="30" width="360" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="r_row2" value="FK  renter_id : BIGINT" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#f8fafc;fontStyle=1;align=left;spacingLeft=10;" vertex="1" parent="tbl_rentals">
+          <mxGeometry y="54" width="360" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="r_row3" value="FK  car_id : BIGINT" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#ffffff;fontStyle=1;align=left;spacingLeft=10;" vertex="1" parent="tbl_rentals">
+          <mxGeometry y="78" width="360" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="r_row4" value="    status : VARCHAR(30)" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#f8fafc;align=left;spacingLeft=10;" vertex="1" parent="tbl_rentals">
+          <mxGeometry y="102" width="360" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="r_row5" value="    overdue_hours : INT (Sprint 4)" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#ffffff;fontStyle=1;align=left;spacingLeft=10;" vertex="1" parent="tbl_rentals">
+          <mxGeometry y="126" width="360" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="r_row6" value="    penalty_fee : NUMERIC(12,2)" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=#f8fafc;align=left;spacingLeft=10;" vertex="1" parent="tbl_rentals">
+          <mxGeometry y="150" width="360" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="edge1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#475569;strokeWidth=1.5;" edge="1" source="u_row1" target="c_row2" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#475569;strokeWidth=1.5;" edge="1" source="c_row1" target="r_row3" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

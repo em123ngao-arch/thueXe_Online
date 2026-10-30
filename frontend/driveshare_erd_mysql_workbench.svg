@@ -1,0 +1,2400 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1480" width="1920" height="1480">
+  <defs>
+    <!-- Background grid like MySQL Workbench -->
+    <pattern id="workbenchGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e6ecf2" stroke-width="1"/>
+    </pattern>
+    
+    <!-- Table Header Gradient -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3a608f"/>
+      <stop offset="100%" stop-color="#24426b"/>
+    </linearGradient>
+
+    <!-- Star Entity Header Gradient (Rentals) -->
+    <linearGradient id="starHeaderGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#094e48"/>
+    </linearGradient>
+
+    <!-- Drop Shadow for Tables -->
+    <filter id="tableShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="3" dy="4" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+
+    <!-- Connector Marker Crowfoot -->
+    <marker id="crowEnd" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L10,6 L0,12 M10,0 L10,12" fill="none" stroke="#475569" stroke-width="1.5"/>
+    </marker>
+    <marker id="oneStart" markerWidth="10" markerHeight="10" refX="2" refY="5" orient="auto">
+      <line x1="4" y1="0" x2="4" y2="10" stroke="#475569" stroke-width="1.5"/>
+      <line x1="8" y1="0" x2="8" y2="10" stroke="#475569" stroke-width="1.5"/>
+    </marker>
+  </defs>
+
+  <!-- Canvas Background -->
+  <rect width="1920" height="1480" fill="#f1f5f9"/>
+  <rect width="1920" height="1480" fill="url(#workbenchGrid)"/>
+
+  <!-- Title Banner -->
+  <g transform="translate(50, 20)">
+    <rect width="680" height="32" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="12" y="21" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="700" fill="#1e293b">
+      🗄️ MySQL Workbench ERD — driveshare_db (PostgreSQL 16 Schema v8.0 Enterprise)
+    </text>
+  </g>
+
+  <!-- RELATIONSHIP CONNECTING LINES (ORTHOGONAL) -->
+  <g id="relations" stroke="#475569" stroke-width="1.5" fill="none">
+    <!-- users -> user_roles -->
+    <path d="M 230,350 L 230,300 L 230,270" marker-start="url(#oneStart)" marker-end="url(#crowEnd)" />
+    <!-- roles -> user_roles -->
+    <path d="M 220,130 L 220,200" marker-start="url(#oneStart)" marker-end="url(#crowEnd)" />
+    <!-- users -> renter_profiles (1:1) -->
+    <path d="M 230,710 L 230,800" marker-start="url(#oneStart)" marker-end="url(#oneStart)" />
+    <!-- users -> owner_profiles (1:1) -->
+    <path d="M 230,1070 L 230,1140" marker-start="url(#oneStart)" marker-end="url(#oneStart)" />
+    
+    <!-- users -> cars -->
+    <path d="M 410,400 L 455,400 L 455,100 L 500,100" marker-start="url(#oneStart)" marker-end="url(#crowEnd)" />
+    <!-- cars -> car_images -->
+    <path d="M 690,530 L 690,640" marker-start="url(#oneStart)" marker-end="url(#crowEnd)" />
+    <!-- cars -> car_calendar_blocks -->
+    <path d="M 690,750 L 690,800" marker-start="url(#oneStart)" marker-end="url(#crowEnd)" />
+    <!-- users -> chat_memory -->
+    <path d="M 410,600 L 460,600 L 460,1030 L 500,1030" marker-start="url(#oneStart)" marker-end="url(#crowEnd)" />
+
+    <!-- users -> rentals -->
+    <path d="M 410,450 L 920,450 L 920,120 L 960,120" marker-start="url(#oneStart)" marker-end="url(#crowEnd)" />
+    <!-- cars -> rentals -->
+    <path d="M 880,150 L 960,150" marker-start="url(#oneStart)" marker-end="url(#crowEnd)" />
+
+    <!-- rentals -> rental_inspections -->
+    <path d="M 1170,510 L 1170,640" marker-start="url(#oneStart)" marker-end="url(#crowEnd)" />
+    <!-- rentals -> reviews (1:1) -->
+    <path d="M 1170,820 L 1170,880" marker-start="url(#oneStart)" marker-end="url(#oneStart)" />
+
+    <!-- rentals -> payments -->
+    <path d="M 1380,120 L 1460,120" marker-start="url(#oneStart)" marker-end="url(#crowEnd)" />
+    <!-- rentals -> rental_disputes -->
+    <path d="M 1380,450 L 1460,450" marker-start="url(#oneStart)" marker-end="url(#crowEnd)" />
+    <!-- users -> notifications -->
+    <path d="M 410,650 L 440,650 L 440,1400 L 1420,1400 L 1420,850 L 1460,850" marker-start="url(#oneStart)" marker-end="url(#crowEnd)" />
+  </g>
+
+  <!-- TABLE: roles -->
+  <g transform="translate(50, 60)" filter="url(#tableShadow)" id="tbl_roles">
+    <!-- Table Outer Box -->
+    <rect width="340" height="88" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 335,0 Q 340,0 340,5 L 340,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ roles
+    </text>
+    <text x="328" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row role_id -->
+      <rect y="0" width="340" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="340" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        role_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="328" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row role_name -->
+      <rect y="24" width="340" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="340" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        role_name (UK)
+      </text>
+      
+      <!-- Column Type -->
+      <text x="328" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(30)
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: user_roles -->
+  <g transform="translate(50, 200)" filter="url(#tableShadow)" id="tbl_user_roles">
+    <!-- Table Outer Box -->
+    <rect width="340" height="88" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 335,0 Q 340,0 340,5 L 340,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ user_roles
+    </text>
+    <text x="328" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row user_id -->
+      <rect y="0" width="340" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="340" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        user_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="328" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row role_id -->
+      <rect y="24" width="340" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="340" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        role_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="328" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: users -->
+  <g transform="translate(50, 350)" filter="url(#tableShadow)" id="tbl_users">
+    <!-- Table Outer Box -->
+    <rect width="360" height="376" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 355,0 Q 360,0 360,5 L 360,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ users
+    </text>
+    <text x="348" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row user_id -->
+      <rect y="0" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="360" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        user_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row username -->
+      <rect y="24" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="360" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        username (UK)
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(50)
+      </text>
+      <!-- Row email -->
+      <rect y="48" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="48" x2="360" y2="48" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="64" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="64" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        email (UK)
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="64" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(150)
+      </text>
+      <!-- Row phone -->
+      <rect y="72" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="72" x2="360" y2="72" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="88" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="88" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        phone (UK)
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="88" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(20)
+      </text>
+      <!-- Row password_hash -->
+      <rect y="96" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="96" x2="360" y2="96" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="112" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="112" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        password_hash
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="112" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(255)
+      </text>
+      <!-- Row full_name -->
+      <rect y="120" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="120" x2="360" y2="120" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="136" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="136" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        full_name
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="136" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(150)
+      </text>
+      <!-- Row avatar_url -->
+      <rect y="144" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="144" x2="360" y2="144" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="160" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="160" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        avatar_url
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="160" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(500)
+      </text>
+      <!-- Row auth_provider -->
+      <rect y="168" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="168" x2="360" y2="168" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="184" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="184" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        auth_provider
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="184" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(20)
+      </text>
+      <!-- Row provider_id -->
+      <rect y="192" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="192" x2="360" y2="192" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="208" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="208" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        provider_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="208" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(100)
+      </text>
+      <!-- Row status -->
+      <rect y="216" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="216" x2="360" y2="216" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="232" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="232" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        status
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="232" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(20)
+      </text>
+      <!-- Row bank_verification_status -->
+      <rect y="240" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="240" x2="360" y2="240" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="256" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="256" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        bank_verification_status
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="256" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(30)
+      </text>
+      <!-- Row bank_rejection_reason -->
+      <rect y="264" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="264" x2="360" y2="264" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="280" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="280" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        bank_rejection_reason
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="280" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TEXT
+      </text>
+      <!-- Row created_at -->
+      <rect y="288" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="288" x2="360" y2="288" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="304" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="304" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        created_at
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="304" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TIMESTAMP
+      </text>
+      <!-- Row updated_at -->
+      <rect y="312" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="312" x2="360" y2="312" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="328" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="328" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        updated_at
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="328" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TIMESTAMP
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: renter_profiles -->
+  <g transform="translate(50, 800)" filter="url(#tableShadow)" id="tbl_renter_profiles">
+    <!-- Table Outer Box -->
+    <rect width="360" height="304" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 355,0 Q 360,0 360,5 L 360,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ renter_profiles
+    </text>
+    <text x="348" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row user_id -->
+      <rect y="0" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="360" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        user_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row license_number -->
+      <rect y="24" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="360" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        license_number (UK)
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(30)
+      </text>
+      <!-- Row license_full_name -->
+      <rect y="48" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="48" x2="360" y2="48" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="64" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="64" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        license_full_name
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="64" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(150)
+      </text>
+      <!-- Row license_dob -->
+      <rect y="72" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="72" x2="360" y2="72" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="88" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="88" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        license_dob
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="88" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        DATE
+      </text>
+      <!-- Row license_issue_date -->
+      <rect y="96" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="96" x2="360" y2="96" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="112" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="112" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        license_issue_date
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="112" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        DATE
+      </text>
+      <!-- Row license_expiry_date -->
+      <rect y="120" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="120" x2="360" y2="120" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="136" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="136" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        license_expiry_date
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="136" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        DATE
+      </text>
+      <!-- Row license_front_url -->
+      <rect y="144" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="144" x2="360" y2="144" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="160" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="160" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        license_front_url
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="160" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(500)
+      </text>
+      <!-- Row license_back_url -->
+      <rect y="168" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="168" x2="360" y2="168" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="184" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="184" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        license_back_url
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="184" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(500)
+      </text>
+      <!-- Row license_verification_status -->
+      <rect y="192" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="192" x2="360" y2="192" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="208" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="208" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        license_verification_status
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="208" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(20)
+      </text>
+      <!-- Row license_verified_by -->
+      <rect y="216" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="216" x2="360" y2="216" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="232" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="232" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        license_verified_by
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="232" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row license_verified_at -->
+      <rect y="240" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="240" x2="360" y2="240" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="256" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="256" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        license_verified_at
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="256" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TIMESTAMP
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: owner_profiles -->
+  <g transform="translate(50, 1140)" filter="url(#tableShadow)" id="tbl_owner_profiles">
+    <!-- Table Outer Box -->
+    <rect width="360" height="256" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 355,0 Q 360,0 360,5 L 360,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ owner_profiles
+    </text>
+    <text x="348" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row user_id -->
+      <rect y="0" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="360" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        user_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row id_card_number -->
+      <rect y="24" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="360" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        id_card_number (UK)
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(20)
+      </text>
+      <!-- Row id_card_front_url -->
+      <rect y="48" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="48" x2="360" y2="48" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="64" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="64" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        id_card_front_url
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="64" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(500)
+      </text>
+      <!-- Row id_card_back_url -->
+      <rect y="72" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="72" x2="360" y2="72" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="88" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="88" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        id_card_back_url
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="88" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(500)
+      </text>
+      <!-- Row bank_name -->
+      <rect y="96" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="96" x2="360" y2="96" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="112" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="112" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        bank_name
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="112" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(100)
+      </text>
+      <!-- Row bank_account_number -->
+      <rect y="120" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="120" x2="360" y2="120" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="136" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="136" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        bank_account_number
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="136" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(30)
+      </text>
+      <!-- Row bank_account_name -->
+      <rect y="144" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="144" x2="360" y2="144" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="160" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="160" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        bank_account_name
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="160" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(150)
+      </text>
+      <!-- Row verification_status -->
+      <rect y="168" width="360" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="168" x2="360" y2="168" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="184" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="184" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        verification_status
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="184" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(20)
+      </text>
+      <!-- Row verified_by -->
+      <rect y="192" width="360" height="24" fill="#ffffff"/>
+      <line x1="0" y1="192" x2="360" y2="192" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="208" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="208" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        verified_by
+      </text>
+      
+      <!-- Column Type -->
+      <text x="348" y="208" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: cars -->
+  <g transform="translate(500, 60)" filter="url(#tableShadow)" id="tbl_cars">
+    <!-- Table Outer Box -->
+    <rect width="380" height="496" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 375,0 Q 380,0 380,5 L 380,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ cars
+    </text>
+    <text x="368" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row car_id -->
+      <rect y="0" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="380" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        car_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row owner_id -->
+      <rect y="24" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="380" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        owner_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row brand -->
+      <rect y="48" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="48" x2="380" y2="48" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="64" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="64" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        brand
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="64" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(50)
+      </text>
+      <!-- Row model -->
+      <rect y="72" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="72" x2="380" y2="72" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="88" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="88" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        model
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="88" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(100)
+      </text>
+      <!-- Row year -->
+      <rect y="96" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="96" x2="380" y2="96" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="112" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="112" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        year
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="112" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        SMALLINT
+      </text>
+      <!-- Row license_plate -->
+      <rect y="120" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="120" x2="380" y2="120" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="136" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="136" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        license_plate (UK)
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="136" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(20)
+      </text>
+      <!-- Row seats -->
+      <rect y="144" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="144" x2="380" y2="144" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="160" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="160" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        seats
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="160" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        SMALLINT
+      </text>
+      <!-- Row transmission -->
+      <rect y="168" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="168" x2="380" y2="168" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="184" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="184" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        transmission
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="184" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(20)
+      </text>
+      <!-- Row fuel_type -->
+      <rect y="192" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="192" x2="380" y2="192" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="208" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="208" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        fuel_type
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="208" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(20)
+      </text>
+      <!-- Row price_per_day -->
+      <rect y="216" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="216" x2="380" y2="216" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="232" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="232" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        price_per_day
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="232" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        NUMERIC(12,2)
+      </text>
+      <!-- Row address -->
+      <rect y="240" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="240" x2="380" y2="240" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="256" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="256" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        address
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="256" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TEXT
+      </text>
+      <!-- Row latitude -->
+      <rect y="264" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="264" x2="380" y2="264" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="280" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="280" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        latitude
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="280" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        NUMERIC(10,7)
+      </text>
+      <!-- Row longitude -->
+      <rect y="288" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="288" x2="380" y2="288" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="304" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="304" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        longitude
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="304" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        NUMERIC(10,7)
+      </text>
+      <!-- Row status -->
+      <rect y="312" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="312" x2="380" y2="312" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="328" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="328" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        status
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="328" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(30)
+      </text>
+      <!-- Row has_driver_service -->
+      <rect y="336" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="336" x2="380" y2="336" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="352" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="352" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        has_driver_service
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="352" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BOOLEAN
+      </text>
+      <!-- Row driver_fee_per_day -->
+      <rect y="360" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="360" x2="380" y2="360" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="376" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="376" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        driver_fee_per_day
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="376" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        NUMERIC(12,2)
+      </text>
+      <!-- Row rating -->
+      <rect y="384" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="384" x2="380" y2="384" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="400" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="400" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        rating
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="400" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        NUMERIC(3,2)
+      </text>
+      <!-- Row rating_count -->
+      <rect y="408" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="408" x2="380" y2="408" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="424" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="424" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        rating_count
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="424" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        INT
+      </text>
+      <!-- Row created_at -->
+      <rect y="432" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="432" x2="380" y2="432" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="448" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="448" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        created_at
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="448" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TIMESTAMP
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: car_images -->
+  <g transform="translate(500, 640)" filter="url(#tableShadow)" id="tbl_car_images">
+    <!-- Table Outer Box -->
+    <rect width="380" height="136" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 375,0 Q 380,0 380,5 L 380,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ car_images
+    </text>
+    <text x="368" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row image_id -->
+      <rect y="0" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="380" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        image_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row car_id -->
+      <rect y="24" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="380" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        car_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row image_url -->
+      <rect y="48" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="48" x2="380" y2="48" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="64" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="64" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        image_url
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="64" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(500)
+      </text>
+      <!-- Row is_thumbnail -->
+      <rect y="72" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="72" x2="380" y2="72" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="88" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="88" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        is_thumbnail
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="88" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BOOLEAN
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: car_calendar_blocks -->
+  <g transform="translate(500, 800)" filter="url(#tableShadow)" id="tbl_car_calendar_blocks">
+    <!-- Table Outer Box -->
+    <rect width="380" height="160" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 375,0 Q 380,0 380,5 L 380,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ car_calendar_blocks
+    </text>
+    <text x="368" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row block_id -->
+      <rect y="0" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="380" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        block_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row car_id -->
+      <rect y="24" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="380" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        car_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row start_date -->
+      <rect y="48" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="48" x2="380" y2="48" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="64" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="64" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        start_date
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="64" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        DATE
+      </text>
+      <!-- Row end_date -->
+      <rect y="72" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="72" x2="380" y2="72" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="88" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="88" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        end_date
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="88" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        DATE
+      </text>
+      <!-- Row reason -->
+      <rect y="96" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="96" x2="380" y2="96" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="112" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="112" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        reason
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="112" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(255)
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: chat_memory -->
+  <g transform="translate(500, 990)" filter="url(#tableShadow)" id="tbl_chat_memory">
+    <!-- Table Outer Box -->
+    <rect width="380" height="160" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 375,0 Q 380,0 380,5 L 380,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ chat_memory
+    </text>
+    <text x="368" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row memory_id -->
+      <rect y="0" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="380" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        memory_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row user_id -->
+      <rect y="24" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="380" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        user_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row session_id -->
+      <rect y="48" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="48" x2="380" y2="48" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="64" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="64" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        session_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="64" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(100)
+      </text>
+      <!-- Row role -->
+      <rect y="72" width="380" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="72" x2="380" y2="72" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="88" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="88" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        role
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="88" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(20)
+      </text>
+      <!-- Row content -->
+      <rect y="96" width="380" height="24" fill="#ffffff"/>
+      <line x1="0" y1="96" x2="380" y2="96" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="112" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="112" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        content
+      </text>
+      
+      <!-- Column Type -->
+      <text x="368" y="112" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TEXT
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: rentals -->
+  <g transform="translate(960, 60)" filter="url(#tableShadow)" id="tbl_rentals">
+    <!-- Table Outer Box -->
+    <rect width="420" height="472" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 415,0 Q 420,0 420,5 L 420,34 L 0,34 Z" fill="url(#starHeaderGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ rentals
+    </text>
+    <text x="408" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row rental_id -->
+      <rect y="0" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="420" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        rental_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row renter_id -->
+      <rect y="24" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="420" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        renter_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row car_id -->
+      <rect y="48" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="48" x2="420" y2="48" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="64" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="64" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        car_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="64" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row start_date -->
+      <rect y="72" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="72" x2="420" y2="72" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="88" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="88" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        start_date
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="88" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        DATE
+      </text>
+      <!-- Row end_date -->
+      <rect y="96" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="96" x2="420" y2="96" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="112" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="112" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        end_date
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="112" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        DATE
+      </text>
+      <!-- Row price_per_day -->
+      <rect y="120" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="120" x2="420" y2="120" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="136" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="136" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        price_per_day
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="136" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        NUMERIC(12,2)
+      </text>
+      <!-- Row total_amount -->
+      <rect y="144" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="144" x2="420" y2="144" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="160" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="160" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        total_amount
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="160" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        NUMERIC(12,2)
+      </text>
+      <!-- Row deposit_amount -->
+      <rect y="168" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="168" x2="420" y2="168" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="184" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="184" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        deposit_amount
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="184" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        NUMERIC(12,2)
+      </text>
+      <!-- Row remaining_amount -->
+      <rect y="192" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="192" x2="420" y2="192" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="208" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="208" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        remaining_amount
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="208" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        NUMERIC(12,2)
+      </text>
+      <!-- Row with_driver -->
+      <rect y="216" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="216" x2="420" y2="216" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="232" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="232" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        with_driver
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="232" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BOOLEAN
+      </text>
+      <!-- Row driver_fee -->
+      <rect y="240" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="240" x2="420" y2="240" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="256" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="256" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        driver_fee
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="256" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        NUMERIC(12,2)
+      </text>
+      <!-- Row status -->
+      <rect y="264" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="264" x2="420" y2="264" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="280" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="280" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        status
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="280" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(30)
+      </text>
+      <!-- Row payment_expires_at -->
+      <rect y="288" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="288" x2="420" y2="288" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="304" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="304" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        payment_expires_at
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="304" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TIMESTAMP
+      </text>
+      <!-- Row overdue_hours -->
+      <rect y="312" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="312" x2="420" y2="312" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="328" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="328" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        overdue_hours
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="328" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        INT
+      </text>
+      <!-- Row penalty_fee -->
+      <rect y="336" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="336" x2="420" y2="336" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="352" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="352" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        penalty_fee
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="352" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        NUMERIC(12,2)
+      </text>
+      <!-- Row actual_return_time -->
+      <rect y="360" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="360" x2="420" y2="360" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="376" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="376" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        actual_return_time
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="376" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TIMESTAMP
+      </text>
+      <!-- Row is_blacklisted_triggered -->
+      <rect y="384" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="384" x2="420" y2="384" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="400" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="400" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        is_blacklisted_triggered
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="400" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BOOLEAN
+      </text>
+      <!-- Row reject_reason -->
+      <rect y="408" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="408" x2="420" y2="408" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="424" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="424" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        reject_reason
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="424" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TEXT
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: rental_inspections -->
+  <g transform="translate(960, 640)" filter="url(#tableShadow)" id="tbl_rental_inspections">
+    <!-- Table Outer Box -->
+    <rect width="420" height="208" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 415,0 Q 420,0 420,5 L 420,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ rental_inspections
+    </text>
+    <text x="408" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row inspection_id -->
+      <rect y="0" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="420" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        inspection_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row rental_id -->
+      <rect y="24" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="420" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        rental_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row type -->
+      <rect y="48" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="48" x2="420" y2="48" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="64" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="64" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        type
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="64" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(20)
+      </text>
+      <!-- Row odo_reading -->
+      <rect y="72" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="72" x2="420" y2="72" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="88" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="88" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        odo_reading
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="88" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        INT
+      </text>
+      <!-- Row fuel_percentage -->
+      <rect y="96" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="96" x2="420" y2="96" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="112" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="112" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        fuel_percentage
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="112" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        SMALLINT
+      </text>
+      <!-- Row images_json -->
+      <rect y="120" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="120" x2="420" y2="120" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="136" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="136" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        images_json
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="136" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TEXT
+      </text>
+      <!-- Row damages_notes -->
+      <rect y="144" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="144" x2="420" y2="144" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="160" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="160" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        damages_notes
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="160" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TEXT
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: reviews -->
+  <g transform="translate(960, 880)" filter="url(#tableShadow)" id="tbl_reviews">
+    <!-- Table Outer Box -->
+    <rect width="420" height="184" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 415,0 Q 420,0 420,5 L 420,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ reviews
+    </text>
+    <text x="408" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row review_id -->
+      <rect y="0" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="420" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        review_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row rental_id -->
+      <rect y="24" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="420" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        rental_id (UK)
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row car_id -->
+      <rect y="48" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="48" x2="420" y2="48" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="64" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="64" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        car_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="64" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row renter_id -->
+      <rect y="72" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="72" x2="420" y2="72" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="88" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="88" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        renter_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="88" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row rating -->
+      <rect y="96" width="420" height="24" fill="#ffffff"/>
+      <line x1="0" y1="96" x2="420" y2="96" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="112" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="112" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        rating
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="112" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        SMALLINT
+      </text>
+      <!-- Row comment -->
+      <rect y="120" width="420" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="120" x2="420" y2="120" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="136" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="136" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        comment
+      </text>
+      
+      <!-- Column Type -->
+      <text x="408" y="136" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TEXT
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: payments -->
+  <g transform="translate(1460, 60)" filter="url(#tableShadow)" id="tbl_payments">
+    <!-- Table Outer Box -->
+    <rect width="400" height="232" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 395,0 Q 400,0 400,5 L 400,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ payments
+    </text>
+    <text x="388" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row payment_id -->
+      <rect y="0" width="400" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="400" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        payment_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row rental_id -->
+      <rect y="24" width="400" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="400" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        rental_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row user_id -->
+      <rect y="48" width="400" height="24" fill="#ffffff"/>
+      <line x1="0" y1="48" x2="400" y2="48" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="64" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="64" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        user_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="64" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row amount -->
+      <rect y="72" width="400" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="72" x2="400" y2="72" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="88" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="88" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        amount
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="88" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        NUMERIC(12,2)
+      </text>
+      <!-- Row payment_type -->
+      <rect y="96" width="400" height="24" fill="#ffffff"/>
+      <line x1="0" y1="96" x2="400" y2="96" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="112" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="112" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        payment_type
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="112" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(30)
+      </text>
+      <!-- Row payment_method -->
+      <rect y="120" width="400" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="120" x2="400" y2="120" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="136" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="136" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        payment_method
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="136" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(30)
+      </text>
+      <!-- Row transaction_id -->
+      <rect y="144" width="400" height="24" fill="#ffffff"/>
+      <line x1="0" y1="144" x2="400" y2="144" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="160" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="160" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        transaction_id (UK)
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="160" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(100)
+      </text>
+      <!-- Row status -->
+      <rect y="168" width="400" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="168" x2="400" y2="168" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="184" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="184" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        status
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="184" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(20)
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: rental_disputes -->
+  <g transform="translate(1460, 410)" filter="url(#tableShadow)" id="tbl_rental_disputes">
+    <!-- Table Outer Box -->
+    <rect width="400" height="256" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 395,0 Q 400,0 400,5 L 400,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ rental_disputes
+    </text>
+    <text x="388" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row dispute_id -->
+      <rect y="0" width="400" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="400" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        dispute_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row rental_id -->
+      <rect y="24" width="400" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="400" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        rental_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row reporter_id -->
+      <rect y="48" width="400" height="24" fill="#ffffff"/>
+      <line x1="0" y1="48" x2="400" y2="48" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="64" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="64" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        reporter_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="64" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row dispute_type -->
+      <rect y="72" width="400" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="72" x2="400" y2="72" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="88" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="88" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        dispute_type
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="88" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(50)
+      </text>
+      <!-- Row reason -->
+      <rect y="96" width="400" height="24" fill="#ffffff"/>
+      <line x1="0" y1="96" x2="400" y2="96" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="112" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="112" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        reason
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="112" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TEXT
+      </text>
+      <!-- Row evidence_images_json -->
+      <rect y="120" width="400" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="120" x2="400" y2="120" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="136" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="136" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        evidence_images_json
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="136" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TEXT
+      </text>
+      <!-- Row compensation_amount -->
+      <rect y="144" width="400" height="24" fill="#ffffff"/>
+      <line x1="0" y1="144" x2="400" y2="144" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="160" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="160" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        compensation_amount
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="160" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        NUMERIC(12,2)
+      </text>
+      <!-- Row status -->
+      <rect y="168" width="400" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="168" x2="400" y2="168" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="184" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="184" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        status
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="184" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(20)
+      </text>
+      <!-- Row resolved_by -->
+      <rect y="192" width="400" height="24" fill="#ffffff"/>
+      <line x1="0" y1="192" x2="400" y2="192" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="208" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="208" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        resolved_by
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="208" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+    </g>
+  </g>
+
+  <!-- TABLE: notifications -->
+  <g transform="translate(1460, 790)" filter="url(#tableShadow)" id="tbl_notifications">
+    <!-- Table Outer Box -->
+    <rect width="400" height="184" rx="5" fill="#ffffff" stroke="#335588" stroke-width="1.5"/>
+    
+    <!-- Table Header (Workbench Style) -->
+    <path d="M 0,5 Q 0,0 5,0 L 395,0 Q 400,0 400,5 L 400,34 L 0,34 Z" fill="url(#headerGrad)"/>
+    
+    <!-- Table Header Icon & Title -->
+    <text x="12" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, monospace" font-size="13" font-weight="700" fill="#ffffff">
+      🗄️ notifications
+    </text>
+    <text x="388" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="#93c5fd" text-anchor="end">
+      TABLE
+    </text>
+    
+    <!-- Table Columns -->
+    <g transform="translate(0, 34)">
+      <!-- Row notification_id -->
+      <rect y="0" width="400" height="24" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="400" y2="0" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="16" font-size="10" fill="#b45309">🔑</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="16" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#0f172a">
+        notification_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="16" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row user_id -->
+      <rect y="24" width="400" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="24" x2="400" y2="24" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="40" font-size="10" fill="#2563eb">🔗</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="40" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="700" fill="#1e3a8a">
+        user_id
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="40" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BIGINT
+      </text>
+      <!-- Row title -->
+      <rect y="48" width="400" height="24" fill="#ffffff"/>
+      <line x1="0" y1="48" x2="400" y2="48" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="64" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="64" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        title
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="64" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(150)
+      </text>
+      <!-- Row content -->
+      <rect y="72" width="400" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="72" x2="400" y2="72" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="88" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="88" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        content
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="88" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        TEXT
+      </text>
+      <!-- Row type -->
+      <rect y="96" width="400" height="24" fill="#ffffff"/>
+      <line x1="0" y1="96" x2="400" y2="96" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="112" font-size="10" fill="#64748b">🔷</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="112" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        type
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="112" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        VARCHAR(50)
+      </text>
+      <!-- Row is_read -->
+      <rect y="120" width="400" height="24" fill="#f8fafc"/>
+      <line x1="0" y1="120" x2="400" y2="120" stroke="#e2e8f0" stroke-width="0.8"/>
+      
+      <!-- Key Icon -->
+      <text x="10" y="136" font-size="10" fill="#64748b">◇</text>
+      
+      <!-- Column Name -->
+      <text x="28" y="136" font-family="Consolas, Monaco, monospace" font-size="11.5" font-weight="500" fill="#334155">
+        is_read
+      </text>
+      
+      <!-- Column Type -->
+      <text x="388" y="136" font-family="Consolas, Monaco, monospace" font-size="10.5" font-weight="500" fill="#64748b" text-anchor="end">
+        BOOLEAN
+      </text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Core Database Tables</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f8fafc;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 520px;
+    }
+    .tables-container {
+      display: flex;
+      gap: 16px;
+      width: 1200px;
+    }
+    .table-card {
+      flex: 1;
+      background: #1e293b;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border: 1px solid #334155;
+    }
+    .table-header {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #ffffff;
+      padding: 10px 14px;
+      font-size: 15px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #38bdf8;
+    }
+    .table-body {
+      padding: 12px 14px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 11.5px;
+      line-height: 1.65;
+      color: #e2e8f0;
+    }
+    .field-pk {
+      color: #facc15;
+      font-weight: bold;
+    }
+    .field-fk {
+      color: #38bdf8;
+      font-weight: bold;
+    }
+    .field-type {
+      color: #94a3b8;
+      font-size: 11px;
+    }
+    .field-key {
+      color: #ffffff;
+    }
+    .status-highlight {
+      color: #4ade80;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="tables-container">
+    
+    <!-- TABLE 1: USERS -->
+    <div class="table-card">
+      <div class="table-header">users</div>
+      <div class="table-body">
+        <div><span class="field-pk">&#x2022; id:</span> <span class="field-type">bigint UNSIGNED (PK)</span></div>
+        <div><span class="field-key">&#x2022; username:</span> <span class="field-type">varchar(100)</span></div>
+        <div><span class="field-key">&#x2022; email:</span> <span class="field-type">varchar(150) UNIQUE</span></div>
+        <div><span class="field-key">&#x2022; phone:</span> <span class="field-type">varchar(20)</span></div>
+        <div><span class="field-key">&#x2022; password_hash:</span> <span class="field-type">varchar(255)</span></div>
+        <div><span class="field-key">&#x2022; full_name:</span> <span class="field-type">varchar(150)</span></div>
+        <div><span class="field-key">&#x2022; id_card_number:</span> <span class="field-type">varchar(50)</span></div>
+        <div><span class="field-key">&#x2022; token_version:</span> <span class="field-type">int DEFAULT 0</span></div>
+        <div><span class="status-highlight">&#x2022; status:</span> <span class="field-type">varchar(30)</span></div>
+        <div><span class="field-key">&#x2022; failed_attempts:</span> <span class="field-type">int DEFAULT 0</span></div>
+        <div><span class="field-key">&#x2022; locked_until:</span> <span class="field-type">timestamp NULL</span></div>
+        <div><span class="field-key">&#x2022; created_at:</span> <span class="field-type">timestamp</span></div>
+      </div>
+    </div>
+
+    <!-- TABLE 2: CARS -->
+    <div class="table-card">
+      <div class="table-header">cars</div>
+      <div class="table-body">
+        <div><span class="field-pk">&#x2022; id:</span> <span class="field-type">bigint UNSIGNED (PK)</span></div>
+        <div><span class="field-fk">&#x2022; owner_id:</span> <span class="field-type">bigint (FK)</span></div>
+        <div><span class="field-key">&#x2022; plate_number:</span> <span class="field-type">varchar(20) UNIQUE</span></div>
+        <div><span class="field-key">&#x2022; brand:</span> <span class="field-type">varchar(50)</span></div>
+        <div><span class="field-key">&#x2022; model:</span> <span class="field-type">varchar(50)</span></div>
+        <div><span class="field-key">&#x2022; year:</span> <span class="field-type">int</span></div>
+        <div><span class="field-key">&#x2022; seats:</span> <span class="field-type">int</span></div>
+        <div><span class="field-key">&#x2022; transmission:</span> <span class="field-type">varchar(30)</span></div>
+        <div><span class="field-key">&#x2022; price_per_day:</span> <span class="field-type">decimal(12,2)</span></div>
+        <div><span class="field-key">&#x2022; province:</span> <span class="field-type">varchar(100)</span></div>
+        <div><span class="status-highlight">&#x2022; status:</span> <span class="field-type">varchar(30)</span></div>
+        <div><span class="field-key">&#x2022; rating:</span> <span class="field-type">double(3,2)</span></div>
+      </div>
+    </div>
+
+    <!-- TABLE 3: RENTALS -->
+    <div class="table-card">
+      <div class="table-header">rentals</div>
+      <div class="table-body">
+        <div><span class="field-pk">&#x2022; id:</span> <span class="field-type">bigint UNSIGNED (PK)</span></div>
+        <div><span class="field-fk">&#x2022; car_id:</span> <span class="field-type">bigint (FK)</span></div>
+        <div><span class="field-fk">&#x2022; renter_id:</span> <span class="field-type">bigint (FK)</span></div>
+        <div><span class="field-key">&#x2022; start_date:</span> <span class="field-type">timestamp</span></div>
+        <div><span class="field-key">&#x2022; end_date:</span> <span class="field-type">timestamp</span></div>
+        <div><span class="field-key">&#x2022; total_days:</span> <span class="field-type">int</span></div>
+        <div><span class="field-key">&#x2022; total_price:</span> <span class="field-type">decimal(12,2)</span></div>
+        <div><span class="field-key">&#x2022; deposit_amount:</span> <span class="field-type">decimal(12,2)</span></div>
+        <div><span class="status-highlight">&#x2022; status:</span> <span class="field-type">varchar(50)</span></div>
+        <div><span class="field-key">&#x2022; payment_expires:</span> <span class="field-type">timestamp (45m)</span></div>
+        <div><span class="field-key">&#x2022; overdue_hours:</span> <span class="field-type">int DEFAULT 0</span></div>
+        <div><span class="field-key">&#x2022; penalty_fee:</span> <span class="field-type">decimal(12,2)</span></div>
+      </div>
+    </div>
+
+    <!-- TABLE 4: PAYMENTS -->
+    <div class="table-card">
+      <div class="table-header">payments</div>
+      <div class="table-body">
+        <div><span class="field-pk">&#x2022; id:</span> <span class="field-type">bigint UNSIGNED (PK)</span></div>
+        <div><span class="field-fk">&#x2022; rental_id:</span> <span class="field-type">bigint (FK)</span></div>
+        <div><span class="field-key">&#x2022; amount:</span> <span class="field-type">decimal(12,2) (30%)</span></div>
+        <div><span class="field-key">&#x2022; payment_type:</span> <span class="field-type">varchar(30)</span></div>
+        <div><span class="field-key">&#x2022; payment_method:</span> <span class="field-type">varchar(30) VietQR</span></div>
+        <div><span class="field-key">&#x2022; transaction_code:</span> <span class="field-type">varchar(100) DSPAY</span></div>
+        <div><span class="field-key">&#x2022; qr_code_url:</span> <span class="field-type">varchar(500)</span></div>
+        <div><span class="status-highlight">&#x2022; status:</span> <span class="field-type">varchar(30) PAID</span></div>
+        <div><span class="field-key">&#x2022; paid_at:</span> <span class="field-type">timestamp</span></div>
+        <div><span class="field-key">&#x2022; created_at:</span> <span class="field-type">timestamp</span></div>
+        <div><span class="field-key">&#x2022; updated_at:</span> <span class="field-type">timestamp</span></div>
+        <div><span class="field-key">&#x2022; deleted_at:</span> <span class="field-type">timestamp NULL</span></div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
+
