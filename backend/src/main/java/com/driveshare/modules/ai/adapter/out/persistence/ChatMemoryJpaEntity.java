@@ -1,4 +1,4 @@
-package com.driveshare.modules.ai.entity;
+package com.driveshare.modules.ai.adapter.out.persistence;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,14 +10,14 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "ChatMemoryEntity")
 @Table(
         name = "chat_memory",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_user_session", columnNames = {"user_id", "session_id"})
         }
 )
-public class ChatMemoryEntity {
+public class ChatMemoryJpaEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -56,3 +56,4 @@ public class ChatMemoryEntity {
     @Builder.Default
     private Instant updatedAt = Instant.now();
 }
+

@@ -193,7 +193,7 @@ class AiChatServiceImplTest {
     @Test
     @DisplayName("Admin transcript: Admin can retrieve full transcript of any session regardless of logged-in user")
     void testGetSessionTranscriptForAdmin() {
-        com.driveshare.modules.ai.entity.ChatMemoryEntity entity = com.driveshare.modules.ai.entity.ChatMemoryEntity.builder()
+        com.driveshare.modules.ai.adapter.out.persistence.ChatMemoryJpaEntity entity = com.driveshare.modules.ai.adapter.out.persistence.ChatMemoryJpaEntity.builder()
                 .sessionId("sess-admin-1")
                 .userId(99L)
                 .messages("[{\"role\":\"USER\",\"content\":\"Xin chào\"},{\"role\":\"ASSISTANT\",\"content\":\"Chào bạn!\"}]")

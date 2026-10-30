@@ -1,6 +1,8 @@
-package com.driveshare.modules.rag.controller;
+package com.driveshare.modules.rag.adapter.in.web;
 
 import com.driveshare.common.dto.ApiResponse;
+import com.driveshare.modules.rag.application.port.in.AskDocumentRagUseCase;
+import com.driveshare.modules.rag.application.port.in.ManageDocumentUseCase;
 import com.driveshare.modules.rag.dto.RagAskRequest;
 import com.driveshare.modules.rag.dto.RagAskResponse;
 import com.driveshare.modules.rag.dto.RagDocumentDto;
@@ -60,3 +62,4 @@ public class RagDocumentController {
         return ResponseEntity.ok(ApiResponse.success(stats));
     }
 }
+
