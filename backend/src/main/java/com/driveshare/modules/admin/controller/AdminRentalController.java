@@ -2,7 +2,7 @@ package com.driveshare.modules.admin.controller;
 
 import com.driveshare.common.dto.ApiResponse;
 import com.driveshare.modules.admin.dto.response.AdminRentalResponse;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.rental.entity.Rental;
 import com.driveshare.modules.rental.repository.RentalRepository;

@@ -5,7 +5,7 @@ import com.driveshare.common.enums.EPaymentStatus;
 import com.driveshare.common.enums.ERentalStatus;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.payment.dto.request.CreatePaymentRequest;
 import com.driveshare.modules.payment.dto.response.OwnerEarningsResponse;

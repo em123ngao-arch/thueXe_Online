@@ -1,4 +1,4 @@
-package com.driveshare.modules.car.entity;
+package com.driveshare.modules.car.adapter.out.persistence;
 
 import com.driveshare.common.entity.BaseEntity;
 import com.driveshare.common.enums.ECarStatus;
@@ -28,7 +28,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "Car")
 @Table(
         name = "cars",
         indexes = {
@@ -168,3 +168,4 @@ public class Car extends BaseEntity {
     @Column(name = "approved_by")
     private Long approvedBy;
 }
+

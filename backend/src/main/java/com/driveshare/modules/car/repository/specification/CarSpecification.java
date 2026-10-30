@@ -3,7 +3,7 @@ package com.driveshare.modules.car.repository.specification;
 import com.driveshare.common.enums.ECarStatus;
 import com.driveshare.common.enums.ERentalStatus;
 import com.driveshare.modules.car.dto.request.CarSearchRequest;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.rental.entity.Rental;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
@@ -95,7 +95,7 @@ public class CarSpecification {
 
                 // 9.2 Loại trừ xe bị chủ xe chủ động chặn lịch bận (Blackout Dates)
                 Subquery<Long> blockSubquery = query.subquery(Long.class);
-                Root<com.driveshare.modules.car.entity.CarCalendarBlock> blockRoot = blockSubquery.from(com.driveshare.modules.car.entity.CarCalendarBlock.class);
+                Root<com.driveshare.modules.car.adapter.out.persistence.CarCalendarBlock> blockRoot = blockSubquery.from(com.driveshare.modules.car.adapter.out.persistence.CarCalendarBlock.class);
                 blockSubquery.select(blockRoot.get("carId"));
 
                 List<Predicate> blockPredicates = new ArrayList<>();

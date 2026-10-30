@@ -1,4 +1,4 @@
-package com.driveshare.modules.car.entity;
+package com.driveshare.modules.car.adapter.out.persistence;
 
 import com.driveshare.common.enums.EDocumentType;
 import com.driveshare.common.enums.EVerificationStatus;
@@ -12,7 +12,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "CarDocument")
 @Table(name = "car_documents")
 public class CarDocument {
 
@@ -50,3 +50,4 @@ public class CarDocument {
     @Builder.Default
     private Instant createdAt = Instant.now();
 }
+

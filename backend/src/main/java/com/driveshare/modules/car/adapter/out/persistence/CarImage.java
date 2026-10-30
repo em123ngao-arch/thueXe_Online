@@ -1,4 +1,4 @@
-package com.driveshare.modules.car.entity;
+package com.driveshare.modules.car.adapter.out.persistence;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,7 +10,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "CarImage")
 @Table(name = "car_images")
 public class CarImage {
 
@@ -34,3 +34,4 @@ public class CarImage {
     @Builder.Default
     private Instant createdAt = Instant.now();
 }
+

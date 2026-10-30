@@ -3,7 +3,7 @@ package com.driveshare.concurrency;
 import com.driveshare.common.enums.ERentalStatus;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.rental.dto.response.RentalSummaryResponse;
 import com.driveshare.modules.rental.entity.Rental;

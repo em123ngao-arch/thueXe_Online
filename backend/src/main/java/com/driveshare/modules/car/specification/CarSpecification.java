@@ -3,7 +3,7 @@ package com.driveshare.modules.car.specification;
 import com.driveshare.common.enums.ECarStatus;
 import com.driveshare.common.enums.ERentalStatus;
 import com.driveshare.modules.car.dto.request.CarSearchFilterRequest;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.rental.entity.Rental;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;

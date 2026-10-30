@@ -1,6 +1,6 @@
 package com.driveshare.modules.car.dto.response;
 
-import com.driveshare.modules.car.entity.CarImage;
+import com.driveshare.modules.car.adapter.out.persistence.CarImage;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

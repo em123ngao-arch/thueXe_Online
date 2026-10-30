@@ -26,7 +26,7 @@ import com.driveshare.common.enums.ECarStatus;
 import com.driveshare.common.enums.EFuelType;
 import com.driveshare.common.enums.ERentalStatus;
 import com.driveshare.common.enums.ETransmission;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.common.enums.EInspectionType;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.notification.adapter.out.persistence.Notification;

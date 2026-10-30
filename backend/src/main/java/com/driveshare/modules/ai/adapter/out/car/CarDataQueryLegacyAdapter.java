@@ -3,7 +3,7 @@ package com.driveshare.modules.ai.adapter.out.car;
 import com.driveshare.common.enums.ECarStatus;
 import com.driveshare.modules.ai.application.port.out.CarDataQueryPort;
 import com.driveshare.modules.ai.application.result.CarSummaryResult;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;

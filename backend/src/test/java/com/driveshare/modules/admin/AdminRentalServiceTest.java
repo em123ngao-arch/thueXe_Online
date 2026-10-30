@@ -12,7 +12,7 @@ import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.admin.dto.response.OverdueRentalResponse;
 import com.driveshare.modules.admin.dto.response.ViolationDossierResponse;
 import com.driveshare.modules.admin.service.impl.AdminRentalServiceImpl;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.payment.entity.Payment;
 import com.driveshare.modules.payment.repository.PaymentRepository;

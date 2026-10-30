@@ -7,7 +7,7 @@ import com.driveshare.common.enums.ERole;
 import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.common.service.CloudinaryService;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.notification.repository.NotificationRepository;
 import com.driveshare.modules.payment.entity.Payment;

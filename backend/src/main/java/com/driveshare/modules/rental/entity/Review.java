@@ -1,6 +1,6 @@
 package com.driveshare.modules.rental.entity;
 
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.user.adapter.out.persistence.User;
 import jakarta.persistence.*;
 import lombok.*;

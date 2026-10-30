@@ -8,7 +8,7 @@ import com.driveshare.modules.ai.dto.response.ChatReplyResponse;
 import com.driveshare.modules.ai.repository.ChatMemoryRepository;
 import com.driveshare.modules.ai.service.GeminiService;
 import com.driveshare.modules.ai.service.impl.AiChatServiceImpl;
-import com.driveshare.modules.car.entity.Car;
+import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;

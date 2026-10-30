@@ -1,4 +1,4 @@
-package com.driveshare.modules.car.entity;
+package com.driveshare.modules.car.adapter.out.persistence;
 
 import com.driveshare.common.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -15,7 +15,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "CarCalendarBlock")
 @Table(
         name = "car_calendar_blocks",
         indexes = {
@@ -46,3 +46,4 @@ public class CarCalendarBlock extends BaseEntity {
     @Column(name = "reason", length = 255)
     private String reason;
 }
+

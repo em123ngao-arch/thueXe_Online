@@ -1,4 +1,4 @@
-package com.driveshare.modules.car.controller;
+package com.driveshare.modules.car.adapter.in.web;
 
 import com.driveshare.common.dto.ApiResponse;
 import com.driveshare.common.dto.PageResponse;
