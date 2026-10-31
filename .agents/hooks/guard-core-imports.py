@@ -1,26 +1,22 @@
 #!/usr/bin/env python3
-"""PreToolUse guard: keep framework imports out of the `core` module.
+"""PreToolUse guard: keep framework imports out of the `domain` layer.
 
-`core` is the pure domain + application module. ArchUnit enforces this after the fact
-(HexagonalArchitectureTest rules 1-3); this catches it before the ~2 minute build.
-
-The forbidden set is exactly what ArchUnit enforces — no stricter. `jakarta.validation`
-is deliberately absent: ArchUnit permits it in `core`, so blocking it here would reject
-code the build accepts.
+`domain` is pure Java business models and policies. ArchUnit enforces this
+(ArchitectureRulesTest rules 1-2); this hook catches violations immediately.
 """
 
 import json
 import re
 import sys
 
-# Anchored to core/src so test sources are covered too; app/ is never inspected.
-CORE_PATH = re.compile(r"(^|/)core/src/")
+CORE_PATH = re.compile(r"(^|[/\\])(com[/\\]driveshare[/\\]modules[/\\][^/\\]+[/\\]domain|core[/\\]src)[/\\]")
 
 FORBIDDEN = re.compile(
     r"""(?x)
     org\.springframework
   | jakarta\.persistence | javax\.persistence | org\.hibernate
   | jakarta\.servlet      | javax\.servlet
+  | jakarta\.validation   | javax\.validation
   | io\.jsonwebtoken
   | com\.fasterxml\.jackson
     """
@@ -57,10 +53,9 @@ def main():
                 "permissionDecisionReason": (
                     "Blocked: "
                     + ", ".join(hits)
-                    + " cannot appear in the `core` module. `core` is pure Java 21 with no "
-                    "Spring, JPA, servlet or Jackson on its classpath. Introduce a port in "
-                    "`core.application.port.out` and implement the adapter under "
-                    "`app.adapter.out`, or move this code to `app`."
+                    + " cannot appear in the `domain` layer. `domain` must be pure Java 21 with no "
+                    "Spring, JPA, validation, servlet or Jackson. Introduce an Inbound/Outbound Port in "
+                    "`application.port` and implement the infrastructure logic under `adapter`."
                 ),
             }
         },

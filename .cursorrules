@@ -1,0 +1,40 @@
+# DriveShare Cursor AI Rules (.cursorrules)
+# Architecture: Spring Boot Hexagonal Modular Architecture (Ports & Adapters)
+
+You are an expert software engineer pair-programming on DriveShare (Spring Boot 3.3.4, Java 21, PostgreSQL 16).
+All modules in `backend/src/main/java/com/driveshare/modules/` strictly follow Hexagonal Architecture.
+
+## 1. Hexagonal Layering & Package Structure
+Each module (`car`, `rental`, `payment`, `user`, `auth`, `admin`, `ai`, `rag`, `notification`, `oauth2`, `health`) has 3 layers:
+
+1. **`domain/` (Core Layer - PURE JAVA)**
+   - Contains immutable Domain Models/Records (`*Record.java`) and Domain Policies (`*Policy.java`).
+   - STRICT BAN: Absolutely NO `org.springframework.*`, `jakarta.persistence.*`, `jakarta.validation.*`, `org.hibernate.*`, `com.fasterxml.jackson.*`.
+   - Domain must not depend on Application or Adapter layers.
+
+2. **`application/` (Use Case & Ports Layer)**
+   - `port/in/`: Inbound interfaces (Use Cases) called by Controllers or other modules.
+   - `port/out/`: Outbound interfaces (SPIs) for DB access, payment gateways, email, etc.
+   - `usecase/`: Implementations of Inbound Ports.
+   - `command/`, `result/`: Parameter and return objects.
+   - STRICT BAN: NO `jakarta.persistence.*`, NO `org.springframework.data.*`, NO imports from `adapter.*`.
+
+3. **`adapter/` (Infrastructure Layer)**
+   - `in/web/`: REST Controllers (`@RestController`).
+     * CRITICAL RULE: Controllers MUST ONLY inject and call Inbound Ports (`application.port.in.*`).
+     * BAN: Controllers MUST NEVER inject JPA Repositories or Persistence Adapters directly.
+   - `out/persistence/`: JPA Entities (`@Entity`), Spring Data Repositories (`JpaRepository`), Mappers, and Outbound Port Implementations.
+
+## 2. Cross-Module Communication Rule
+- Modules must NEVER access another module's internal use case implementations, domain classes, or persistence adapters.
+- Cross-module calls MUST go through the target module's `application.port.in.*`, commands, results, or public DTOs.
+
+## 3. API Response & Error Handling Conventions
+- Controllers must return `ResponseEntity<ApiResponse<T>>`.
+- Always wrap successful results in `ApiResponse.success(data)` or `ApiResponse.created(data)`.
+- Throw `AppException(ErrorCode.XYZ)` for business errors (handled globally by `GlobalExceptionHandler`).
+
+## 4. Verification
+Before completing any task, ensure that all tests pass:
+`cd backend; .\mvnw.cmd test`
+ArchUnit rule violations in `ArchitectureRulesTest.java` will fail the build immediately if boundaries are breached.
