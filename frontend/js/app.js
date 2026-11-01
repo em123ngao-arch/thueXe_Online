@@ -799,8 +799,8 @@ const App = {
 
         const res = await CarAPI.searchCars(params);
         // Backend trả dạng: { data: { items: [...], pagination: {...} } }
-        const items = res?.data?.items || res?.data?.content || res?.result?.items || [];
-        if (items.length > 0) {
+        if (res && (res.success || res.code === 200 || Array.isArray(res?.data?.items) || Array.isArray(res?.result?.items))) {
+          const items = res?.data?.items || res?.data?.content || res?.result?.items || [];
           carsFromApi = items;
         }
       } catch (err) {
@@ -809,7 +809,7 @@ const App = {
     }
 
     let filtered = [];
-    if (carsFromApi) {
+    if (carsFromApi !== null) {
       filtered = [...carsFromApi];
 
       // Lọc theo Số chỗ
