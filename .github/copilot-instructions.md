@@ -28,3 +28,4 @@ Under `backend/src/main/java/com/driveshare/modules/<module>/`:
 - REST endpoints return `ResponseEntity<ApiResponse<T>>`.
 - Throw `AppException(ErrorCode.XYZ)` for domain and application errors.
 - Always run `cd backend; ./mvnw test` to verify that `ArchitectureRulesTest.java` (7 ArchUnit rules) passes.
+

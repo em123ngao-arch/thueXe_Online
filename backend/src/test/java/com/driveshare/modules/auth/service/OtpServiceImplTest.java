@@ -42,7 +42,7 @@ class OtpServiceImplTest {
     private static final String RAW_OTP = "123456";
 
     @Test
-    @DisplayName("1. Gửi OTP thành công: sinh mã 6 số, trả về masked format 123*** và TTL 120s")
+    @DisplayName("1. Gửi OTP thành công: sinh mã 6 số, trả về masked format 123*** và TTL 300s")
     void sendOtp_Success_GeneratesMaskedFormatAndSaves() {
         when(emailOtpRepository.save(any(EmailOtpJpaEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -55,7 +55,7 @@ class OtpServiceImplTest {
 
         assertNotNull(response);
         assertEquals(TEST_EMAIL, response.getEmail());
-        assertEquals(120, response.getTtlSeconds());
+        assertEquals(300, response.getTtlSeconds());
         assertNotNull(response.getMaskedOtp());
         assertTrue(response.getMaskedOtp().matches("^[0-9]{3}\\*\\*\\*$"), 
                 "Masked OTP phải có dạng 3 số đầu kèm *** (vd: 123***)");

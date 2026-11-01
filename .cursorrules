@@ -38,3 +38,4 @@ Each module (`car`, `rental`, `payment`, `user`, `auth`, `admin`, `ai`, `rag`, `
 Before completing any task, ensure that all tests pass:
 `cd backend; .\mvnw.cmd test`
 ArchUnit rule violations in `ArchitectureRulesTest.java` will fail the build immediately if boundaries are breached.
+
