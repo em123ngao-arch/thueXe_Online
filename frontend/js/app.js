@@ -844,7 +844,7 @@ const App = {
 
       // Lọc theo Địa điểm / Tỉnh thành (Chuẩn hóa TP. / Thành phố / Tỉnh)
       if (this.currentFilters.city && this.currentFilters.city !== 'ALL') {
-        let cleanCity = this.currentFilters.city.replace(/^(tp\.?|thành phố|tỉnh)\s*/i, '').trim().toLowerCase();
+        let cleanCity = (this.currentFilters.city || '').replace(/^(tp\.?|thành phố|thanh pho|tỉnh|tinh)\s*/i, '').trim().toLowerCase();
         if (/^(hcm|tp\.?hcm|tphcm)$/i.test(cleanCity)) cleanCity = 'hồ chí minh';
         filtered = filtered.filter(c => {
           const prov = (c.province || c.city || '').toLowerCase();

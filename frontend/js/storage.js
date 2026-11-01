@@ -18,13 +18,20 @@ const StorageService = {
   // Khởi tạo dữ liệu nếu chưa có trong LocalStorage
   init() {
     // Tự động dọn sạch cache mock cũ nếu có
-    const cleanedFlag = 'driveshare_mock_cleaned_v7';
+    const cleanedFlag = 'driveshare_mock_cleaned_v8';
     if (!localStorage.getItem(cleanedFlag)) {
       localStorage.removeItem(STORAGE_KEYS.CARS);
       localStorage.removeItem(STORAGE_KEYS.BOOKINGS);
       localStorage.removeItem(STORAGE_KEYS.RENTERS);
       localStorage.removeItem(STORAGE_KEYS.OWNERS);
       localStorage.removeItem(STORAGE_KEYS.USERS);
+      // Xóa custom_backend_url nếu trỏ sai hoặc không hợp lệ khi ở trên Render live
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        const savedUrl = localStorage.getItem('custom_backend_url');
+        if (savedUrl && !savedUrl.includes('driveshare-backend-frug.onrender.com')) {
+          localStorage.removeItem('custom_backend_url');
+        }
+      }
       localStorage.setItem(cleanedFlag, 'true');
     }
 

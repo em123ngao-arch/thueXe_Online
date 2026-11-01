@@ -91,6 +91,7 @@ DriveShareSocket.init();
 
 const API_CONFIG = {
   BASE_URL: (() => {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     try {
       const urlParams = new URLSearchParams(window.location.search);
       const paramBackend = urlParams.get('backend');
@@ -101,10 +102,17 @@ const API_CONFIG = {
         return target;
       }
       const saved = localStorage.getItem('custom_backend_url');
-      if (saved) return saved;
+      if (saved) {
+        // Nếu ở trên Render mà saved trỏ về localhost thì hủy bỏ ngay để tránh Mixed Content / Failed to fetch
+        if (!isLocal && (saved.includes('localhost') || saved.includes('127.0.0.1'))) {
+          localStorage.removeItem('custom_backend_url');
+        } else {
+          return saved;
+        }
+      }
     } catch (e) {}
 
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    if (isLocal) {
       return 'http://localhost:8080/api/v1';
     }
     return 'https://driveshare-backend-frug.onrender.com/api/v1';
