@@ -988,13 +988,17 @@ Bài thuyết trình báo cáo đề tài của nhóm chúng em đến đây là
 Nhóm xin gửi lời cảm ơn chân thành nhất đến quý Thầy Cô trong Hội đồng và đặc biệt là Thầy Trương Thanh Bình.
 Sau đây, nhóm chúng em xin được lắng nghe những ý kiến đóng góp quý báu và sẵn sàng trả lời các câu hỏi phản biện từ quý Thầy Cô. Em xin cảm ơn!""")
 
-    # Lưu duy nhất vào file slide chuẩn của dự án
-    output_path = "docs/Slide_Bao_Ve_Do_An_DriveShare_K4.pptx"
-    try:
-        prs.save(output_path)
-        print(f"[OK] Xuất thành công {len(prs.slides)} slides chuẩn ITC K25 vào: {output_path}")
-    except Exception as e:
-        print(f"[!] Không thể lưu vào {output_path}: {e}")
+    # Lưu vào cả 2 file để người dùng xem trực tiếp file nào cũng có bản mới nhất
+    paths_to_save = [
+        "docs/Slide_Bao_Ve_Do_An_DriveShare_K4.pptx",
+        "docs/Slide_Bao_Ve_Do_An_DriveShare_K4_V4_17Slides.pptx"
+    ]
+    for output_path in paths_to_save:
+        try:
+            prs.save(output_path)
+            print(f"[OK] Xuất thành công {len(prs.slides)} slides chuẩn ITC K25 vào: {output_path}")
+        except Exception as e:
+            print(f"[!] Không thể lưu vào {output_path}: {e}")
 
 
 if __name__ == "__main__":
