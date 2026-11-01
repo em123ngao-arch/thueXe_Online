@@ -2361,7 +2361,11 @@ const AdminService = {
 
     try {
       const apiBase = getAdminApiBase();
-      const token = typeof AuthService !== 'undefined' ? AuthService.getToken() : localStorage.getItem('token');
+      const token = (typeof getAccessToken === 'function' ? getAccessToken() : null) ||
+                    (typeof TokenService !== 'undefined' ? TokenService.getToken() : null) ||
+                    (typeof AuthService !== 'undefined' && typeof AuthService.getToken === 'function' ? AuthService.getToken() : null) ||
+                    localStorage.getItem('access_token') ||
+                    localStorage.getItem('token');
       const body = {
         action: action,
         admin_note: action === 'REFUND_RENTER' 
