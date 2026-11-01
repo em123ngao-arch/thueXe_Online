@@ -1171,7 +1171,7 @@ const App = {
     if (typeof ReviewAPI !== 'undefined' && ReviewAPI.getRentalReview) {
       try {
         const res = await ReviewAPI.getRentalReview(bookingId);
-        if (res && res.success && res.data) {
+        if (res && res.success && res.data && (res.data.reviewId || res.data.id)) {
           existingReview = res.data;
         }
       } catch (_) {}
