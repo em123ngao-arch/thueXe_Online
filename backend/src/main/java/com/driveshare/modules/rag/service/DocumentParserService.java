@@ -113,6 +113,25 @@ public class DocumentParserService {
         return new ParsedDocumentResult(docId, originalFilename, fileType, fileSize, pageCount, chunks);
     }
 
+    public ParsedDocumentResult parseAndChunkText(String text, String documentName) {
+        String docId = UUID.randomUUID().toString();
+        List<DocumentChunk> chunks = new ArrayList<>();
+        List<String> textPieces = splitIntoChunks(text != null ? text.trim() : "", CHUNK_SIZE, CHUNK_OVERLAP);
+        for (int i = 0; i < textPieces.size(); i++) {
+            chunks.add(DocumentChunk.builder()
+                    .chunkId(docId + "_txt_c" + (i + 1))
+                    .documentId(docId)
+                    .documentName(documentName)
+                    .pageNumber(1)
+                    .section("Quy chế & Chính sách DriveShare")
+                    .chunkIndex(chunks.size() + 1)
+                    .content(textPieces.get(i))
+                    .build());
+        }
+        log.info("Đã chia văn bản '{}' thành {} chunks trong RAM", documentName, chunks.size());
+        return new ParsedDocumentResult(docId, documentName, "SYSTEM_TEXT", text != null ? text.length() : 0, 1, chunks);
+    }
+
     private List<String> splitIntoChunks(String text, int chunkSize, int overlap) {
         List<String> result = new ArrayList<>();
         if (text == null || text.isBlank()) {

@@ -477,11 +477,16 @@ public class DataInitializer implements CommandLineRunner {
         // (COMPLETED nhưng CHƯA CÓ REVIEW để người dùng tự tay viết và kiểm tra)
         // =========================================================================
         if (renter != null) {
-            boolean hasRenterCompletedRentals = rentalRepository.findAll().stream()
-                    .anyMatch(r -> r.getRenterId().equals(renter.getUserId()) && r.getStatus() == ERentalStatus.COMPLETED);
+            List<Long> reviewedRentalIds = reviewRepository.findAll().stream()
+                    .map(Review::getRentalId)
+                    .toList();
+            long unreviewedCount = rentalRepository.findAll().stream()
+                    .filter(r -> r.getRenterId().equals(renter.getUserId()) && r.getStatus() == ERentalStatus.COMPLETED)
+                    .filter(r -> !reviewedRentalIds.contains(r.getRentalId()))
+                    .count();
 
-            if (!hasRenterCompletedRentals) {
-                // Chuyến 1 của renter: Thuê Hyundai Accent (30E-888.22) - 3 ngày trước
+            if (unreviewedCount < 4) {
+                // Chuyến 1 của renter: Thuê Hyundai Accent (30E-888.22) - 5 ngày trước
                 Rental renterTrip1 = rentalRepository.save(Rental.builder()
                         .carId(car5.getCarId())
                         .renterId(renter.getUserId())
@@ -497,7 +502,7 @@ public class DataInitializer implements CommandLineRunner {
                         .build());
                 createInspections(renterTrip1, owner, 8200, 8450);
 
-                // Chuyến 2 của renter: Thuê Toyota Vios (43A-666.88) - 5 ngày trước
+                // Chuyến 2 của renter: Thuê Toyota Vios (43A-666.88) - 8 ngày trước
                 Rental renterTrip2 = rentalRepository.save(Rental.builder()
                         .carId(car6.getCarId())
                         .renterId(renter.getUserId())
@@ -513,33 +518,65 @@ public class DataInitializer implements CommandLineRunner {
                         .build());
                 createInspections(renterTrip2, owner, 45200, 45580);
 
-                // Chuyến 3 của renter: Thuê VinFast VF e34 (51H-333.44) - 7 ngày trước
+                // Chuyến 3 của renter: Thuê Ford Everest Titanium (51L-888.99) - 12 ngày trước
                 Rental renterTrip3 = rentalRepository.save(Rental.builder()
-                        .carId(car7.getCarId())
+                        .carId(car8.getCarId())
                         .renterId(renter.getUserId())
-                        .startDate(LocalDate.now().minusDays(10))
-                        .endDate(LocalDate.now().minusDays(8))
+                        .startDate(LocalDate.now().minusDays(12))
+                        .endDate(LocalDate.now().minusDays(9))
+                        .totalDays(3)
+                        .pricePerDay(car8.getPricePerDay())
+                        .totalPrice(car8.getPricePerDay().multiply(BigDecimal.valueOf(3)))
+                        .depositAmount(car8.getPricePerDay().multiply(BigDecimal.valueOf(3)).multiply(new BigDecimal("0.30")))
+                        .status(ERentalStatus.COMPLETED)
+                        .withDriver(true)
+                        .note("Chuyến đi phượt Đà Lạt 7 chỗ gầm cao Ford Everest (Chờ bạn tự viết đánh giá)")
+                        .build());
+                createInspections(renterTrip3, owner, 12000, 12650);
+
+                // Chuyến 4 của renter: Thuê VinFast VF9 Plus (51N-555.66) - 15 ngày trước
+                Rental renterTrip4 = rentalRepository.save(Rental.builder()
+                        .carId(car11.getCarId())
+                        .renterId(renter.getUserId())
+                        .startDate(LocalDate.now().minusDays(15))
+                        .endDate(LocalDate.now().minusDays(13))
                         .totalDays(2)
-                        .pricePerDay(car7.getPricePerDay())
-                        .totalPrice(car7.getPricePerDay().multiply(BigDecimal.valueOf(2)))
-                        .depositAmount(car7.getPricePerDay().multiply(BigDecimal.valueOf(2)).multiply(new BigDecimal("0.30")))
+                        .pricePerDay(car11.getPricePerDay())
+                        .totalPrice(car11.getPricePerDay().multiply(BigDecimal.valueOf(2)))
+                        .depositAmount(car11.getPricePerDay().multiply(BigDecimal.valueOf(2)).multiply(new BigDecimal("0.30")))
                         .status(ERentalStatus.COMPLETED)
                         .withDriver(false)
-                        .note("Chuyến đi nội ô Sài Gòn của Khách thuê Trần Văn B (Chờ bạn tự viết đánh giá)")
+                        .note("Trải nghiệm xe điện hạng sang VinFast VF9 Vũng Tàu (Chờ bạn tự viết đánh giá)")
                         .build());
-                createInspections(renterTrip3, owner, 18200, 18390);
+                createInspections(renterTrip4, owner, 6200, 6480);
+
+                // Chuyến 5 của renter: Thuê BMW 320i Sport Line (51P-777.88) - 18 ngày trước
+                Rental renterTrip5 = rentalRepository.save(Rental.builder()
+                        .carId(car12.getCarId())
+                        .renterId(renter.getUserId())
+                        .startDate(LocalDate.now().minusDays(18))
+                        .endDate(LocalDate.now().minusDays(16))
+                        .totalDays(2)
+                        .pricePerDay(car12.getPricePerDay())
+                        .totalPrice(car12.getPricePerDay().multiply(BigDecimal.valueOf(2)))
+                        .depositAmount(car12.getPricePerDay().multiply(BigDecimal.valueOf(2)).multiply(new BigDecimal("0.30")))
+                        .status(ERentalStatus.COMPLETED)
+                        .withDriver(false)
+                        .note("Chuyến công tác Phan Thiết bằng BMW 320i sang trọng (Chờ bạn tự viết đánh giá)")
+                        .build());
+                createInspections(renterTrip5, owner, 21000, 21420);
 
                 // Thông báo nhắc nhở đánh giá gửi tới tài khoản renter
                 notificationRepository.save(Notification.builder()
                         .userId(renter.getUserId())
-                        .title("⭐ Bạn có chuyến đi vừa hoàn tất!")
-                        .content("Chuyến đi xe Hyundai Accent (30E-888.22) đã hoàn tất. Hãy dành ít giây viết đánh giá và chấm điểm xe nhé!")
+                        .title("⭐ Bạn có các chuyến đi vừa hoàn tất!")
+                        .content("Bạn có 5 chuyến đi đã hoàn tất. Hãy dành ít giây viết đánh giá và chấm điểm sao cho các dòng xe đã trải nghiệm nhé!")
                         .type("RENTAL_COMPLETED")
                         .referenceId(renterTrip1.getRentalId())
                         .isRead(false)
                         .build());
 
-                log.info("Initialized 3 COMPLETED rentals for renter@driveshare.com WITHOUT reviews (Ready for user testing).");
+                log.info("Initialized 5 COMPLETED rentals for renter@driveshare.com WITHOUT reviews (Ready for user testing).");
             }
 
             // Đơn mẫu PENDING để test đặt xe

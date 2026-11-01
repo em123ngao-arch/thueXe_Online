@@ -64,7 +64,7 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
     private static final Locale VI_LOCALE = new Locale("vi", "VN");
     private static final BigDecimal DEPOSIT_RATE = new BigDecimal("0.30");
     private static final BigDecimal REMAINING_RATE = new BigDecimal("0.70");
-    private static final int MAX_SUGGESTED_CARS = 3;
+    private static final int MAX_SUGGESTED_CARS = 6;
 
     // =========================================================================
     // Pattern nhận diện ý định người dùng
@@ -208,15 +208,19 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
         DepositCalculation deposit = null;
         StringBuilder carsRag = new StringBuilder();
 
-        // 1. Chỉ thực hiện RAG và gắn thẻ xe khi người dùng THỰC SỰ có nhu cầu tìm xe
+        // 1. Luôn truy vấn danh sách xe đang hoạt động (tối đa 50 xe) để cung cấp dữ liệu RAG
+        List<CarSummaryResult> allActiveCars = carDataQueryPort.findActiveCars(50);
+        if (allActiveCars == null) {
+            allActiveCars = Collections.emptyList();
+        }
+
+        List<CarSummaryResult> filteredCars = filterCarsByQuery(allActiveCars, lower);
+        if (filteredCars.isEmpty()) {
+            filteredCars = allActiveCars;
+        }
+
+        // 2. Chỉ tạo thẻ xe (Car Cards) hiển thị trên giao diện chat khi người dùng có nhu cầu tìm xe
         if (isSearchingCars) {
-            List<CarSummaryResult> allActiveCars = carDataQueryPort.findActiveCars(50);
-
-            List<CarSummaryResult> filteredCars = filterCarsByQuery(allActiveCars, lower);
-            if (filteredCars.isEmpty()) {
-                filteredCars = allActiveCars;
-            }
-
             List<CarSummaryResult> topCars = filteredCars.stream().limit(MAX_SUGGESTED_CARS).collect(Collectors.toList());
             carCards = topCars.stream().map(this::buildCarCard).collect(Collectors.toList());
 
@@ -233,29 +237,32 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
                     deposit = calculateDeposit(bestMatch, rentalDays, withDriver);
                 }
             }
-
-            // Tạo khối dữ liệu RAG xe thực tế chèn vào System Instruction
-            carsRag.append("\n\n[DỮ LIỆU XE KHẢ DỤNG]\n");
-            for (CarSummaryResult car : topCars) {
-                carsRag.append(String.format("• %s %s (Năm %d) | %d chỗ | Hộp số: %s | Nhiên liệu: %s | Giá: %s/ngày | Đánh giá: %s⭐ (%d lượt) | Địa chỉ: %s | Dịch vụ tài xế: %s\n",
-                        car.getBrand(),
-                        car.getModel(),
-                        car.getYear() != null ? car.getYear() : 2023,
-                        car.getSeats() != null ? car.getSeats() : 5,
-                        translateTransmission(car.getTransmission()),
-                        translateFuelType(car.getFuelType()),
-                        formatCurrency(car.getPricePerDay()),
-                        car.getRating() != null ? car.getRating().toPlainString() : "5.0",
-                        car.getRatingCount() != null ? car.getRatingCount() : 0,
-                        car.getAddress() != null ? car.getAddress() : "TP Hồ Chí Minh",
-                        Boolean.TRUE.equals(car.getHasDriverService()) ? "Có (" + formatCurrency(car.getDriverFeePerDay()) + "/ngày)" : "Không"
-                ));
-            }
-            carsRag.append("[/DỮ LIỆU XE KHẢ DỤNG]\n");
         }
 
-                if (documentSearchPort != null) {
-            List<String> snippets = documentSearchPort.findRelevantSnippets(query, 2);
+        // 3. Tạo khối dữ liệu RAG xe thực tế chèn vào System Instruction:
+        // Cung cấp danh mục xe khớp (hoặc toàn bộ catalog xe active, tối đa 20 xe) để Gemini
+        // có đầy đủ kiến thức về tất cả các xe đang có trên DriveShare, không bị hạn chế 3 xe!
+        carsRag.append(String.format("\n\n[DỮ LIỆU XE THỰC TẾ TRÊN HỆ THỐNG DRIVESHARE - TỔNG CỘNG %d XE KHẢ DỤNG]\n", allActiveCars.size()));
+        List<CarSummaryResult> carsForPrompt = isSearchingCars ? filteredCars : allActiveCars;
+        for (CarSummaryResult car : carsForPrompt.stream().limit(20).toList()) {
+            carsRag.append(String.format("• %s %s (Năm %d) | %d chỗ | Hộp số: %s | Nhiên liệu: %s | Giá: %s/ngày | Đánh giá: %s⭐ (%d lượt) | Địa chỉ: %s | Dịch vụ tài xế: %s\n",
+                    car.getBrand(),
+                    car.getModel(),
+                    car.getYear() != null ? car.getYear() : 2023,
+                    car.getSeats() != null ? car.getSeats() : 5,
+                    translateTransmission(car.getTransmission()),
+                    translateFuelType(car.getFuelType()),
+                    formatCurrency(car.getPricePerDay()),
+                    car.getRating() != null ? car.getRating().toPlainString() : "5.0",
+                    car.getRatingCount() != null ? car.getRatingCount() : 0,
+                    car.getAddress() != null ? car.getAddress() : "TP Hồ Chí Minh",
+                    Boolean.TRUE.equals(car.getHasDriverService()) ? "Có (" + formatCurrency(car.getDriverFeePerDay()) + "/ngày)" : "Không"
+            ));
+        }
+        carsRag.append("[/DỮ LIỆU XE THỰC TẾ TRÊN HỆ THỐNG DRIVESHARE]\n");
+
+        if (documentSearchPort != null) {
+            List<String> snippets = documentSearchPort.findRelevantSnippets(query, 3);
             if (!snippets.isEmpty()) {
                 carsRag.append("\n\n[TRÍCH DẪN QUY CHẾ & CHÍNH SÁCH TỪ TÀI LIỆU DRIVESHARE ĐÃ NẠP]\n");
                 for (String s : snippets) {
@@ -515,14 +522,18 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
                 || lower.contains("mới") || lower.contains("hôm nay") || lower.contains("đang có")
                 || lower.contains("tất cả xe") || lower.contains("thông tin xe") || lower.contains("bên bạn có")
                 || lower.contains("bên mình có") || lower.contains("gợi ý")
+                || lower.contains("bao nhiêu xe") || lower.contains("những xe nào") || lower.contains("các loại xe")
+                || lower.contains("mẫu xe") || lower.contains("dàn xe") || lower.contains("toàn bộ xe")
+                || lower.contains("danh sách xe") || lower.contains("bên bạn có xe") || lower.contains("xem xe")
+                || lower.contains("bảng giá")
                 || containsBrand(lower);
     }
 
     private boolean containsBrand(String lower) {
         List<String> brands = List.of("toyota", "vios", "camry", "innova", "fortuner",
-                "mazda", "cx5", "cx-5", "honda", "civic", "crv", "cr-v", "hyundai", "accent", "tucson",
-                "kia", "morning", "seltos", "vinfast", "vf5", "vf8", "vf9", "mitsubishi", "xpander",
-                "ford", "ranger", "everest", "mercedes", "bmw");
+                "mazda", "cx5", "cx-5", "honda", "civic", "crv", "cr-v", "city", "hyundai", "accent", "tucson", "santafe", "santa fe",
+                "kia", "morning", "seltos", "carnival", "k3", "k5", "vinfast", "vf5", "vf8", "vf9", "vfe34", "vf e34", "mitsubishi", "xpander",
+                "ford", "ranger", "everest", "mercedes", "bmw", "audi", "lexus", "nissan", "suzuki");
         for (String b : brands) {
             if (lower.contains(b)) return true;
         }
@@ -616,15 +627,16 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
         return ChatReplyResponse.builder()
                 .sessionId(sessionId)
                 .message("""
-                        Dạ em rất tiếc và xin lỗi anh/chị ạ! Em là **Trợ lý AI DriveShare** — chuyên trách tư vấn và hỗ trợ khách hàng tìm kiếm thuê xe trên hệ thống DriveShare nên chưa thể hỗ trợ tốt cho chủ đề này. 😊
-                        
+                        Dạ em rất tiếc và xin lỗi anh/chị ạ! 🙏 Em là **Trợ lý AI DriveShare** — chuyên trách tư vấn và hỗ trợ khách hàng tìm kiếm thuê xe trên hệ thống DriveShare nên chưa thể hỗ trợ tốt cho chủ đề này.
+
                         Để nhận được câu trả lời chi tiết và đầy đủ nhất cho câu hỏi này, em gợi ý anh/chị có thể tham khảo trực tiếp các trợ lý AI đa năng hàng đầu thế giới hiện nay nhé:
-                        • 🌐 [ChatGPT (OpenAI)](https://chatgpt.com) — Trợ lý AI hỏi đáp đa năng phổ biến nhất
+                        • 🌐 [ChatGPT (OpenAI)](https://chatgpt.com) — Trợ lý AI hỏi đáp đa năng phổ biến nhất thế giới
                         • ⚡ [Google Gemini](https://gemini.google.com) — Trí tuệ nhân tạo thế hệ mới từ Google
                         • 🧠 [Claude AI (Anthropic)](https://claude.ai) — Trợ lý AI phân tích và lập luận chuyên sâu
+                        • 🔍 [Perplexity AI](https://www.perplexity.ai) — Công cụ tìm kiếm và giải đáp thông tin chuẩn xác
                         • 🐋 [DeepSeek](https://chat.deepseek.com) — Trí tuệ nhân tạo thông minh thế hệ mới
                         • 🚀 [Grok (xAI)](https://grok.com) — Trợ lý AI đối thoại và cập nhật thời gian thực
-                        
+
                         Bất cứ lúc nào anh/chị cần tìm xe du lịch, xe công tác, xe tự lái hay có tài xế trên DriveShare, em luôn sẵn lòng hỗ trợ anh/chị ạ! 🚗✨""")
                 .build();
     }
@@ -843,7 +855,7 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
             filteredCars = allActiveCars;
         }
 
-        // Giới hạn tối đa 3 xe gợi ý
+        // Giới hạn số xe gợi ý trên giao diện (MAX_SUGGESTED_CARS = 6)
         List<CarSummaryResult> topCars = filteredCars.stream()
                 .limit(MAX_SUGGESTED_CARS)
                 .collect(Collectors.toList());
@@ -858,7 +870,7 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
         if (matchedSpecificCriteria) {
             sb.append(buildContextualGreeting(lower, topCars.size()));
         } else {
-            sb.append(String.format("Hiện tại chưa có xe nào khớp chính xác 100%% với yêu cầu của bạn. Bạn có thể tham khảo **%d xe** khả dụng dưới đây:", topCars.size()));
+            sb.append(String.format("Dạ DriveShare hiện có **%d dòng xe** chất lượng đang sẵn sàng phục vụ. Bạn có thể tham khảo các dòng xe nổi bật dưới đây nhé:", allActiveCars.size()));
         }
         sb.append("\n\n");
 
