@@ -549,81 +549,24 @@ Từ các phân tích trên, DriveShare xác định 4 mục tiêu then chốt:
 4. Tích hợp AI nâng cao trải nghiệm đặt xe thông minh.""")
 
     # =========================================================================
-    # SLIDE 5: CHƯƠNG 2 - MÔ HÌNH KIẾN TRÚC & TECH STACK (SƠ ĐỒ BÊN PHẢI LÀ ẢNH CHUẨN)
+    # SLIDE 5: CHƯƠNG 2 - MÔ HÌNH KIẾN TRÚC HEXAGONAL (PORTS & ADAPTERS)
     # =========================================================================
     s5 = prs.slides.add_slide(blank_layout)
-    set_slide_background(s5)
-    add_slide_header(s5, "2.1", "Mô Hình Kiến Trúc Hệ Thống & Tech Stack",
-                     "> Kiến trúc Hexagonal Modular tách biệt Client - Server qua RESTful API:")
-
-    # Cột trái: Card đặc điểm kiến trúc
-    left_card = s5.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.75), Inches(5.5), Inches(5.1))
-    left_card.fill.solid()
-    left_card.fill.fore_color.rgb = WHITE
-    left_card.line.color.rgb = BORDER_COLOR
-    left_card.line.width = Pt(1.5)
-
-    tf_l = left_card.text_frame
-    tf_l.margin_left = tf_l.margin_right = tf_l.margin_top = Inches(0.35)
-    tf_l.word_wrap = True
-
-    p = tf_l.paragraphs[0]
-    p.text = "ĐẶC ĐIỂM KIẾN TRÚC CỐT LÕI"
-    p.font.name = FONT_HEADING
-    p.font.size = Pt(16)
-    p.font.bold = True
-    p.font.color.rgb = PRIMARY
-    p.space_after = Pt(14)
-
-    bullets_s5 = [
-        "Kiến trúc Ports & Adapters: Tách biệt Core Domain với Web Controller và Database Adapter.",
-        "Backend Core: Java 17/21, Spring Boot 3.3.4 Hexagonal Modular (11 modules độc lập).",
-        "Cơ sở dữ liệu: PostgreSQL 16 Alpine đóng gói Docker (Port 5432) + Adminer.",
-        "Lưu trữ đám mây: Quản lý và lưu trữ hình ảnh xe, biên bản ODO qua Cloudinary CDN.",
-        "Trí tuệ nhân tạo: Google Gemini 2.5 Flash REST API + Chat Memory lưu vết PostgreSQL.",
-        "Frontend Web: HTML5, CSS3 Modern, JavaScript ES6+, Bootstrap 5 tối ưu tải tĩnh."
-    ]
-    for b in bullets_s5:
-        p = tf_l.add_paragraph()
-        p.text = "•  " + b
-        p.font.name = FONT_BODY
-        p.font.size = Pt(13)
-        p.font.color.rgb = TEXT_MAIN
-        p.space_after = Pt(9)
-
-    # Cột phải: Container khung ảnh sơ đồ kiến trúc Hexagonal chuẩn mực
-    right_box = s5.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.55), Inches(1.75), Inches(5.983), Inches(5.1))
-    right_box.fill.solid()
-    right_box.fill.fore_color.rgb = WHITE
-    right_box.line.color.rgb = BORDER_COLOR
-    right_box.line.width = Pt(1.5)
-
     img_arch = "docs/diagrams/hexagonal_architecture_diagram.png"
-    if os.path.exists(img_arch):
-        try:
-            with Image.open(img_arch) as img:
-                orig_w, orig_h = img.size
-
-            aspect = orig_w / orig_h
-            dest_w = Inches(5.7)
-            dest_h = dest_w / aspect
-            if dest_h > Inches(4.85):
-                dest_h = Inches(4.85)
-                dest_w = dest_h * aspect
-
-            dest_l = Inches(6.55) + (Inches(5.983) - dest_w) / 2
-            dest_t = Inches(1.75) + (Inches(5.1) - dest_h) / 2
-
-            s5.shapes.add_picture(img_arch, dest_l, dest_t, dest_w, dest_h)
-        except Exception as e:
-            print(f"Lỗi chèn ảnh kiến trúc: {e}")
-
+    add_centered_diagram_slide(
+        s5, "2.1", "Mô Hình Kiến Trúc Hệ Thống (Hexagonal Architecture)",
+        "> Mô hình Ports & Adapters: Tâm điểm là Hình Lục Giác Domain Core độc lập với Web và Cơ sở dữ liệu:",
+        img_arch,
+        "Hình 2.1 Sơ đồ kiến trúc Hexagonal Modular (Ports & Adapters) — Phân tách 3 tầng độc lập theo 7 luật ArchUnit"
+    )
     set_notes(s5, """LỜI THOẠI THUYẾT TRÌNH (03:00 - 03:45):
-Về kiến trúc, hệ thống tách biệt Client và Server qua RESTful API chuẩn ApiResponse<T>.
-Backend dùng Spring Boot 3.3.4 cấu trúc theo kiến trúc Hexagonal (Ports & Adapters) gồm 11 module độc lập:
-- Tầng Driving Adapters: Web Controllers và Security Filter tiếp nhận request.
-- Tầng Hexagon Core: Use Case Inbound/Outbound Ports và Domain Policies thuần Java.
-- Tầng Driven Adapters: Kết nối CSDL PostgreSQL 16, Cloudinary CDN, VietQR và Gemini AI.""")
+Kính thưa Thầy Cô, bước sang Chương 2, đây là Sơ đồ Kiến trúc Hexagonal - Ports & Adapters chuẩn doanh nghiệp của hệ thống:
+1. Tâm điểm trung tâm là HÌNH LỤC GIÁC gồm 2 tầng lõi:
+   - Trong cùng là Tầng 1: Domain Core bằng 100% Pure Java, chứa các quy tắc nghiệp vụ và Entity, tuyệt đối không phụ thuộc vào bất kỳ framework hay thư viện Spring/JPA nào.
+   - Bao bọc xung quanh là Tầng 2: Application Layer định nghĩa các Cổng Inbound Ports cho Web gọi vào và Outbound Ports để gọi ra dịch vụ ngoài.
+2. Bên trái là Tầng Driving Adapters: Web REST Controllers tiếp nhận request và bọc phản hồi ApiResponse<T>, kết hợp Spring Security và Filter JWT Stateless kiểm soát token_version.
+3. Bên phải là Tầng Driven Adapters: Kết nối với CSDL PostgreSQL 16 qua Spring Data JPA và Khóa bi quan, Cổng thanh toán VietQR giữ cọc 30%, Cloudinary lưu ảnh và Google Gemini 2.5 Flash tư vấn thông minh.
+Toàn bộ 11 module được kiểm soát tự động bởi Bộ 7 luật ArchUnit Test mỗi khi biên dịch, đảm bảo không có vi phạm phân tầng hay phụ thuộc vòng.""")
 
     # =========================================================================
     # SLIDE 6: CHƯƠNG 2 - BIỂU ĐỒ USE CASE HỆ THỐNG
