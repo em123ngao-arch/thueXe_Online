@@ -1772,7 +1772,7 @@ const NotificationAPI = {
     try {
       this.markAllLocalAsRead();
       try {
-        await fetch(${API_CONFIG.BASE_URL}/notifications/mark-all-read, {
+        await fetch(`${API_CONFIG.BASE_URL}/notifications/mark-all-read`, {
           method: 'PUT',
           headers: this.getAuthHeaders()
         });
@@ -1784,14 +1784,14 @@ const NotificationAPI = {
         await Promise.all(unreadItems.map(n => {
           const notifId = n.id || n.notification_id || n.notificationId;
           if (!notifId) return Promise.resolve();
-          return fetch(${API_CONFIG.BASE_URL}/notifications//read, {
+          return fetch(`${API_CONFIG.BASE_URL}/notifications/${notifId}/read`, {
             method: 'PUT',
             headers: this.getAuthHeaders()
           }).catch(() => {});
         }));
       }
     } catch (_) {}
-  }
+  },
 
   addNotification(title, content, type = 'GENERAL', referenceId = null) {
     try {
@@ -1919,7 +1919,7 @@ const NotificationCenter = {
       this.notifications = NotificationAPI.getLocalNotifications();
     }
     this.render();
-  }
+  },
 
   render() {
     const unreadCount = this.notifications.filter(n => !(n.isRead || n.is_read || n.read)).length;
@@ -2061,7 +2061,7 @@ const NotificationCenter = {
     });
     this.render();
     await NotificationAPI.markAllAsRead(unreadSnapshot);
-  }
+  },
 
   _formatTimeAgo(dateStr) {
     if (!dateStr) return 'Vừa xong';
