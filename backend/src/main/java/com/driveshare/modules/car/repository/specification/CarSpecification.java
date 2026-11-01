@@ -29,9 +29,14 @@ public class CarSpecification {
             predicates.add(cb.isNull(root.get("deletedAt")));
             predicates.add(cb.equal(root.get("status"), ECarStatus.ACTIVE));
 
-            // 2. Lọc theo Tỉnh/Thành phố
+            // 2. Lọc theo Tỉnh/Thành phố (Chuẩn hóa tự động: loại bỏ tiền tố TP., Thành phố, Tỉnh để luôn khớp CSDL)
             if (StringUtils.hasText(request.getProvince())) {
-                predicates.add(cb.like(cb.lower(root.get("province")), "%" + request.getProvince().toLowerCase().trim() + "%"));
+                String cleanProv = request.getProvince().trim().toLowerCase()
+                        .replaceAll("^(tp\\.?|thành phố|tỉnh)\\s*", "");
+                if ("hcm".equals(cleanProv) || "tp.hcm".equals(cleanProv) || "tphcm".equals(cleanProv)) {
+                    cleanProv = "hồ chí minh";
+                }
+                predicates.add(cb.like(cb.lower(root.get("province")), "%" + cleanProv + "%"));
             }
 
             // 3. Lọc theo Địa điểm/Vị trí

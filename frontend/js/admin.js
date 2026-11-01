@@ -390,6 +390,18 @@ const AdminService = {
       ? await ApiService.getAdminUsers(this.userState) 
       : StorageService.getUsers(this.userState);
 
+    if (data.source === 'AUTH_ERROR' || data.status === 401) {
+      wrapper.innerHTML = `
+        <div style="padding: 2.5rem 1.5rem; text-align: center; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 12px; margin: 1rem 0;">
+          <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🔒</div>
+          <h4 style="color: #9f1239; margin-bottom: 0.5rem; font-weight: 600;">Phiên làm việc Quản trị viên đã hết hạn</h4>
+          <p style="color: #be123c; margin-bottom: 1.25rem; font-size: 0.95rem;">Mã xác thực JWT với máy chủ Render đã hết hạn (sau 24h). Vui lòng đăng nhập lại với tài khoản <b>admin@driveshare.com</b> để tải toàn bộ dữ liệu từ CSDL PostgreSQL.</p>
+          <a href="login.html?redirect=admin.html%23users" class="btn btn-primary" style="padding: 0.65rem 1.75rem; text-decoration: none; display: inline-block; font-weight: 600;">Đăng nhập lại ngay</a>
+        </div>
+      `;
+      return;
+    }
+
     const users = data.items || [];
     const pagination = data.pagination || { page: 1, limit: 5, totalItems: users.length, totalPages: 1, hasNext: false, hasPrev: false };
 

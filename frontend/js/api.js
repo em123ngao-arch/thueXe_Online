@@ -443,6 +443,16 @@ const ApiService = {
           };
         }
       }
+      if (res.status === 401 || res.status === 403) {
+        return {
+          source: 'AUTH_ERROR',
+          status: res.status,
+          error: 'UNAUTHORIZED',
+          message: 'Phiên đăng nhập Admin đã hết hạn hoặc chưa xác thực.',
+          items: [],
+          pagination: {}
+        };
+      }
       throw new Error(`HTTP ${res.status}`);
     } catch (error) {
       console.warn('DriveShare: Chuyển sang Local Storage cho danh sách người dùng:', error.message);
