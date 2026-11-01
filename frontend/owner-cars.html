@@ -12,6 +12,26 @@
     <link rel="stylesheet" href="css/components.css" />
     <link rel="stylesheet" href="css/portals.css?v=4.0" />
     <link rel="stylesheet" href="css/trip-tracker.css?v=4.0" />
+    <!-- Stay-on-page instant tab persistence for Owner -->
+    <script>
+      (function() {
+        try {
+          var h = (window.location.hash || '').replace('#', '').toUpperCase();
+          var t = (['CARS', 'REQUESTS', 'ADD'].indexOf(h) >= 0 ? h : null) || sessionStorage.getItem('driveshare_owner_tab') || localStorage.getItem('driveshare_owner_tab');
+          if (t === 'REQUESTS') {
+            document.documentElement.classList.add('init-owner-requests');
+          } else if (t === 'ADD') {
+            document.documentElement.classList.add('init-owner-add');
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <style>
+      html.init-owner-requests #ownerTabCarsContent { display: none !important; }
+      html.init-owner-requests #ownerTabRequestsContent { display: block !important; }
+      html.init-owner-add #ownerTabCarsContent { display: none !important; }
+      html.init-owner-add #ownerTabAddContent { display: block !important; }
+    </style>
   </head>
   <body>
     <!-- Site Header -->

@@ -51,11 +51,34 @@ const App = {
     // 5. Cài đặt ràng buộc ngày nhận/trả xe (tối thiểu cách 1 ngày, không ở quá khứ)
     this.initSearchDates();
 
-    // 6. Kiểm tra URL param hoặc hash để mở trực tiếp Chuyến đi
+    // 6. Kiểm tra URL param hoặc hash để mở trực tiếp Chuyến đi (giữ vững trang hiện tại, tuyệt đối không nhảy về trang chủ khi F5)
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('tab') === 'trips' || window.location.hash === '#trips' || window.location.hash === '#my-trips') {
-      setTimeout(() => this.showMyBookingsView(), 150);
+    const hash = (window.location.hash || '').toLowerCase();
+    const savedView = sessionStorage.getItem('driveshare_current_view') || localStorage.getItem('driveshare_current_view');
+    const isTripsTarget = (
+      urlParams.get('tab') === 'trips' ||
+      hash === '#my-bookings' ||
+      hash === '#trips' ||
+      hash === '#my-trips' ||
+      hash === '#bookings' ||
+      (savedView === 'my-bookings' && hash !== '#catalog' && hash !== '#home')
+    );
+    if (isTripsTarget) {
+      this.showMyBookingsView();
     }
+
+    // Lắng nghe hashchange để điều hướng mượt mà không reload
+    window.addEventListener('hashchange', () => {
+      const h = (window.location.hash || '').toLowerCase();
+      if (h === '#my-bookings' || h === '#trips' || h === '#my-trips' || h === '#bookings') {
+        this.showMyBookingsView();
+      } else if (h === '' || h === '#home' || h === '#catalog') {
+        this.showCatalogView();
+      }
+    });
+
+    // Khởi chạy vòng đồng bộ thời gian thực tự động
+    this.startAutoSync();
     const paramCarId = urlParams.get('carId');
     if (paramCarId) {
       setTimeout(() => this.openCarDetailModal(paramCarId), 250);
@@ -185,11 +208,24 @@ const App = {
     const adminView = document.getElementById('adminSection');
 
     if (role === 'RENTER') {
-      if (renterView) renterView.style.display = 'block';
-      if (myBookingsView) myBookingsView.style.display = 'none';
+      const h = (window.location.hash || '').toLowerCase();
+      const v = sessionStorage.getItem('driveshare_current_view') || localStorage.getItem('driveshare_current_view');
+      const isViewingBookings = (
+        h === '#my-bookings' || h === '#trips' || h === '#my-trips' || h === '#bookings' ||
+        (v === 'my-bookings' && h !== '#catalog' && h !== '#home')
+      );
+      if (isViewingBookings) {
+        if (renterView) renterView.style.display = 'none';
+        if (myBookingsView) myBookingsView.style.display = 'block';
+        document.documentElement.classList.add('init-my-bookings');
+      } else {
+        if (renterView) renterView.style.display = 'block';
+        if (myBookingsView) myBookingsView.style.display = 'none';
+        document.documentElement.classList.remove('init-my-bookings');
+        this.applyFilters();
+      }
       if (ownerView) ownerView.style.display = 'none';
       if (adminView) adminView.style.display = 'none';
-      this.applyFilters();
     } else if (role === 'OWNER') {
       if (renterView) renterView.style.display = 'none';
       if (myBookingsView) myBookingsView.style.display = 'none';
@@ -221,6 +257,12 @@ const App = {
 
   // Hiển thị màn hình "Chuyến của tôi" (cho Renter - Giai đoạn 1 v2.0.0)
   async showMyBookingsView() {
+    try {
+      sessionStorage.setItem('driveshare_current_view', 'my-bookings');
+      localStorage.setItem('driveshare_current_view', 'my-bookings');
+      document.documentElement.classList.add('init-my-bookings');
+      history.replaceState(null, '', '#my-bookings');
+    } catch (_) {}
     const renterView = document.getElementById('renterSection');
     const myBookingsView = document.getElementById('myBookingsSection');
     const ownerView = document.getElementById('ownerSection');
@@ -250,19 +292,19 @@ const App = {
 
     // Ưu tiên tải từ API backend thực tế (RentalAPI.getMyRentals)
     let bookings = [];
+    let serverLoaded = false;
     if (typeof RentalAPI !== 'undefined' && RentalAPI.getMyRentals && typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
       try {
         const res = await RentalAPI.getMyRentals();
         if (res && (res.code === 200 || res.success) && Array.isArray(res.data)) {
           bookings = res.data;
-        } else {
-          bookings = StorageService.getBookings();
+          serverLoaded = true;
         }
       } catch (e) {
         console.warn('Lỗi khi tải đơn thuê từ server, sử dụng local storage:', e);
-        bookings = StorageService.getBookings();
       }
-    } else {
+    }
+    if (!serverLoaded && typeof StorageService !== 'undefined') {
       bookings = StorageService.getBookings();
     }
 
@@ -332,7 +374,204 @@ const App = {
     }
   },
 
+  // Mở Popup Thanh Toán Đặt Cọc 30% VietQR Ngay Trên Trang (Không bao giờ bị nhảy trang)
+  async openDepositModal(rentalId) {
+    if (typeof showToast === 'function') showToast('Đang khởi tạo mã VietQR đặt cọc 30%...', 'info', 1500);
+    const res = await PaymentAPI.createDepositPayment(rentalId);
+    if (!res || !res.success || !res.data) {
+      const msg = res?.message || 'Không thể tạo mã thanh toán đặt cọc';
+      if (typeof showToast === 'function') showToast(msg, 'error');
+      else alert(msg);
+      return;
+    }
+    const p = res.data;
+    const paymentId = p.payment_id || p.id;
+    const depositAmount = p.deposit_amount || p.amount || 0;
+    const formatMoney = (v) => Number(v || 0).toLocaleString('vi-VN') + ' đ';
+    const bankName = p.bank_name || 'MB Bank (Ngân hàng Quân Đội)';
+    const bankAccount = p.bank_account_number || '090123456789';
+    const bankOwner = p.bank_account_name || 'DRIVESHARE CORP';
+    const memo = p.transaction_code || ('DSPAY_' + rentalId);
+    const qrUrl = p.qr_code_url || `https://img.vietqr.io/image/MB-090123456789-compact2.png?amount=${depositAmount}&addInfo=${encodeURIComponent(memo)}&accountName=${encodeURIComponent(bankOwner)}`;
+
+    const html = `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; align-items: start;">
+        <div>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 12px;">
+            <div style="font-weight: 800; color: #0f172a; font-size: 1rem; margin-bottom: 4px;">
+              ${p.car_brand || 'Xe'} ${p.car_model || ''} <span style="font-size: 0.8rem; color: #64748b; font-weight: normal;">(${p.plate_number || 'Biển số'})</span>
+            </div>
+            <div style="font-size: 0.85rem; color: #475569; display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span>Mã đơn thuê:</span>
+              <strong>#${rentalId}</strong>
+            </div>
+            <div style="font-size: 0.85rem; color: #475569; display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span>Thời gian thuê:</span>
+              <strong>${p.start_date || ''} &rarr; ${p.end_date || ''} (${p.total_days || 1} ngày)</strong>
+            </div>
+            <div style="font-size: 0.85rem; color: #475569; display: flex; justify-content: space-between;">
+              <span>Tổng tiền chuyến đi:</span>
+              <strong>${formatMoney(p.total_price)}</strong>
+            </div>
+          </div>
+
+          <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 10px; padding: 12px; margin-bottom: 14px;">
+            <div style="font-size: 0.78rem; text-transform: uppercase; color: #065f46; font-weight: 700; letter-spacing: 0.04em;">Số tiền cọc cần chuyển (30%)</div>
+            <div style="font-size: 1.6rem; font-weight: 900; color: #047857; margin: 2px 0;">${formatMoney(depositAmount)}</div>
+            <div style="font-size: 0.8rem; color: #047857;">Hệ thống kích hoạt giữ chỗ Soft Lock 45 phút</div>
+          </div>
+
+          <div style="font-size: 0.86rem; color: #334155; display: flex; flex-direction: column; gap: 8px;">
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">
+              <span style="color:#64748b;">Ngân hàng:</span>
+              <strong>${bankName}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">
+              <span style="color:#64748b;">Số tài khoản:</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <strong style="color:#2563eb; font-size:1rem; letter-spacing:0.04em;">${bankAccount}</strong>
+                <button type="button" class="btn btn-ghost btn-sm" style="padding:2px 6px; font-size:0.75rem;" onclick="navigator.clipboard.writeText('${bankAccount}'); if(typeof showToast==='function') showToast('Đã copy số tài khoản!', 'success', 2000);">Copy</button>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">
+              <span style="color:#64748b;">Chủ tài khoản:</span>
+              <strong>${bankOwner}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:#64748b;">Nội dung CK:</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <strong style="color:#b45309; font-size:0.95rem; background:#fef3c7; padding:2px 6px; border-radius:4px;">${memo}</strong>
+                <button type="button" class="btn btn-ghost btn-sm" style="padding:2px 6px; font-size:0.75rem;" onclick="navigator.clipboard.writeText('${memo}'); if(typeof showToast==='function') showToast('Đã copy nội dung chuyển khoản!', 'success', 2000);">Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+          <div style="font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 8px;">Quét mã VietQR bằng App Ngân hàng</div>
+          <div style="width: 210px; height: 210px; border-radius: 10px; overflow: hidden; border: 2px solid #0f766e; padding: 4px; background: #fff; margin-bottom: 12px;">
+            <img src="${qrUrl}" alt="Mã VietQR" style="width: 100%; height: 100%; object-fit: contain;" />
+          </div>
+          <div style="font-size: 0.78rem; color: #64748b; text-align: center; margin-bottom: 14px;">
+            Mã QR đã nhúng sẵn đúng số tiền và nội dung chuyển khoản
+          </div>
+
+          <button id="btnConfirmDepositNow" class="btn btn-primary btn-md" style="width: 100%; background: #059669; border-color: #059669; font-weight: 800; font-size: 0.92rem; padding: 10px 14px; box-shadow: 0 4px 12px rgba(5,150,105,0.25);" onclick="App.confirmDepositPayment(${paymentId}, ${rentalId})">
+            ✔ Tôi đã chuyển khoản thành công
+          </button>
+          
+          <div style="margin-top: 10px; display: flex; gap: 8px; width: 100%; justify-content: center;">
+            <a href="payment.html?rental_id=${rentalId}" target="_blank" class="btn btn-ghost btn-sm" style="font-size: 0.78rem; color: #0284c7;">
+              Mở cổng thanh toán riêng &rarr;
+            </a>
+            <button class="btn btn-outline btn-sm" style="font-size: 0.78rem;" onclick="App.closeModal()">
+              Đóng
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.openModal(`Thanh Toán Cọc 30% — Đơn #${rentalId}`, html);
+  },
+
+  async confirmDepositPayment(paymentId, rentalId) {
+    const btn = document.getElementById('btnConfirmDepositNow');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang đối soát giao dịch...';
+    }
+    try {
+      const res = await PaymentAPI.confirmPayment(paymentId);
+      if (res && (res.success || res.code === 200)) {
+        if (typeof DriveShareSocket !== 'undefined') {
+          DriveShareSocket.emit('PAYMENT_CONFIRMED', { rental_id: rentalId, payment_id: paymentId, ...(res.data || {}) });
+        }
+        this.closeModal();
+        if (typeof showToast === 'function') {
+          showToast('🎉 Ngân hàng xác nhận tiền về! Đặt cọc 30% thành công. Đơn đã được chốt (CONFIRMED)!', 'success', 5000);
+        }
+        await this.refreshMyBookings();
+      } else {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '✔ Tôi đã chuyển khoản thành công';
+        }
+        const msg = res?.message || 'Chưa nhận được tiền từ ngân hàng. Vui lòng thử lại sau giây lát!';
+        if (typeof showToast === 'function') showToast(msg, 'error');
+        else alert(msg);
+      }
+    } catch (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '✔ Tôi đã chuyển khoản thành công';
+      }
+      if (typeof showToast === 'function') showToast('Lỗi kết nối khi đối soát thanh toán!', 'error');
+    }
+  },
+
+  // Kiểm tra phân hệ 'Chuyến của tôi' có đang tích cực hiển thị không (kể cả khi vừa F5 hoặc class init-my-bookings)
+  isMyBookingsActive() {
+    const el = document.getElementById('myBookingsSection');
+    if (!el) return false;
+    const compDisplay = window.getComputedStyle(el).display;
+    return compDisplay !== 'none' ||
+           el.style.display === 'block' ||
+           document.documentElement.classList.contains('init-my-bookings') ||
+           sessionStorage.getItem('driveshare_current_view') === 'my-bookings' ||
+           window.location.hash.toLowerCase().includes('booking') ||
+           window.location.hash.toLowerCase().includes('trip');
+  },
+
+  // Làm mới danh sách đơn thuê của tôi tức thời (Realtime & Silent Sync)
+  async refreshMyBookings(silent = true) {
+    if (typeof RentalAPI === 'undefined' || !RentalAPI.getMyRentals) return;
+    try {
+      const res = await RentalAPI.getMyRentals();
+      if (res && (res.code === 200 || res.success) && Array.isArray(res.data)) {
+        this.cachedMyBookings = res.data;
+        const myBookingsView = document.getElementById('myBookingsSection');
+        if (this.isMyBookingsActive()) {
+          if (myBookingsView) myBookingsView.style.display = 'block';
+          RenderService.renderMyBookings(
+            this.cachedMyBookings,
+            'myBookingsListContainer',
+            this.currentTripTab || 'ALL',
+            this.currentTripSearch || ''
+          );
+        }
+        // Nếu Shopee Trip Tracker Modal đang mở thì đồng bộ luôn tiến trình bên trong
+        if (typeof TripTrackerService !== 'undefined' && TripTrackerService.currentRentalId) {
+          const trackerEl = document.getElementById('tripTrackerModal');
+          if (trackerEl && trackerEl.style.display !== 'none') {
+            await TripTrackerService.openTrackerModal(TripTrackerService.currentRentalId);
+          }
+        }
+        this.updateBookingCountBadge();
+      }
+    } catch (err) {
+      if (!silent) console.warn('[App] refreshMyBookings error:', err);
+    }
+  },
+
+  startAutoSync() {
+    if (this._autoSyncTimer) return;
+    this._autoSyncTimer = setInterval(async () => {
+      const isVisible = this.isMyBookingsActive();
+      const isTrackerOpen = typeof TripTrackerService !== 'undefined' && Boolean(TripTrackerService.currentRentalId);
+      if (isVisible || isTrackerOpen) {
+        await this.refreshMyBookings(true);
+      }
+    }, 1000);
+  },
+
   showCatalogView() {
+    try {
+      sessionStorage.setItem('driveshare_current_view', 'home');
+      localStorage.setItem('driveshare_current_view', 'home');
+      document.documentElement.classList.remove('init-my-bookings');
+      history.replaceState(null, '', window.location.pathname);
+    } catch (_) {}
     // Ẩn Chuyến đi của tôi, hiện lại renterSection
     const renterView = document.getElementById('renterSection');
     const myBookingsView = document.getElementById('myBookingsSection');
@@ -1098,11 +1337,11 @@ const App = {
 
         this.closeModal();
 
-        // Tải lại danh sách chuyến đi của khách
-        if (this.renderMyBookings) {
-          this.renderMyBookings();
-        } else {
-          setTimeout(() => window.location.reload(), 1000);
+        // Tải lại danh sách chuyến đi của khách (tại chỗ, không reload web)
+        if (typeof this.refreshMyBookings === 'function') {
+          await this.refreshMyBookings();
+        } else if (typeof this.showMyBookingsView === 'function') {
+          await this.showMyBookingsView();
         }
       } else {
         const msg = res?.message || 'Không thể xác nhận biên bản. Vui lòng thử lại!';
@@ -1503,3 +1742,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
   App.init();
 });
+
+
+// Alias an toàn
+if (typeof App !== 'undefined') {
+  App.renderMyBookings = App.refreshMyBookings;
+}
+
+// Lắng nghe sự kiện Realtime Socket cho Phân hệ Khách thuê (Renter)
+if (typeof DriveShareSocket !== 'undefined') {
+  DriveShareSocket.on('RENTAL_APPROVED', async (data) => {
+    console.log('[RenterRealtime] Nhận tín hiệu RENTAL_APPROVED tức thì qua Socket:', data);
+    if (typeof App !== 'undefined') {
+      if (App.refreshMyBookings) await App.refreshMyBookings();
+      else if (App.showMyBookingsView) await App.showMyBookingsView();
+    }
+    if (typeof TripTrackerService !== 'undefined' && TripTrackerService.currentRentalId) {
+      await TripTrackerService.openTrackerModal(TripTrackerService.currentRentalId);
+    }
+    if (typeof NotificationCenter !== 'undefined' && NotificationCenter.refresh) {
+      NotificationCenter.refresh();
+    }
+    if (typeof showToast === 'function') {
+      showToast('🎉 Chủ xe đã duyệt yêu cầu thuê xe #' + (data?.rental_id || data?.id || '') + '! Tiến trình đã nhảy sang bước Cọc 30%.', 'success', 6000);
+    } else if (typeof toast !== 'undefined' && toast.success) {
+      toast.success('🎉 Chủ xe đã duyệt yêu cầu thuê xe #' + (data?.rental_id || data?.id || '') + '!');
+    }
+  });
+
+  DriveShareSocket.on('RENTAL_REJECTED', async (data) => {
+    console.log('[RenterRealtime] Nhận tín hiệu RENTAL_REJECTED tức thì qua Socket:', data);
+    if (typeof App !== 'undefined' && App.refreshMyBookings) {
+      await App.refreshMyBookings();
+    }
+    if (typeof NotificationCenter !== 'undefined' && NotificationCenter.refresh) {
+      NotificationCenter.refresh();
+    }
+    if (typeof showToast === 'function') {
+      showToast('Đơn thuê xe #' + (data?.rental_id || data?.id || '') + ' đã bị từ chối.', 'warning', 4000);
+    }
+  });
+
+  DriveShareSocket.on('PAYMENT_CONFIRMED', async (data) => {
+    console.log('[RenterRealtime] Nhận tín hiệu PAYMENT_CONFIRMED tức thì qua Socket:', data);
+    if (typeof App !== 'undefined') {
+      if (App.refreshMyBookings) await App.refreshMyBookings();
+      else if (App.showMyBookingsView) await App.showMyBookingsView();
+    }
+    if (typeof TripTrackerService !== 'undefined' && TripTrackerService.currentRentalId) {
+      await TripTrackerService.openTrackerModal(TripTrackerService.currentRentalId);
+    }
+    if (typeof NotificationCenter !== 'undefined' && NotificationCenter.refresh) {
+      NotificationCenter.refresh();
+    }
+    if (typeof showToast === 'function') {
+      showToast('🚗 Ngân hàng xác nhận tiền về! Đặt cọc 30% thành công.', 'success', 5000);
+    }
+  });
+}

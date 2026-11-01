@@ -18,7 +18,7 @@ const StorageService = {
   // Khởi tạo dữ liệu nếu chưa có trong LocalStorage
   init() {
     // Tự động dọn sạch cache mock cũ nếu có
-    const cleanedFlag = 'driveshare_mock_cleaned_v3';
+    const cleanedFlag = 'driveshare_mock_cleaned_v6';
     if (!localStorage.getItem(cleanedFlag)) {
       localStorage.removeItem(STORAGE_KEYS.CARS);
       localStorage.removeItem(STORAGE_KEYS.BOOKINGS);
@@ -101,6 +101,18 @@ const StorageService = {
   },
 
   // Đơn đặt xe (Bookings)
+  getBookingById(id) {
+    const bookings = this.getBookings();
+    return bookings.find(b => String(b.id || b.rental_id || b.rentalId) === String(id));
+  },
+
+  clearAllBookings() {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.BOOKINGS);
+      localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify([]));
+    } catch (e) {}
+  },
+
   getBookings() {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.BOOKINGS);

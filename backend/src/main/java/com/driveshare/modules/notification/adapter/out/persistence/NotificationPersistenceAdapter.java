@@ -54,6 +54,13 @@ public class NotificationPersistenceAdapter implements NotificationPersistencePo
         return repository.countByUserIdAndIsReadFalse(userId);
     }
 
+    @Override
+    public void markAllAsRead(Long userId) {
+        if (userId != null) {
+            repository.markAllAsReadByUserId(userId);
+        }
+    }
+
     private NotificationRecord toRecord(Notification n) {
         if (n == null) return null;
         return NotificationRecord.builder()
@@ -68,4 +75,3 @@ public class NotificationPersistenceAdapter implements NotificationPersistencePo
                 .build();
     }
 }
-

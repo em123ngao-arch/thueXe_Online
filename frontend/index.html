@@ -20,6 +20,22 @@
     <link rel="stylesheet" href="css/portals.css?v=20261001_v6" />
     <link rel="stylesheet" href="css/mioto-time.css?v=20260928_v5" />
     <link rel="stylesheet" href="css/trip-tracker.css?v=20261025_v4" />
+    <!-- Stay-on-page instant state persistence (Khắc phục triệt để lỗi F5 nhảy về trang chủ) -->
+    <script>
+      (function() {
+        try {
+          var h = (window.location.hash || '').toLowerCase();
+          var v = sessionStorage.getItem('driveshare_current_view') || localStorage.getItem('driveshare_current_view');
+          if (h === '#my-bookings' || h === '#trips' || h === '#my-trips' || h === '#bookings' || (v === 'my-bookings' && h !== '#catalog' && h !== '#home')) {
+            document.documentElement.classList.add('init-my-bookings');
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <style>
+      html.init-my-bookings #renterSection { display: none !important; }
+      html.init-my-bookings #myBookingsSection { display: block !important; }
+    </style>
   </head>
   <body>
     <!-- ==================== 1. TOP NAVBAR ==================== -->

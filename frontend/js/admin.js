@@ -2166,6 +2166,10 @@ const AdminService = {
 
   // Chuyển Tab Admin
   switchTab(tabName) {
+    try {
+      sessionStorage.setItem('admin_active_tab', tabName);
+      history.replaceState(null, '', '#' + tabName.toLowerCase());
+    } catch (_) {}
     document.getElementById('adminTabCars')?.classList.toggle('active', tabName === 'CARS');
     document.getElementById('adminTabCccd')?.classList.toggle('active', tabName === 'CCCD');
     document.getElementById('adminTabLicenses')?.classList.toggle('active', tabName === 'LICENSES');

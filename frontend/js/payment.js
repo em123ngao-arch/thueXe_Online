@@ -30,6 +30,12 @@ const PaymentUI = {
   async initDepositForRental(rentalId) {
     this.renderLoading('Đang tạo mã thanh toán VietQR cọc 30%...');
 
+    const token = (typeof TokenService !== 'undefined') ? TokenService.getToken() : (localStorage.getItem('access_token') || '');
+    if (!token) {
+      this.renderAuthRequired('Bạn chưa đăng nhập. Vui lòng đăng nhập tài khoản Khách thuê (renter@driveshare.com) để xem và thanh toán cọc đơn #' + rentalId);
+      return;
+    }
+
     // Gọi API Backend: POST /api/v1/rentals/{id}/payment
     const res = await PaymentAPI.createDepositPayment(rentalId);
     if (res.success && res.data) {
@@ -39,7 +45,13 @@ const PaymentUI = {
       this.startPolling(this.currentPayment.payment_id);
     } else {
       // Fallback kiểm tra dữ liệu local nếu backend chưa có đơn này
-      const localBooking = (typeof StorageService !== 'undefined') ? StorageService.getBookingById(rentalId) : null;
+      if (res.status === 401 || (res.message && res.message.includes('401'))) {
+        this.renderAuthRequired('Phiên đăng nhập đã hết hạn (401). Vui lòng đăng nhập lại tài khoản Khách thuê.');
+        return;
+      }
+      const localBooking = (typeof StorageService !== 'undefined' && typeof StorageService.getBookingById === 'function') 
+        ? StorageService.getBookingById(rentalId) 
+        : null;
       if (localBooking) {
         this.currentPayment = {
           payment_id: 'LOCAL-' + Date.now(),
@@ -96,6 +108,22 @@ const PaymentUI = {
         <p style="color: var(--slate-500); font-size: 0.88rem; margin-top: 0.5rem;">Vui lòng giữ nguyên màn hình trong giây lát</p>
       </div>
       <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    `;
+  },
+
+  renderAuthRequired(msg) {
+    const container = document.getElementById('paymentContainer');
+    const returnUrl = encodeURIComponent(window.location.href);
+    container.innerHTML = `
+      <div style="max-width: 520px; margin: 3rem auto; background: var(--white); border-radius: var(--radius-lg); padding: 2.5rem 2rem; text-align: center; box-shadow: var(--shadow-md); border: 1px solid var(--slate-200);">
+        <div style="width: 64px; height: 64px; background: #e0f2fe; color: #0284c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto; font-size: 1.8rem; font-weight: bold;">🔒</div>
+        <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--slate-900); margin-bottom: 0.5rem;">Yêu Cầu Đăng Nhập</h3>
+        <p style="color: var(--slate-600); font-size: 0.92rem; margin-bottom: 1.5rem; line-height: 1.5;">${msg}</p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+          <a href="login.html?redirect=${returnUrl}" class="btn btn-primary btn-md">Đăng nhập ngay</a>
+          <a href="index.html" class="btn btn-outline btn-md">Về trang chủ</a>
+        </div>
+      </div>
     `;
   },
 
@@ -356,10 +384,7 @@ const PaymentUI = {
         }
       }
 
-      if (typeof showToast === 'function') {
-        showToast('Xác nhận đặt cọc thành công! Đơn thuê đã được CONFIRMED.', 'success', 3500);
-      }
-      this.renderPaymentView(this.currentPayment);
+      this.handlePaymentSuccessTransition();
     } else {
       if (typeof showToast === 'function') {
         showToast(res.message || 'Chưa nhận được giao dịch. Vui lòng thử lại sau giây lát!', 'error');
@@ -413,18 +438,66 @@ const PaymentUI = {
 
   startPolling(paymentId) {
     clearInterval(this.pollTimer);
+    // Fast Polling kiểm tra trạng thái ngân hàng mỗi 3 giây
     this.pollTimer = setInterval(async () => {
       if (!paymentId || paymentId.toString().startsWith('LOCAL-')) return;
       const res = await PaymentAPI.getPayment(paymentId);
       if (res.success && res.data && res.data.status === 'SUCCESS') {
         this.currentPayment = res.data;
         this.stopTimers();
-        if (typeof showToast === 'function') {
-          showToast('Hệ thống tự động phát hiện chuyển khoản thành công!', 'success', 3500);
-        }
-        this.renderPaymentView(this.currentPayment);
+        this.handlePaymentSuccessTransition();
       }
-    }, 5000);
+    }, 3000);
+  },
+
+  handlePaymentSuccessTransition() {
+    this.stopTimers();
+    if (typeof showToast === 'function') {
+      showToast('🎉 Ngân hàng xác nhận tiền về! Đặt cọc 30% thành công.', 'success', 4000);
+    }
+    this.renderPaymentSuccessScreen(this.currentPayment);
+  },
+
+  renderPaymentSuccessScreen(p) {
+    const container = document.getElementById('paymentContainer');
+    if (!container) return;
+
+    let countdown = 3;
+    container.innerHTML = `
+      <div style="max-width: 600px; margin: 3rem auto; background: var(--white); border-radius: var(--radius-lg); padding: 3rem 2.5rem; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.1); border: 2px solid #10b981;">
+        <div style="width: 80px; height: 80px; background: #dcfce7; color: #166534; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; font-size: 2.5rem; animation: pulse 1.5s infinite;">
+          ✔
+        </div>
+        <span class="badge badge-success" style="font-size: 0.9rem; padding: 0.4rem 1rem; background: #10b981; color: #fff; font-weight: 800; border-radius: 999px;">
+          THANH TOÁN CỌC THÀNH CÔNG (CONFIRMED)
+        </span>
+        <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--slate-900); margin: 1.25rem 0 0.5rem 0;">
+          Chúc Mừng Bạn Đã Đặt Xe Thành Công!
+        </h2>
+        <p style="color: var(--slate-600); font-size: 0.95rem; margin-bottom: 1.75rem; line-height: 1.6;">
+          Hệ thống ngân hàng đã xác nhận thanh toán cọc 30% cho đơn thuê <strong>#${p.rental_id}</strong>. Xe đã được giữ chỗ chắc chắn cho chuyến đi của bạn.
+        </p>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 2rem; font-size: 0.9rem; color: #334155;">
+          Tự động chuyển về danh sách chuyến đi sau <strong id="redirectCountdown" style="color: #0284c7; font-size: 1.1rem;">3</strong> giây...
+        </div>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <a href="index.html#my-bookings" class="btn btn-primary btn-lg" style="background: #059669; border-color: #059669; font-weight: 700; padding: 10px 24px;">
+            Xem chuyến đi của bạn ngay &rarr;
+          </a>
+          <a href="index.html" class="btn btn-outline btn-lg">Về trang chủ</a>
+        </div>
+      </div>
+    `;
+
+    const timer = setInterval(() => {
+      countdown--;
+      const el = document.getElementById('redirectCountdown');
+      if (el) el.textContent = countdown;
+      if (countdown <= 0) {
+        clearInterval(timer);
+        window.location.href = 'index.html#my-bookings';
+      }
+    }, 1000);
   },
 
   stopTimers() {
@@ -449,3 +522,14 @@ const PaymentUI = {
     return Number(num).toLocaleString('vi-VN') + ' ₫';
   }
 };
+
+
+// Lắng nghe sự kiện PAYMENT_CONFIRMED tức thì qua Socket tại Cổng thanh toán
+if (typeof DriveShareSocket !== 'undefined') {
+  DriveShareSocket.on('PAYMENT_CONFIRMED', (data) => {
+    console.log('[PaymentRealtime] Nhận tín hiệu PAYMENT_CONFIRMED qua Socket:', data);
+    if (typeof PaymentView !== 'undefined' && PaymentView.handlePaymentSuccessTransition) {
+      PaymentView.handlePaymentSuccessTransition(data);
+    }
+  });
+}

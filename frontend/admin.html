@@ -319,7 +319,7 @@
         if (checkAuth("ADMIN")) {
           AdminService.renderAdminPortal("adminPortalContainer");
           const params = new URLSearchParams(window.location.search);
-          const tab = params.get('tab') || window.location.hash.replace('#', '').toUpperCase();
+          const tab = params.get('tab') || window.location.hash.replace('#', '').toUpperCase() || sessionStorage.getItem('admin_active_tab') || 'CARS';
           if (tab && typeof AdminService.switchTab === 'function') {
             setTimeout(() => AdminService.switchTab(tab), 150);
           }

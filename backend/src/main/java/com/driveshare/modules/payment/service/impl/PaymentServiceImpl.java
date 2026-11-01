@@ -41,6 +41,9 @@ public class PaymentServiceImpl implements PaymentService {
     private final CarRepository carRepository;
     private final UserRepository userRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.driveshare.modules.notification.application.port.in.NotificationUseCase notificationUseCase;
+
     @Override
     @Transactional
     public PaymentResponse createDepositPayment(Long rentalId, CreatePaymentRequest request, Long currentUserId) {
@@ -238,6 +241,34 @@ public class PaymentServiceImpl implements PaymentService {
             rentalRepository.saveAll(competingRentals);
             log.info("Auto-rejection: Đã tự động từ chối {} đơn trùng lịch sau khi rentalId={} chốt cọc",
                     competingRentals.size(), rental.getRentalId());
+        }
+
+        if (notificationUseCase != null) {
+            try {
+                if (rental.getRenterId() != null) {
+                    notificationUseCase.sendNotification(
+                            rental.getRenterId(),
+                            "Đặt cọc thành công",
+                            String.format("Bạn đã thanh toán cọc 30%% cho đơn #%d thành công. Chuyến đi của bạn đã được xác nhận (CONFIRMED)!", rental.getRentalId()),
+                            "RENTAL_CONFIRMED",
+                            rental.getRentalId()
+                    );
+                }
+                Car car = carRepository.findById(rental.getCarId()).orElse(null);
+                if (car != null && car.getOwnerId() != null) {
+                    notificationUseCase.sendNotification(
+                            car.getOwnerId(),
+                            "Khách đã đặt cọc xe thành công",
+                            String.format("Khách thuê đã thanh toán cọc 30%% cho xe %s %s (#%d). Vui lòng chuẩn bị xe để bàn giao đúng hẹn.",
+                                    car.getBrand(), car.getModel(), rental.getRentalId()),
+                            "RENTAL_CONFIRMED",
+                            rental.getRentalId()
+                    );
+                }
+                log.info("Đã gửi thông báo xác nhận cọc thành công cho cả khách và chủ xe");
+            } catch (Exception e) {
+                log.warn("Không thể gửi thông báo đặt cọc thành công: {}", e.getMessage());
+            }
         }
 
         log.info("Đơn rentalId={} đã được chuyển sang trạng thái CONFIRMED sau khi thanh toán", rental.getRentalId());

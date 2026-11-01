@@ -109,6 +109,7 @@ public class DataInitializer implements CommandLineRunner {
                     .fullName("System Administrator")
                     .phone("0900000001")
                     .status(EUserStatus.ACTIVE)
+                    .emailVerified(true)
                     .roles(new HashSet<>(Set.of(adminRole)))
                     .build();
 
@@ -130,6 +131,7 @@ public class DataInitializer implements CommandLineRunner {
                     .phone("0900000002")
                     .idCardNumber("001200000001")
                     .status(EUserStatus.ACTIVE)
+                    .emailVerified(true)
                     .roles(new HashSet<>(Set.of(ownerRole)))
                     .build();
 
@@ -161,6 +163,7 @@ public class DataInitializer implements CommandLineRunner {
                     .phone("0900000003")
                     .idCardNumber("001200000002")
                     .status(EUserStatus.ACTIVE)
+                    .emailVerified(true)
                     .roles(new HashSet<>(Set.of(renterRole)))
                     .build();
 
@@ -382,107 +385,5 @@ public class DataInitializer implements CommandLineRunner {
             car1 = carRepository.save(car1);
         }
 
-        // Tạo 1 đơn thuê mẫu PENDING để Khiêm test duyệt (CRP-47/48) và Quân test lọc ngày (CRP-38)
-        Rental sampleRental = null;
-        if (rentalRepository.count() == 0 && car1 != null && renter != null) {
-            LocalDate start = LocalDate.now().plusDays(3);
-            LocalDate end = LocalDate.now().plusDays(5);
-            BigDecimal pricePerDay = car1.getPricePerDay();
-            BigDecimal totalPrice = pricePerDay.multiply(BigDecimal.valueOf(2));
-            BigDecimal deposit = totalPrice.multiply(new BigDecimal("0.30"));
-
-            sampleRental = Rental.builder()
-                    .carId(car1.getCarId())
-                    .renterId(renter.getUserId())
-                    .startDate(start)
-                    .endDate(end)
-                    .totalDays(2)
-                    .pricePerDay(pricePerDay)
-                    .totalPrice(totalPrice)
-                    .depositAmount(deposit)
-                    .status(ERentalStatus.PENDING)
-                    .note("Đơn đặt xe mẫu tự động phục vụ test chức năng Sprint 2 (CRP-47, CRP-48, CRP-38)")
-                    .build();
-
-            sampleRental = rentalRepository.save(sampleRental);
-            log.info("Initialized sample rental: ID={}, CarId={}, Status=PENDING, Dates={} to {}",
-                    sampleRental.getRentalId(), car1.getCarId(), start, end);
-        }
-
-        // Sprint 3: Tạo 1 đơn thuê COMPLETED có đủ 2 biên bản (Check-in, Check-out), Đánh giá 5 sao và Thông báo
-        if (car1 != null && renter != null && rentalInspectionRepository.count() == 0) {
-            LocalDate completedStart = LocalDate.now().minusDays(5);
-            LocalDate completedEnd = LocalDate.now().minusDays(3);
-            Rental completedRental = rentalRepository.save(Rental.builder()
-                    .carId(car1.getCarId())
-                    .renterId(renter.getUserId())
-                    .startDate(completedStart)
-                    .endDate(completedEnd)
-                    .totalDays(2)
-                    .pricePerDay(car1.getPricePerDay())
-                    .totalPrice(new BigDecimal("2400000.00"))
-                    .depositAmount(new BigDecimal("720000.00"))
-                    .status(ERentalStatus.COMPLETED)
-                    .withDriver(true)
-                    .driverFee(new BigDecimal("1000000.00"))
-                    .note("Đơn hoàn tất mẫu phục vụ kiểm thử Sprint 3 (Inspection, Review, Driver)")
-                    .build());
-
-            // 1. Biên bản nhận xe CHECK_IN
-            rentalInspectionRepository.save(RentalInspection.builder()
-                    .rentalId(completedRental.getRentalId())
-                    .inspectionType(EInspectionType.CHECK_IN)
-                    .odoMeter(15200)
-                    .fuelLevel(95)
-                    .images("https://images.unsplash.com/photo-1549399542-7e3f8b79c341,https://images.unsplash.com/photo-1580273916550-e323be2ae537")
-                    .notes("Bàn giao xe đúng hẹn, ngoại thất sạch đẹp không trầy xước.")
-                    .performedBy(owner.getUserId())
-                    .build());
-
-            // 2. Biên bản trả xe CHECK_OUT
-            rentalInspectionRepository.save(RentalInspection.builder()
-                    .rentalId(completedRental.getRentalId())
-                    .inspectionType(EInspectionType.CHECK_OUT)
-                    .odoMeter(15450)
-                    .fuelLevel(90)
-                    .extraFee(BigDecimal.ZERO)
-                    .images("https://images.unsplash.com/photo-1549399542-7e3f8b79c341")
-                    .notes("Nghiệm thu trả xe thành công: đã đi 250km, mức pin tốt, hoàn cọc đầy đủ.")
-                    .performedBy(owner.getUserId())
-                    .build());
-
-            // 3. Đánh giá Review 5 sao
-            if (reviewRepository.count() == 0) {
-                reviewRepository.save(Review.builder()
-                        .rentalId(completedRental.getRentalId())
-                        .carId(car1.getCarId())
-                        .renterId(renter.getUserId())
-                        .rating(5)
-                        .comment("Xe VinFast VF8 chạy cực kỳ êm ái, bác tài hỗ trợ nhiệt tình, 5 sao chất lượng!")
-                        .build());
             }
-
-            // 4. Thông báo mẫu
-            if (notificationRepository.count() == 0) {
-                notificationRepository.save(Notification.builder()
-                        .userId(renter.getUserId())
-                        .title("Chuyến đi hoàn tất")
-                        .content("Chuyến đi xe VinFast VF8 (51K-12345) đã hoàn tất thành công. Hãy để lại đánh giá của bạn!")
-                        .type("RENTAL_COMPLETED")
-                        .referenceId(completedRental.getRentalId())
-                        .isRead(false)
-                        .build());
-
-                notificationRepository.save(Notification.builder()
-                        .userId(owner.getUserId())
-                        .title("Đánh giá mới cho xe VinFast VF8")
-                        .content("Khách hàng đã chấm 5 sao kèm nhận xét tích cực cho xe của bạn.")
-                        .type("REVIEW_RECEIVED")
-                        .referenceId(completedRental.getRentalId())
-                        .isRead(false)
-                        .build());
-            }
-            log.info("Initialized Sprint 3 seed data: Completed rental with inspections, review, and notifications.");
-        }
-    }
 }

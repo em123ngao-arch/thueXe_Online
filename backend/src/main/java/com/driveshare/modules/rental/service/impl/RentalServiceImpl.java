@@ -34,6 +34,9 @@ public class RentalServiceImpl implements RentalService {
     private final com.driveshare.modules.user.repository.RenterProfileRepository renterProfileRepository;
     private final com.driveshare.modules.user.repository.UserRepository userRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.driveshare.modules.notification.application.port.in.NotificationUseCase notificationUseCase;
+
     private static final int MAX_PENDING_RENTALS = 3;
     private static final BigDecimal DEPOSIT_PERCENTAGE = BigDecimal.valueOf(0.30);
 
@@ -195,6 +198,22 @@ public class RentalServiceImpl implements RentalService {
         Rental savedRental = rentalRepository.save(rental);
         log.info("Tạo yêu cầu thuê xe thành công: rentalId={}, carId={}, renterId={}, totalDays={}, totalPrice={}, withDriver={}, driverFee={}, status={}",
                 savedRental.getRentalId(), car.getCarId(), renterId, totalDays, totalPrice, isWithDriver, driverFee, savedRental.getStatus());
+
+        if (notificationUseCase != null && car.getOwnerId() != null) {
+            try {
+                notificationUseCase.sendNotification(
+                        car.getOwnerId(),
+                        "Yêu cầu thuê xe mới",
+                        String.format("Khách thuê vừa gửi yêu cầu đặt xe %s %s (%s). Mã đơn #%d. Vui lòng kiểm tra và duyệt đơn.",
+                                car.getBrand(), car.getModel(), car.getPlateNumber(), savedRental.getRentalId()),
+                        "RENTAL_CREATED",
+                        savedRental.getRentalId()
+                );
+                log.info("Đã gửi thông báo yêu cầu thuê xe tới chủ xe ownerId={}", car.getOwnerId());
+            } catch (Exception e) {
+                log.warn("Không thể gửi thông báo cho chủ xe: {}", e.getMessage());
+            }
+        }
 
         return RentalResponse.from(savedRental);
     }
