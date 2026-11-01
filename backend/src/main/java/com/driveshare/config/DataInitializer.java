@@ -8,6 +8,8 @@ import com.driveshare.common.enums.ERole;
 import com.driveshare.common.enums.ETransmission;
 import com.driveshare.common.enums.EUserStatus;
 import com.driveshare.common.enums.EVerificationStatus;
+import com.driveshare.modules.ai.adapter.out.persistence.ChatMemoryJpaEntity;
+import com.driveshare.modules.ai.repository.ChatMemoryRepository;
 import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.notification.adapter.out.persistence.Notification;
@@ -55,6 +57,7 @@ public class DataInitializer implements CommandLineRunner {
     private final RentalInspectionRepository rentalInspectionRepository;
     private final ReviewRepository reviewRepository;
     private final NotificationRepository notificationRepository;
+    private final ChatMemoryRepository chatMemoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
@@ -602,6 +605,82 @@ public class DataInitializer implements CommandLineRunner {
 
         // Tự động tính toán lại rating và ratingCount cho tất cả 18 xe theo review thực tế trong DB
         recalculateAllCarRatings();
+
+        // Khởi tạo các phiên hội thoại mẫu cho Chat-AI để lịch sử trò chuyện không bị trống
+        initSampleChatSessions(renter);
+    }
+
+    private void initSampleChatSessions(User renter) {
+        if (chatMemoryRepository == null) return;
+        if (chatMemoryRepository.count() > 0) return;
+
+        Long renterId = renter != null ? renter.getUserId() : 2L;
+        String renterEmail = renter != null ? renter.getEmail() : "renter@driveshare.com";
+        String renterName = renter != null && renter.getFullName() != null ? renter.getFullName() : "Khách thuê Trần Văn B";
+
+        // 1. Session 1: Tư vấn xe 7 chỗ đi Đà Lạt (renter)
+        String s1Messages = """
+                [
+                  {"role":"USER","content":"Tư vấn cho tôi xe 7 chỗ đi du lịch Đà Lạt cùng gia đình 6 người với"},
+                  {"role":"ASSISTANT","content":"Dạ em chào anh/chị! Nếu gia đình mình 6 người đi du lịch Đà Lạt thì em gợi ý dòng xe 7 chỗ gầm cao rất mạnh mẽ và đầm chắc là **Ford Everest Titanium 4x4** hoặc **Toyota Fortuner Legender** ạ. Không gian xe rất rộng rãi, thoải mái cho cả nhà và chứa được nhiều vali. Bên em cũng có dịch vụ thuê kèm tài xế chuyên nghiệp nếu nhà mình muốn thư giãn ngắm cảnh suốt chặng đường nhé!"},
+                  {"role":"USER","content":"Thuê xe Ford Everest 3 ngày thì tiền cọc tính thế nào em?"},
+                  {"role":"ASSISTANT","content":"Dạ tiền thuê Ford Everest trong 3 ngày là 4.350.000 đ. Anh/chị chỉ cần thanh toán trước 30% tiền cọc là **1.305.000 đ** qua mã VietQR tự động để hệ thống khóa lịch giữ xe ngay lập tức. Số tiền 70% còn lại (3.045.000 đ) mình sẽ thanh toán trực tiếp cho chủ xe khi nhận xe thực tế ạ!"}
+                ]""";
+
+        chatMemoryRepository.save(ChatMemoryJpaEntity.builder()
+                .userId(renterId)
+                .sessionId("session_renter_tuvan_dalat")
+                .userRole("ROLE_RENTER")
+                .userEmail(renterEmail)
+                .userFullName(renterName)
+                .messageCount(4)
+                .firstMessage("Tư vấn cho tôi xe 7 chỗ đi du lịch Đà Lạt cùng gia đình 6 người với")
+                .lastMessage("Dạ tiền thuê Ford Everest trong 3 ngày là 4.350.000 đ. Anh/chị chỉ cần thanh toán trước 30% tiền cọc là 1.305.000 đ qua mã VietQR tự động...")
+                .messages(s1Messages.trim())
+                .updatedAt(Instant.now().minus(2, java.time.temporal.ChronoUnit.HOURS))
+                .build());
+
+        // 2. Session 2: Hỏi chính sách cọc & hoàn tiền (renter)
+        String s2Messages = """
+                [
+                  {"role":"USER","content":"Chính sách hủy chuyến và hoàn cọc của DriveShare như thế nào vậy em?"},
+                  {"role":"ASSISTANT","content":"Dạ chính sách hoàn cọc của DriveShare rất rõ ràng và minh bạch ạ:\\n• Hủy trước 48 giờ: Hoàn lại 100% tiền cọc.\\n• Hủy từ 24 đến 48 giờ: Hoàn lại 70% tiền cọc.\\n• Hủy dưới 24 giờ: Không hoàn cọc để bảo vệ quyền lợi chủ xe.\\nToàn bộ tiền cọc được giữ trung gian tại DriveShare an toàn tuyệt đối nên anh/chị hoàn toàn yên tâm nhé!"}
+                ]""";
+
+        chatMemoryRepository.save(ChatMemoryJpaEntity.builder()
+                .userId(renterId)
+                .sessionId("session_renter_chinhsach_coc")
+                .userRole("ROLE_RENTER")
+                .userEmail(renterEmail)
+                .userFullName(renterName)
+                .messageCount(2)
+                .firstMessage("Chính sách hủy chuyến và hoàn cọc của DriveShare như thế nào vậy em?")
+                .lastMessage("Dạ chính sách hoàn cọc của DriveShare rất rõ ràng và minh bạch ạ: Hủy trước 48 giờ được hoàn 100% cọc...")
+                .messages(s2Messages.trim())
+                .updatedAt(Instant.now().minus(1, java.time.temporal.ChronoUnit.DAYS))
+                .build());
+
+        // 3. Session 3: Khách vãng lai hỏi xe điện (GUEST - userId = 0)
+        String s3Messages = """
+                [
+                  {"role":"USER","content":"Website có những dòng xe điện nào vậy?"},
+                  {"role":"ASSISTANT","content":"Dạ DriveShare hiện có các dòng xe điện thông minh hàng đầu như VinFast VF8, VinFast VF9 Plus và VinFast VF e34 với đầy đủ trạm sạc trên toàn quốc, vận hành êm ái và thân thiện môi trường ạ!"}
+                ]""";
+
+        chatMemoryRepository.save(ChatMemoryJpaEntity.builder()
+                .userId(0L)
+                .sessionId("session_guest_xedien_vinfast")
+                .userRole("GUEST")
+                .userEmail("guest@visitor.com")
+                .userFullName("Khách vãng lai")
+                .messageCount(2)
+                .firstMessage("Website có những dòng xe điện nào vậy?")
+                .lastMessage("Dạ DriveShare hiện có các dòng xe điện thông minh hàng đầu như VinFast VF8, VinFast VF9 Plus...")
+                .messages(s3Messages.trim())
+                .updatedAt(Instant.now().minus(3, java.time.temporal.ChronoUnit.DAYS))
+                .build());
+
+        log.info("Initialized 3 realistic chat sessions into chat_memory table.");
     }
 
     private Car createOrGetCar(Long ownerId, String plateNumber, String brand, String model, int year,
