@@ -138,7 +138,7 @@ Dự án áp dụng mô hình phân nhánh và kiểm duyệt nghiêm ngặt nh�
 ### 1. Cấu Trúc Nhánh & Trách Nhiệm
 - **`develop` (Default Branch)**: Nhánh tích hợp chính của nhóm. Mọi nhánh tính năng (`feature/*`) và sửa lỗi (`fix/*`) bắt buộc phải fork từ `develop` và tạo Pull Request vào `develop`.
 - **`main` (Production Branch)**: Nhánh chạy thực tế kết nối với Render Cloud. Chỉ nhận code từ `develop` thông qua Release PR do Tech Lead khởi tạo.
-- **`CODEOWNERS`**: Mọi Pull Request đều được tự động gán Tech Lead **Nguyễn Duy Bảo** (`@em123ngao-arch`) làm người thẩm định và phê duyệt (Required Approval).
+- **`CODEOWNERS`**: Mọi Pull Request đều được tự động gán Tech Lead **Nguyễn Duy Bảo** (`@em123ngao-arch`) và **Đỗ Ngọc Phát** (`@dongocphat007-ctrl`) làm người thẩm định, phê duyệt và merge (Required Approval).
 
 ### 2. Chiến Lược Merge (Hợp Nhất Code)
 - **Feature/Fix PR $\rightarrow$ `develop`**: Sử dụng **Squash and Merge** (Gộp toàn bộ commit vụn vặt thành 1 commit duy nhất theo chuẩn Conventional Commits).

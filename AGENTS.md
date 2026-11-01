@@ -142,7 +142,7 @@ Khi thêm chức năng hoặc sửa lỗi, AI và Developer cần tuân thủ th
 - **`develop`**: Nhánh tích hợp chính (Default branch). Toàn bộ tính năng (`feature/*`) và sửa lỗi (`fix/*`) mở PR vào đây.
 - **`main`**: Nhánh Production/Release kết nối với Render Web Service. Chỉ nhận PR từ `develop` do Tech Lead duyệt.
 - **CẤM**: Không được push trực tiếp vào `develop` và `main`. Mọi thay đổi phải qua Pull Request.
-- **CODEOWNERS**: Tech Lead Nguyễn Duy Bảo (`@em123ngao-arch`) là người duyệt bắt buộc (Required Approval).
+- **CODEOWNERS**: Tech Lead Nguyễn Duy Bảo (`@em123ngao-arch`) và Đỗ Ngọc Phát (`@dongocphat007-ctrl`) là người duyệt bắt buộc và có thẩm quyền merge PR (Required Approval).
 
 ### 6.2 Chiến Lược Hợp Nhất (Merge Strategy)
 - **Feature/Fix PR $\rightarrow$ `develop`**: Sử dụng **Squash and Merge** (Gom các commit nhỏ lẻ thành 1 commit sạch đẹp).

@@ -201,4 +201,4 @@ Khi phát hiện lỗi trong quá trình kiểm thử:
 1. Tạo branch sửa lỗi từ `develop`: `git checkout -b fix/<jira-id>-<ten-loi>`.
 2. Sửa code tuân thủ nghiêm ngặt 3 tầng Hexagonal (Domain $\rightarrow$ Ports $\rightarrow$ Adapters).
 3. Chạy kiểm thử tự động nội bộ: `cd backend; .\mvnw.cmd test` (bắt buộc pass 240/240 tests, không vi phạm 7 luật ArchUnit).
-4. Đẩy nhánh và tạo Pull Request vào `develop` theo đúng quy chuẩn `create-github-pr`. Tech Lead (`NB`) kiểm tra và merge.
+4. Đẩy nhánh và tạo Pull Request vào `develop` theo đúng quy chuẩn `create-github-pr`. Tech Lead (`NB`) hoặc Quản trị viên (`PT`) kiểm tra, phê duyệt (CODEOWNERS) và merge.
