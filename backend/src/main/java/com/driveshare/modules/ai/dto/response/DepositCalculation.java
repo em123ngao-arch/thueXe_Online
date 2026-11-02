@@ -1,5 +1,6 @@
 package com.driveshare.modules.ai.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -58,4 +59,46 @@ public class DepositCalculation {
 
     /** Còn lại đã format */
     private String remainingFormatted;
+
+    @JsonProperty("carId")
+    public Long getCarIdCamel() { return carId; }
+
+    @JsonProperty("carName")
+    public String getCarNameCamel() { return carName; }
+
+    @JsonProperty("rentalDays")
+    public Integer getRentalDaysCamel() { return rentalDays; }
+
+    @JsonProperty("pricePerDay")
+    public BigDecimal getPricePerDayCamel() { return pricePerDay; }
+
+    @JsonProperty("totalRentalFee")
+    public BigDecimal getTotalRentalFeeCamel() { return totalRentalFee; }
+
+    @JsonProperty("withDriver")
+    public Boolean getWithDriverCamel() { return withDriver; }
+
+    @JsonProperty("driverFeePerDay")
+    public BigDecimal getDriverFeePerDayCamel() { return driverFeePerDay; }
+
+    @JsonProperty("totalDriverFee")
+    public BigDecimal getTotalDriverFeeCamel() { return totalDriverFee; }
+
+    @JsonProperty("grandTotal")
+    public BigDecimal getGrandTotalCamel() { return grandTotal; }
+
+    @JsonProperty("depositAmount")
+    public BigDecimal getDepositAmountCamel() { return depositAmount; }
+
+    @JsonProperty("remainingAmount")
+    public BigDecimal getRemainingAmountCamel() { return remainingAmount; }
+
+    @JsonProperty("depositFormatted")
+    public String getDepositFormattedCamel() { return depositFormatted; }
+
+    @JsonProperty("grandTotalFormatted")
+    public String getGrandTotalFormattedCamel() { return grandTotalFormatted; }
+
+    @JsonProperty("remainingFormatted")
+    public String getRemainingFormattedCamel() { return remainingFormatted; }
 }

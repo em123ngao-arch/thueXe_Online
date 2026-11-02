@@ -2865,24 +2865,32 @@ const AdminService = {
       `;
 
       sessions.forEach(s => {
-        const timeStr = s.updatedAt ? new Date(s.updatedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+        const sid = s.sessionId || s.session_id || '';
+        const userFullName = s.userFullName || s.user_full_name || '';
+        const userEmail = s.userEmail || s.user_email || '';
+        const userRole = s.userRole || s.user_role || '';
+        const lastMsg = s.lastMessage || s.last_message || '';
+        const msgCount = (s.messageCount != null) ? s.messageCount : ((s.message_count != null) ? s.message_count : 0);
+        const updatedRaw = s.updatedAt || s.updated_at;
+        const timeStr = s.updatedAtFormatted || s.updated_at_formatted || (updatedRaw ? new Date(updatedRaw).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+
         let roleBadge = '';
-        if (s.userRole === 'ROLE_RENTER') {
+        if (userRole === 'ROLE_RENTER') {
           roleBadge = '<span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 600;">Khách thuê</span>';
-        } else if (s.userRole === 'ROLE_OWNER') {
+        } else if (userRole === 'ROLE_OWNER') {
           roleBadge = '<span class="badge" style="background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; font-weight: 600;">Chủ xe</span>';
-        } else if (s.userRole === 'ROLE_ADMIN') {
+        } else if (userRole === 'ROLE_ADMIN') {
           roleBadge = '<span class="badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 600;">Quản trị</span>';
         } else {
           roleBadge = '<span class="badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-weight: 600;">Khách vãng lai</span>';
         }
 
-        const userDisplay = s.userFullName
-          ? `<strong>${this.escapeHtml(s.userFullName)}</strong><br><small style="color: #64748b;">${this.escapeHtml(s.userEmail || '')}</small>`
+        const userDisplay = userFullName
+          ? `<strong>${this.escapeHtml(userFullName)}</strong><br><small style="color: #64748b;">${this.escapeHtml(userEmail)}</small>`
           : `<span style="color: #94a3b8; font-style: italic;">Khách vãng lai (Chưa đăng nhập)</span>`;
 
-        const lastSnippet = s.lastMessage
-          ? this.escapeHtml(s.lastMessage.length > 90 ? s.lastMessage.substring(0, 90) + '...' : s.lastMessage)
+        const lastSnippet = lastMsg
+          ? this.escapeHtml(lastMsg.length > 90 ? lastMsg.substring(0, 90) + '...' : lastMsg)
           : '<span style="color: #cbd5e1;">(Chưa có nội dung)</span>';
 
         html += `
@@ -2891,9 +2899,9 @@ const AdminService = {
             <td style="font-size: 13px;">${userDisplay}</td>
             <td>${roleBadge}</td>
             <td style="font-size: 13px; color: #334155;">${lastSnippet}</td>
-            <td style="text-align: center;"><span class="badge" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #1e293b; font-weight: 700;">${s.messageCount || 0}</span></td>
+            <td style="text-align: center;"><span class="badge" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #1e293b; font-weight: 700;">${msgCount}</span></td>
             <td style="text-align: center;">
-              <button class="btn btn-primary btn-sm" onclick="AdminService.viewChatDetail('${this.escapeHtml(s.sessionId)}', '${this.escapeHtml(s.userFullName || 'Khách vãng lai')}')" style="font-size: 12px; padding: 4px 10px;">
+              <button class="btn btn-primary btn-sm" onclick="AdminService.viewChatDetail('${this.escapeHtml(sid)}', '${this.escapeHtml(userFullName || 'Khách vãng lai')}')" style="font-size: 12px; padding: 4px 10px;">
                 Xem chi tiết
               </button>
             </td>

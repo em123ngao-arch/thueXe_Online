@@ -1,6 +1,7 @@
 package com.driveshare.modules.ai.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,4 +31,19 @@ public class ChatReplyResponse {
 
     /** Kết quả tính tiền cọc 30% (nếu khách hỏi tính tiền) */
     private DepositCalculation depositCalculation;
+
+    @JsonProperty("sessionId")
+    public String getSessionIdCamel() {
+        return sessionId;
+    }
+
+    @JsonProperty("suggestedCars")
+    public List<CarCardDto> getSuggestedCarsCamel() {
+        return suggestedCars;
+    }
+
+    @JsonProperty("depositCalculation")
+    public DepositCalculation getDepositCalculationCamel() {
+        return depositCalculation;
+    }
 }
