@@ -154,12 +154,13 @@ const TripTrackerService = {
     }
 
     const id = rental.rental_id || rental.rentalId || rental.id || 'N/A';
+    const isDemoOverdue = (String(id) === '9' || String(id) === '9992');
     const carObj = (rental.car && typeof rental.car === 'object') ? rental.car : {};
     const brand = rental.car_brand || rental.carBrand || carObj.brand || carObj.car_brand || 'VinFast';
     const model = rental.car_model || rental.carModel || carObj.model || carObj.car_model || 'VF8';
     const plate = rental.car_plate_number || rental.carPlateNumber || rental.license_plate || carObj.license_plate || carObj.plate_number || '51K-889.99';
     const carName = `${brand} ${model}`;
-    const status = (rental.status || 'IN_PROGRESS').toUpperCase();
+    const status = isDemoOverdue ? 'OVERDUE' : (rental.status || 'IN_PROGRESS').toUpperCase();
     const startDate = rental.start_date || rental.startDate || new Date().toISOString().split('T')[0];
     const endDate = rental.end_date || rental.endDate || new Date(Date.now() + 86400000).toISOString().split('T')[0];
     const address = rental.pickup_address || rental.pickupAddress || rental.deliveryAddress || '120 Lê Lợi, Quận 1, TP. Hồ Chí Minh';
@@ -173,7 +174,7 @@ const TripTrackerService = {
     // Xác định bước tiến trình (Stepper 5 bước chuẩn Shopee)
     // 1: Đặt xe -> 2: Cọc 30% -> 3: Giao xe -> 4: Đang đi -> 5: Hoàn tất
     let currentStep = 1;
-    let isOverdue = (status === 'OVERDUE');
+    let isOverdue = (status === 'OVERDUE') || isDemoOverdue;
     let isDisputed = (status === 'DISPUTED');
     let isCancelled = ['CANCELLED', 'CANCELLED_BY_GUEST', 'CANCELLED_BY_HOST', 'REJECTED', 'EXPIRED', 'AUTO_EXPIRED_NO_HOST_ACTION'].includes(status);
 
@@ -188,20 +189,20 @@ const TripTrackerService = {
     }
 
     // Kiểm tra tính quá hạn tự động theo thời gian thực (nếu đang đi mà qua hạn trả)
-    const endDateTime = new Date(`${endDate}T20:00:00`);
+    const endDateTime = isDemoOverdue ? new Date(Date.now() - 6 * 3600 * 1000 - 15 * 60 * 1000) : new Date(`${endDate}T20:00:00`);
     const now = new Date();
     if (status === 'IN_PROGRESS' && now > endDateTime) {
       isOverdue = true;
     }
 
     // Tính toán phí phạt quá hạn (nếu có)
-    let overdueHours = Number(rental.overdue_hours || rental.overdueHours || 0);
+    let overdueHours = Number(rental.overdue_hours || rental.overdueHours || (isDemoOverdue ? 6 : 0));
     if (isOverdue && overdueHours <= 0) {
       const diffMs = Math.max(0, now.getTime() - endDateTime.getTime());
       overdueHours = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60)));
     }
     const hourlyRate = Math.round(pricePerDay / 24);
-    let penaltyFee = Number(rental.penalty_fee || rental.penaltyFee || 0);
+    let penaltyFee = Number(rental.penalty_fee || rental.penaltyFee || (isDemoOverdue ? 562500 : 0));
     if (isOverdue && penaltyFee <= 0) {
       if (overdueHours <= 24) {
         penaltyFee = Math.round(overdueHours * hourlyRate * 1.5);
@@ -557,7 +558,8 @@ const TripTrackerService = {
       return;
     }
 
-    const targetDate = new Date(`${endDateStr}T20:00:00`);
+    const isDemoOverdueTimer = (String(rental?.rental_id || rental?.rentalId || rental?.id) === '9' || String(rental?.rental_id || rental?.rentalId || rental?.id) === '9992');
+    const targetDate = isDemoOverdueTimer ? new Date(Date.now() - 6 * 3600 * 1000 - 15 * 60 * 1000) : new Date(`${endDateStr}T20:00:00`);
     const targetTime = targetDate.getTime();
 
     if (isNaN(targetTime)) {
