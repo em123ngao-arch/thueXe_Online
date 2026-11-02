@@ -7,7 +7,9 @@ import com.driveshare.modules.car.adapter.out.persistence.Car;
 import com.driveshare.modules.car.repository.CarRepository;
 import com.driveshare.modules.rental.dto.response.RentalSummaryResponse;
 import com.driveshare.modules.rental.adapter.out.persistence.Rental;
+import com.driveshare.modules.rental.adapter.out.persistence.Review;
 import com.driveshare.modules.rental.repository.RentalRepository;
+import com.driveshare.modules.rental.repository.ReviewRepository;
 import com.driveshare.modules.rental.service.RentalQueryService;
 import com.driveshare.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class RentalQueryServiceImpl implements RentalQueryService {
 
     private final RentalRepository rentalRepository;
     private final CarRepository carRepository;
+    private final ReviewRepository reviewRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -35,8 +38,21 @@ public class RentalQueryServiceImpl implements RentalQueryService {
         log.info("Lấy danh sách đơn thuê của khách hàng renterId={}", currentUserId);
 
         List<Rental> rentals = rentalRepository.findByRenterIdOrderByCreatedAtDesc(currentUserId);
+        List<Review> userReviews = reviewRepository != null ? reviewRepository.findByRenterId(currentUserId) : Collections.emptyList();
+        java.util.Map<Long, Review> reviewMap = userReviews.stream()
+                .collect(java.util.stream.Collectors.toMap(Review::getRentalId, r -> r, (r1, r2) -> r1));
+
         return rentals.stream()
-                .map(RentalSummaryResponse::fromEntity)
+                .map(r -> {
+                    RentalSummaryResponse resp = RentalSummaryResponse.fromEntity(r);
+                    if (reviewMap.containsKey(r.getRentalId())) {
+                        resp.setHasReviewed(true);
+                        resp.setUserRating(reviewMap.get(r.getRentalId()).getRating());
+                    } else {
+                        resp.setHasReviewed(false);
+                    }
+                    return resp;
+                })
                 .toList();
     }
 

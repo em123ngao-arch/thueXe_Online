@@ -44,6 +44,9 @@ class RentalQueryServiceTest {
     @Mock
     private CarRepository carRepository;
 
+    @Mock
+    private com.driveshare.modules.rental.repository.ReviewRepository reviewRepository;
+
     @InjectMocks
     private RentalQueryServiceImpl rentalQueryService;
 
@@ -108,6 +111,8 @@ class RentalQueryServiceTest {
     void getMyRentals_Success() {
         when(rentalRepository.findByRenterIdOrderByCreatedAtDesc(100L))
                 .thenReturn(List.of(sampleRental));
+        when(reviewRepository.findByRenterId(100L))
+                .thenReturn(Collections.emptyList());
 
         List<RentalSummaryResponse> results = rentalQueryService.getMyRentals();
 

@@ -1545,20 +1545,21 @@ const RenderService = {
 
             statusBadge = '<span class="badge badge-success" style="background:#ecfdf5; color:#065f46; border:1.5px solid #a7f3d0; font-weight:800; padding:4px 10px; border-radius:6px;">ĐÃ HOÀN TẤT</span>';
 
-            actionButtons = `
-
+            const isReviewed = Boolean(bk.has_reviewed || bk.hasReviewed || bk.is_reviewed || bk.isReviewed || (typeof App !== 'undefined' && App.isRentalReviewed && App.isRentalReviewed(id)));
+            const reviewBtnHtml = isReviewed ? `
+              <span class="badge" style="background:#fef3c7; color:#b45309; border:1.5px solid #fde68a; font-weight:800; padding:6px 12px; font-size:0.8rem; display:inline-flex; align-items:center; gap:4px; border-radius:6px;" title="Chuyến đi đã hoàn tất đánh giá (mỗi người chỉ được đánh giá 1 lần)">
+                ⭐ Đã đánh giá ${bk.user_rating || bk.userRating ? '(' + (bk.user_rating || bk.userRating) + ' sao)' : ''}
+              </span>
+            ` : `
               <button class="btn btn-outline btn-sm" style="color:#d97706; border-color:#fcd34d; background:#fffbeb; font-weight:700;" onclick="App.showReviewPrompt('${id}')">
-
                 ⭐ Đánh giá chuyến đi
-
               </button>
-
+            `;
+            actionButtons = `
+              ${reviewBtnHtml}
               <button class="btn btn-ghost btn-sm" style="color:#0f766e;" onclick="App.showHandoverInfo('${id}')">
-
                 Biên bản bàn giao
-
               </button>
-
             `;
 
             activeStep = 5;

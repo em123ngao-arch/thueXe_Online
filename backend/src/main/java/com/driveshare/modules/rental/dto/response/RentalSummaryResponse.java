@@ -50,6 +50,10 @@ public class RentalSummaryResponse {
     private Integer overdueHours;
     private BigDecimal penaltyFee;
 
+    // Sprint 3: Trạng thái & kết quả đánh giá (chặn đánh giá lặp lại)
+    private Boolean hasReviewed;
+    private Integer userRating;
+
     public static RentalSummaryResponse fromEntity(Rental rental) {
         if (rental == null) {
             return null;
