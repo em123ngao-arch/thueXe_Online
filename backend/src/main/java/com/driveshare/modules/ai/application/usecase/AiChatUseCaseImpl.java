@@ -1222,6 +1222,7 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
                 .province(car.getProvince())
                 .rating(car.getRating())
                 .ratingCount(car.getRatingCount())
+                .tripCount(car.getTripCount() != null ? car.getTripCount() : 0)
                 .hasDriverService(car.getHasDriverService())
                 .driverFeePerDay(car.getDriverFeePerDay())
                 .driverFeeFormatted(car.getDriverFeePerDay() != null && car.getDriverFeePerDay().compareTo(BigDecimal.ZERO) > 0

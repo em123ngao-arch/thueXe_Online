@@ -86,6 +86,7 @@ public class DataInitializer implements CommandLineRunner {
 
         try {
             jdbcTemplate.execute("ALTER TABLE rental_inspections ADD COLUMN IF NOT EXISTS status VARCHAR(40) DEFAULT 'CONFIRMED'");
+            jdbcTemplate.execute("ALTER TABLE cars ADD COLUMN IF NOT EXISTS trip_count INT DEFAULT 0");
             log.info("Successfully ensured status column exists in rental_inspections for PostgreSQL");
         } catch (Exception e) {
             log.warn("Could not add status column to rental_inspections: {}", e.getMessage());
@@ -408,71 +409,106 @@ public class DataInitializer implements CommandLineRunner {
         // =========================================================================
         // NẠP DỮ LIỆU ĐÁNH GIÁ ẢO (REVIEWS & COMMENTS) THẬT TRONG DB CHO CÁC XE
         // =========================================================================
-        if (reviewRepository.count() == 0 && reviewerNam != null && reviewerLinh != null && reviewerDung != null) {
-            log.info("Seeding realistic completed rentals & reviews for cars...");
+        if (reviewerNam != null && reviewerLinh != null && reviewerDung != null) {
+            log.info("Ensuring realistic completed rentals & reviews exist for all cars in DB...");
 
             // VinFast VF8 (car1) - 2 reviews
-            createSeededReview(car1, reviewerNam, owner, 5,
+            seedCarReviewIfEmpty(car1, reviewerNam, owner, 5,
                     "Xe điện VinFast VF8 chạy cực kỳ êm ái, pin đi từ Sài Gòn ra Vũng Tàu thoải mái không lo hết pin. Trợ lý ảo ViVi tiếng Việt nhận lệnh rất chuẩn xác!",
                     LocalDate.now().minusDays(20), LocalDate.now().minusDays(18));
-            createSeededReview(car1, reviewerLinh, owner, 5,
+            seedCarReviewIfEmpty(car1, reviewerLinh, owner, 5,
                     "Bác tài rất lịch sự, đón đúng giờ tại quận 1, lái xe điềm đạm an toàn, nội thất da thơm tho sạch sẽ. Lần sau gia đình mình sẽ tiếp tục ủng hộ!",
                     LocalDate.now().minusDays(15), LocalDate.now().minusDays(13));
 
             // Mazda CX-5 (car2) - 1 review
-            createSeededReview(car2, reviewerDung, owner, 5,
+            seedCarReviewIfEmpty(car2, reviewerDung, owner, 5,
                     "Xe gia đình 5 chỗ chạy phố Hà Nội nhẹ nhàng, máy xăng tiết kiệm, camera lùi nét căng. Chủ xe hỗ trợ giao nhận xe cực kỳ nhiệt tình.",
                     LocalDate.now().minusDays(14), LocalDate.now().minusDays(12));
 
             // Toyota Fortuner Legender (car3) - 2 reviews
-            createSeededReview(car3, reviewerDung, owner, 5,
+            seedCarReviewIfEmpty(car3, reviewerDung, owner, 5,
                     "Gia đình mình 6 người thuê đi du lịch Đà Lạt 4 ngày 3 đêm, xe 7 chỗ máy dầu gầm cao leo đèo Prenn cực bốc và đầm chắc. Rất đáng đồng tiền!",
                     LocalDate.now().minusDays(25), LocalDate.now().minusDays(21));
-            createSeededReview(car3, reviewerNam, owner, 5,
+            seedCarReviewIfEmpty(car3, reviewerNam, owner, 5,
                     "Chủ xe giao nhận xe đúng hẹn ở sân bay Tân Sơn Nhất, xe sạch tinh tươm không một vết bẩn. Thủ tục hoàn cọc diễn ra ngay sau khi bàn giao.",
                     LocalDate.now().minusDays(12), LocalDate.now().minusDays(10));
 
             // Mitsubishi Xpander (car4) - 1 review
-            createSeededReview(car4, reviewerLinh, owner, 5,
+            seedCarReviewIfEmpty(car4, reviewerLinh, owner, 5,
                     "Xe 7 chỗ rộng rãi, hàng ghế 3 người lớn ngồi vẫn thoải mái, điều hòa làm lạnh nhanh sâu, mức tiêu thụ xăng tiết kiệm bất ngờ. 5 sao uy tín!",
                     LocalDate.now().minusDays(18), LocalDate.now().minusDays(16));
 
+            // Hyundai Accent (car5) - 1 review
+            seedCarReviewIfEmpty(car5, reviewerNam, owner, 5,
+                    "Xe sedan 5 chỗ nhỏ gọn, chạy nội đô cực kỳ tiết kiệm nhiên liệu, máy lạnh sâu. Rất phù hợp cho chuyến đi ngắn ngày.",
+                    LocalDate.now().minusDays(19), LocalDate.now().minusDays(17));
+
+            // Toyota Vios (car6) - 1 review
+            seedCarReviewIfEmpty(car6, reviewerLinh, owner, 5,
+                    "Dòng xe quốc dân bền bỉ, chạy đường Đà Nẵng - Hội An cực kỳ êm ái, chủ xe thân thiện hướng dẫn chi tiết.",
+                    LocalDate.now().minusDays(22), LocalDate.now().minusDays(20));
+
+            // VinFast VF e34 (car7) - 1 review
+            seedCarReviewIfEmpty(car7, reviewerDung, owner, 5,
+                    "Trải nghiệm xe điện thông minh không mùi xăng xe rất thoải mái cho trẻ em, sạc nhanh tiện lợi ở Vincom.",
+                    LocalDate.now().minusDays(16), LocalDate.now().minusDays(14));
+
             // Ford Everest Titanium (car8) - 1 review
-            createSeededReview(car8, reviewerNam, owner, 5,
+            seedCarReviewIfEmpty(car8, reviewerNam, owner, 5,
                     "Dòng SUV cơ bắp Mỹ cách âm đỉnh cao, hệ thống loa B&O nghe nhạc sống động như rạp hát. Máy 2.0 Bi-Turbo vượt xe dứt khoát và an toàn.",
                     LocalDate.now().minusDays(11), LocalDate.now().minusDays(9));
 
+            // Honda CR-V (car9) - 1 review
+            seedCarReviewIfEmpty(car9, reviewerLinh, owner, 5,
+                    "Crossover 7 chỗ Honda CR-V lái đầm chắc, gói Honda Sensing cảnh báo rất nhạy, cả gia đình đi Tây Bắc cực an tâm.",
+                    LocalDate.now().minusDays(17), LocalDate.now().minusDays(15));
+
             // Kia Carnival Signature (car10) - 1 review
-            createSeededReview(car10, reviewerDung, owner, 5,
+            seedCarReviewIfEmpty(car10, reviewerDung, owner, 5,
                     "Thuê xe cho ban giám đốc đi công tác Đà Nẵng - Hội An, hàng ghế thương gia chỉnh điện ngả lưng cực kỳ thoải mái và sang trọng. Đối tác khen nức nở!",
                     LocalDate.now().minusDays(10), LocalDate.now().minusDays(8));
 
             // Mercedes C200 (car11) - 1 review
-            createSeededReview(car11, reviewerLinh, owner, 5,
+            seedCarReviewIfEmpty(car11, reviewerLinh, owner, 5,
                     "Thuê xe sang phục vụ đám cưới em gái, xe bóng bẩy chụp ảnh ngoại cảnh siêu lung linh. Chủ xe bàn giao xe bóng loáng thơm phức.",
                     LocalDate.now().minusDays(16), LocalDate.now().minusDays(15));
 
             // BMW 320i (car12) - 1 review
-            createSeededReview(car12, reviewerNam, owner, 5,
+            seedCarReviewIfEmpty(car12, reviewerNam, owner, 5,
                     "Cảm giác lái BMW đúng là đỉnh chóp, vô lăng chính xác từng mi-li-mét, đạp ga dính lưng. Trải nghiệm thuê xe thể thao quá tuyệt vời trên DriveShare!",
                     LocalDate.now().minusDays(13), LocalDate.now().minusDays(11));
 
             // VinFast VF9 (car13) - 1 review
-            createSeededReview(car13, reviewerDung, owner, 5,
+            seedCarReviewIfEmpty(car13, reviewerDung, owner, 5,
                     "Xe điện Full-size đẳng cấp chủ tịch, trần kính toàn cảnh ngắm hoàng hôn siêu đẹp, ghế massage êm ru. Bác tài chu đáo phục vụ 5 sao.",
                     LocalDate.now().minusDays(9), LocalDate.now().minusDays(7));
 
             // Hyundai SantaFe (car14) - 1 review
-            createSeededReview(car14, reviewerLinh, owner, 5,
+            seedCarReviewIfEmpty(car14, reviewerLinh, owner, 5,
                     "Xe 7 chỗ máy dầu chạy đầm chắc, hệ thống phanh khẩn cấp và cảnh báo điểm mù hoạt động rất nhạy, đi đường dài Tây Bắc an tâm tuyệt đối.",
                     LocalDate.now().minusDays(14), LocalDate.now().minusDays(12));
 
             // Toyota Camry 2.5Q (car15) - 1 review
-            createSeededReview(car15, reviewerNam, owner, 5,
+            seedCarReviewIfEmpty(car15, reviewerNam, owner, 5,
                     "Camry 2.5Q êm ru như thảm bay, hàng ghế sau VIP có điều khiển cảm ứng ngả lưng riêng. Chủ xe rất chuyên nghiệp và uy tín.",
                     LocalDate.now().minusDays(8), LocalDate.now().minusDays(6));
 
-            log.info("Successfully seeded reviews for cars with actual DB records.");
+            // Kia Seltos 1.4 Turbo (car16) - 1 review
+            seedCarReviewIfEmpty(car16, reviewerDung, owner, 5,
+                    "Gầm cao máy thoáng, động cơ Turbo bốc, luồn lách phố xá Sài Gòn rất linh hoạt, giá thuê lại cực kỳ mềm.",
+                    LocalDate.now().minusDays(12), LocalDate.now().minusDays(10));
+
+            // Mazda 3 Premium (car17) - 1 review
+            seedCarReviewIfEmpty(car17, reviewerLinh, owner, 5,
+                    "Dáng xe KODO đỏ pha lê cực đẹp, nội thất da cao cấp sang chảnh, chụp ảnh check-in biển Đà Nẵng tuyệt vời.",
+                    LocalDate.now().minusDays(7), LocalDate.now().minusDays(5));
+
+            // VinFast VF5 Plus (car18) - 1 review
+            seedCarReviewIfEmpty(car18, reviewerNam, owner, 5,
+                    "Xe điện đô thị nhỏ gọn dễ lái, điều hòa mát rượi, chi phí sạc pin tiết kiệm hơn rất nhiều so với đổ xăng.",
+                    LocalDate.now().minusDays(6), LocalDate.now().minusDays(4));
+
+            log.info("Successfully ensured all cars have realistic reviews in DB.");
         }
 
         // =========================================================================
@@ -715,6 +751,13 @@ public class DataInitializer implements CommandLineRunner {
         });
     }
 
+    private void seedCarReviewIfEmpty(Car car, User renter, User owner, int rating, String comment,
+                                       LocalDate startDate, LocalDate endDate) {
+        if (car != null && reviewRepository.countByCarId(car.getCarId()) == 0) {
+            createSeededReview(car, renter, owner, rating, comment, startDate, endDate);
+        }
+    }
+
     private void createSeededReview(Car car, User renter, User owner, int rating, String comment,
                                     LocalDate startDate, LocalDate endDate) {
         long days = Math.max(1, java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate));
@@ -778,16 +821,25 @@ public class DataInitializer implements CommandLineRunner {
         for (Car car : allCars) {
             Double avg = reviewRepository.calculateAverageRatingByCarId(car.getCarId());
             long count = reviewRepository.countByCarId(car.getCarId());
+            long completedRentals = rentalRepository.findAll().stream()
+                    .filter(r -> r.getCarId().equals(car.getCarId()) && r.getStatus() == ERentalStatus.COMPLETED)
+                    .count();
 
             if (count > 0 && avg != null) {
                 car.setRating(BigDecimal.valueOf(avg).setScale(2, RoundingMode.HALF_UP));
                 car.setRatingCount((int) count);
             } else {
                 car.setRating(new BigDecimal("5.00"));
-                car.setRatingCount(0);
+                car.setRatingCount((int) count);
             }
+
+            int finalTrips = (int) Math.max(completedRentals, car.getRatingCount() != null ? car.getRatingCount() : 0);
+            if (finalTrips == 0) {
+                finalTrips = (int) ((car.getCarId() % 5) + 3);
+            }
+            car.setTripCount(finalTrips);
             carRepository.save(car);
         }
-        log.info("Recalculated ratings for {} cars according to actual review database.", allCars.size());
+        log.info("Recalculated ratings and trip counts for {} cars according to actual review & rental database.", allCars.size());
     }
 }

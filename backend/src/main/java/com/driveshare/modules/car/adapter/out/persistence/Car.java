@@ -145,6 +145,10 @@ public class Car extends BaseEntity {
     @Builder.Default
     private Integer ratingCount = 0;
 
+    @Column(name = "trip_count")
+    @Builder.Default
+    private Integer tripCount = 0;
+
     // -----------------------------------------------------------------
     // Trạng thái & Soft-delete
     // -----------------------------------------------------------------
