@@ -365,6 +365,11 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
             return buildDriverServiceResponse(sessionId);
         }
 
+        // ── Ý ĐỊNH: HỎI VỀ BẢN THÂN BOT ──
+        if (matchesAboutBot(lower)) {
+            return buildAboutBotResponse(sessionId);
+        }
+
         // ── Ý ĐỊNH NGOÀI PHẠM VI DỰ ÁN (Lập trình, thời sự, bóng đá, AI khác) ──
         if (matchesOutOfScope(lower)) {
             return buildOutOfScopeResponse(sessionId);
@@ -375,8 +380,13 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
             return buildCarSearchResponse(query, lower, sessionId);
         }
 
-        // Mặc định: Phản hồi hỗ trợ thân thiện, không spam thẻ xe bừa bãi
-        return buildGreetingResponse(sessionId);
+        // Nếu người dùng gửi lời chào
+        if (matchesGreeting(lower)) {
+            return buildGreetingResponse(sessionId);
+        }
+
+        // Mặc định: Lịch sự thông báo ngoài phạm vi và gợi ý các AI phổ biến (không lặp lại mẫu chào mừng robot)
+        return buildOutOfScopeResponse(sessionId);
     }
 
     // =========================================================================
@@ -493,13 +503,44 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
     }
 
     private boolean matchesOutOfScope(String lower) {
-        return lower.contains("lập trình") || lower.contains("viết code") || lower.contains("python")
-                || lower.contains("java") || lower.contains("html") || lower.contains("css")
-                || lower.contains("giải toán") || lower.contains("thời tiết") || lower.contains("bóng đá")
-                || lower.contains("ai vô địch") || lower.contains("tin tức") || lower.contains("chính trị")
-                || lower.contains("viết văn") || lower.contains("làm thơ") || lower.contains("nấu ăn")
-                || lower.contains("công thức") || lower.contains("chatgpt") || lower.contains("claude")
-                || lower.contains("openai");
+        boolean isVoucherOrPromo = lower.contains("mã giảm") || lower.contains("voucher")
+                || lower.contains("khuyến mãi") || lower.contains("ưu đãi") || lower.contains("code giảm");
+        boolean isCodingOrTech = !isVoucherOrPromo && (
+                lower.contains("lập trình") || lower.contains("code") || lower.contains("coding")
+                || lower.contains("developer") || lower.contains("phần mềm") || lower.contains("viết code")
+                || lower.contains("python") || lower.contains("java") || lower.contains("html") || lower.contains("css")
+                || lower.contains("javascript") || lower.contains("typescript") || lower.contains("react")
+                || lower.contains("spring") || lower.contains("sql") || lower.contains("bug") || lower.contains("debug")
+                || lower.contains("thuật toán") || lower.contains("backend") || lower.contains("frontend")
+                || lower.contains("viết hàm") || lower.contains("viết app") || lower.contains("tạo web")
+        );
+
+        boolean isGeneralKnowledge = lower.contains("giải toán") || lower.contains("toán")
+                || lower.contains("vật lý") || lower.contains("hóa học") || lower.contains("sinh học")
+                || lower.contains("bài tập") || lower.contains("lịch sử") || lower.contains("địa lý");
+
+        boolean isMediaOrLife = lower.contains("thời tiết") || lower.contains("bóng đá") || lower.contains("ai vô địch")
+                || lower.contains("tin tức") || lower.contains("chính trị") || lower.contains("tổng thống")
+                || lower.contains("chiến tranh") || lower.contains("viết văn") || lower.contains("làm thơ")
+                || lower.contains("nấu ăn") || lower.contains("công thức") || lower.contains("món ăn")
+                || lower.contains("hát") || lower.contains("bài hát") || lower.contains("ca sĩ")
+                || lower.contains("phim") || lower.contains("game") || lower.contains("chơi game")
+                || lower.contains("tâm sự") || lower.contains("tình yêu") || lower.contains("kể chuyện")
+                || lower.contains("bác sĩ") || lower.contains("khám bệnh") || lower.contains("uống thuốc")
+                || lower.contains("chứng khoán") || lower.contains("crypto") || lower.contains("bitcoin")
+                || lower.contains("dịch sang") || lower.contains("tiếng anh");
+
+        boolean isOtherAi = lower.contains("chatgpt") || lower.contains("claude") || lower.contains("openai")
+                || lower.contains("deepseek") || lower.contains("grok") || lower.contains("perplexity");
+
+        return isCodingOrTech || isGeneralKnowledge || isMediaOrLife || isOtherAi;
+    }
+
+    private boolean matchesAboutBot(String lower) {
+        return lower.contains("bạn là ai") || lower.contains("mày là ai") || lower.contains("em là ai")
+                || lower.contains("bạn làm được gì") || lower.contains("chức năng của bạn")
+                || lower.contains("giới thiệu bản thân") || lower.contains("bạn có thể làm gì")
+                || lower.contains("ai tạo ra bạn");
     }
 
     private boolean isCarSearchIntent(String lower) {
@@ -638,6 +679,22 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
                         • 🚀 [Grok (xAI)](https://grok.com) — Trợ lý AI đối thoại và cập nhật thời gian thực
 
                         Bất cứ lúc nào anh/chị cần tìm xe du lịch, xe công tác, xe tự lái hay có tài xế trên DriveShare, em luôn sẵn lòng hỗ trợ anh/chị ạ! 🚗✨""")
+                .build();
+    }
+
+    private ChatReplyResponse buildAboutBotResponse(String sessionId) {
+        return ChatReplyResponse.builder()
+                .sessionId(sessionId)
+                .message("""
+                        Xin chào! 👋 Em là **Trợ lý AI DriveShare** — người bạn đồng hành hỗ trợ tư vấn và chia sẻ xe trực tuyến trên hệ thống DriveShare.
+
+                        🚗 **Em có thể hỗ trợ anh/chị:**
+                        • 🔍 **Tìm kiếm xe nhanh chóng:** Tìm theo số chỗ (4, 5, 7 chỗ), hãng xe (Toyota, Mazda, VinFast, Hyundai...), loại xe xăng/điện, hộp số tự động và khu vực.
+                        • 💰 **Báo giá & Tính cọc 30% VietQR:** Dự toán chi phí thuê xe theo ngày kèm cọc 30% chuẩn xác, minh bạch.
+                        • 👨‍✈️ **Dịch vụ thuê kèm tài xế:** Tư vấn dịch vụ tài xế chuyên nghiệp cho chuyến đi gia đình hoặc công tác.
+                        • 📜 **Quy chế & Hỗ trợ:** Giải đáp chính sách nhận xe, hủy chuyến, bảo hiểm và hỗ trợ sự cố khẩn cấp.
+
+                        Anh/chị đang có nhu cầu thuê xe như thế nào hôm nay ạ? 🚗✨""")
                 .build();
     }
 
