@@ -219,8 +219,15 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
             filteredCars = allActiveCars;
         }
 
-        // 2. Chỉ tạo thẻ xe (Car Cards) hiển thị trên giao diện chat khi người dùng có nhu cầu tìm xe
-        if (isSearchingCars) {
+        // 2. Chỉ tạo thẻ xe (Car Cards) hiển thị trên giao diện chat khi người dùng có nhu cầu tìm xe cụ thể.
+        // Nếu người dùng chỉ hỏi về số lượng tổng thể (ví dụ: "có bao nhiêu xe", "website có những xe gì")
+        // mà không chỉ định dòng xe/số chỗ cụ thể thì không đính kèm thẻ xe để tránh việc nói có 18 xe
+        // nhưng giao diện chỉ hiện 6 xe gây hiểu lầm cho người dùng.
+        boolean isGeneralInventory = isGeneralInventoryQuery(lower)
+                && filterBySpecificModelOrId(allActiveCars, lower).isEmpty()
+                && !SEATS_PATTERN.matcher(lower).find();
+
+        if (isSearchingCars && !isGeneralInventory) {
             List<CarSummaryResult> topCars = filteredCars.stream().limit(MAX_SUGGESTED_CARS).collect(Collectors.toList());
             carCards = topCars.stream().map(this::buildCarCard).collect(Collectors.toList());
 
@@ -240,12 +247,15 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
         }
 
         // 3. Tạo khối dữ liệu RAG xe thực tế chèn vào System Instruction:
-        // Cung cấp danh mục xe khớp (hoặc toàn bộ catalog xe active, tối đa 20 xe) để Gemini
-        // có đầy đủ kiến thức về tất cả các xe đang có trên DriveShare, không bị hạn chế 3 xe!
+        // Cung cấp danh mục xe khớp (hoặc toàn bộ catalog xe active, tối đa 50 xe) để Gemini
+        // có đầy đủ kiến thức về tất cả các xe đang có trên DriveShare, không bị hạn chế!
         carsRag.append(String.format("\n\n[DỮ LIỆU XE THỰC TẾ TRÊN HỆ THỐNG DRIVESHARE - TỔNG CỘNG %d XE KHẢ DỤNG]\n", allActiveCars.size()));
-        List<CarSummaryResult> carsForPrompt = isSearchingCars ? filteredCars : allActiveCars;
-        for (CarSummaryResult car : carsForPrompt.stream().limit(20).toList()) {
-            carsRag.append(String.format("• %s %s (Năm %d) | %d chỗ | Hộp số: %s | Nhiên liệu: %s | Giá: %s/ngày | Đánh giá: %s⭐ (%d lượt) | Địa chỉ: %s | Dịch vụ tài xế: %s\n",
+        List<CarSummaryResult> carsForPrompt = (isSearchingCars && !isGeneralInventory) ? filteredCars : allActiveCars;
+        int carIndex = 1;
+        for (CarSummaryResult car : carsForPrompt.stream().limit(50).toList()) {
+            carsRag.append(String.format("• [Xe số %d - Mã xe #%d] %s %s (Năm %d) | %d chỗ | Hộp số: %s | Nhiên liệu: %s | Giá: %s/ngày | Đánh giá: %s⭐ (%d lượt) | Địa chỉ: %s | Dịch vụ tài xế: %s\n",
+                    carIndex++,
+                    car.getCarId(),
                     car.getBrand(),
                     car.getModel(),
                     car.getYear() != null ? car.getYear() : 2023,
@@ -964,7 +974,115 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
     // RAG: Lọc xe thông minh theo ý định người dùng
     // =========================================================================
 
+    private boolean isGeneralInventoryQuery(String lower) {
+        return lower.contains("bao nhiêu xe")
+                || lower.contains("bao nhiêu chiếc")
+                || lower.contains("có những xe gì")
+                || lower.contains("có các xe gì")
+                || lower.contains("toàn bộ xe")
+                || lower.contains("danh sách xe")
+                || lower.contains("tổng số xe")
+                || lower.contains("các loại xe bạn có")
+                || lower.contains("tất cả các xe");
+    }
+
+    private List<CarSummaryResult> filterBySpecificModelOrId(List<CarSummaryResult> cars, String lowerQuery) {
+        if (cars == null || cars.isEmpty() || lowerQuery == null || lowerQuery.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        // 1. Kiểm tra tìm theo mã xe / xe số (ví dụ: "xe số 3", "xe #3", "mã xe #3", "#3", "mã xe 3")
+        // Tránh nhầm lẫn với "xe 7 chỗ" hoặc "3 ngày" bằng negative lookahead
+        Pattern idPattern = Pattern.compile("(?:mã xe\\s*#?|xe\\s*#|#|xe số\\s+)(\\d+)(?!\\s*(?:chỗ|ghế|người|ngày|tháng|k|tr|triệu))", Pattern.CASE_INSENSITIVE);
+        Matcher idMatcher = idPattern.matcher(lowerQuery);
+        if (idMatcher.find()) {
+            try {
+                long carId = Long.parseLong(idMatcher.group(1));
+                List<CarSummaryResult> idMatches = cars.stream()
+                        .filter(c -> c.getCarId() != null && c.getCarId().equals(carId))
+                        .collect(Collectors.toList());
+                if (!idMatches.isEmpty()) {
+                    return idMatches;
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+
+        // 2. Danh sách từ khóa model xe (ưu tiên từ khóa dài trước)
+        List<Map.Entry<String, String>> modelKeywords = List.of(
+                Map.entry("fortuner legender", "fortuner"),
+                Map.entry("fortuner", "fortuner"),
+                Map.entry("xpander premium", "xpander"),
+                Map.entry("xpander", "xpander"),
+                Map.entry("santafe", "santafe"),
+                Map.entry("santa fe", "santafe"),
+                Map.entry("everest titanium", "everest"),
+                Map.entry("everest", "everest"),
+                Map.entry("cr-v", "cr-v"),
+                Map.entry("crv", "cr-v"),
+                Map.entry("carnival signature", "carnival"),
+                Map.entry("carnival", "carnival"),
+                Map.entry("vf8 plus", "vf8"),
+                Map.entry("vf 8 plus", "vf8"),
+                Map.entry("vf-8", "vf8"),
+                Map.entry("vf8", "vf8"),
+                Map.entry("vf 8", "vf8"),
+                Map.entry("vf5 plus", "vf5"),
+                Map.entry("vf 5 plus", "vf5"),
+                Map.entry("vf-5", "vf5"),
+                Map.entry("vf5", "vf5"),
+                Map.entry("vf 5", "vf5"),
+                Map.entry("vf9 plus", "vf9"),
+                Map.entry("vf 9 plus", "vf9"),
+                Map.entry("vf-9", "vf9"),
+                Map.entry("vf9", "vf9"),
+                Map.entry("vf 9", "vf9"),
+                Map.entry("vf e34", "vf e34"),
+                Map.entry("vf-e34", "vf e34"),
+                Map.entry("vfe34", "vf e34"),
+                Map.entry("e34", "vf e34"),
+                Map.entry("vios", "vios"),
+                Map.entry("camry", "camry"),
+                Map.entry("innova", "innova"),
+                Map.entry("accent", "accent"),
+                Map.entry("seltos", "seltos"),
+                Map.entry("cx-5", "cx-5"),
+                Map.entry("cx5", "cx-5"),
+                Map.entry("mazda 3", "mazda 3"),
+                Map.entry("mazda3", "mazda 3"),
+                Map.entry("c200", "c200"),
+                Map.entry("320i", "320i"),
+                Map.entry("civic", "civic"),
+                Map.entry("tucson", "tucson"),
+                Map.entry("ranger", "ranger"),
+                Map.entry("morning", "morning")
+        );
+
+        for (Map.Entry<String, String> entry : modelKeywords) {
+            if (lowerQuery.contains(entry.getKey())) {
+                String targetKeyword = entry.getValue().toLowerCase().replace("-", "").replace(" ", "");
+                List<CarSummaryResult> modelMatches = cars.stream()
+                        .filter(c -> {
+                            String model = c.getModel() != null ? c.getModel().toLowerCase().replace("-", "").replace(" ", "") : "";
+                            String brand = c.getBrand() != null ? c.getBrand().toLowerCase().replace("-", "").replace(" ", "") : "";
+                            return model.contains(targetKeyword) || (brand + model).contains(targetKeyword);
+                        })
+                        .collect(Collectors.toList());
+                if (!modelMatches.isEmpty()) {
+                    return modelMatches;
+                }
+            }
+        }
+
+        return Collections.emptyList();
+    }
+
     private List<CarSummaryResult> filterCarsByQuery(List<CarSummaryResult> cars, String lowerQuery) {
+        // 0. Ưu tiên cao nhất: Lọc theo dòng xe / mã xe cụ thể nếu người dùng nêu đích danh
+        List<CarSummaryResult> specificMatches = filterBySpecificModelOrId(cars, lowerQuery);
+        if (!specificMatches.isEmpty()) {
+            return specificMatches;
+        }
+
         List<CarSummaryResult> results = new ArrayList<>(cars);
 
         // 1. Lọc theo số chỗ
@@ -1004,9 +1122,8 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
             if (!manualFiltered.isEmpty()) results = manualFiltered;
         }
 
-        // 5. Lọc theo xe điện
-        if (lowerQuery.contains("xe điện") || lowerQuery.contains("electric") || lowerQuery.contains("vinfast")
-                || lowerQuery.contains("vf5") || lowerQuery.contains("vf8") || lowerQuery.contains("vf9")) {
+        // 5. Lọc theo xe điện tổng quát
+        if (lowerQuery.contains("xe điện") || lowerQuery.contains("electric") || lowerQuery.contains("vinfast")) {
             List<CarSummaryResult> electricFiltered = results.stream()
                     .filter(c -> c.getFuelType() == EFuelType.ELECTRIC
                             || "VinFast".equalsIgnoreCase(c.getBrand()))
@@ -1039,34 +1156,17 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
     }
 
     private List<CarSummaryResult> filterByBrand(List<CarSummaryResult> cars, String lowerQuery) {
-        Map<String, String> brandKeywords = Map.ofEntries(
-                Map.entry("toyota", "Toyota"),
-                Map.entry("vios", "Toyota"),
-                Map.entry("camry", "Toyota"),
-                Map.entry("innova", "Toyota"),
-                Map.entry("fortuner", "Toyota"),
-                Map.entry("mazda", "Mazda"),
-                Map.entry("cx5", "Mazda"),
-                Map.entry("cx-5", "Mazda"),
-                Map.entry("mazda3", "Mazda"),
-                Map.entry("honda", "Honda"),
-                Map.entry("civic", "Honda"),
-                Map.entry("crv", "Honda"),
-                Map.entry("cr-v", "Honda"),
-                Map.entry("hyundai", "Hyundai"),
-                Map.entry("accent", "Hyundai"),
-                Map.entry("tucson", "Hyundai"),
-                Map.entry("kia", "Kia"),
-                Map.entry("morning", "Kia"),
-                Map.entry("seltos", "Kia"),
-                Map.entry("ford", "Ford"),
-                Map.entry("ranger", "Ford"),
-                Map.entry("everest", "Ford"),
-                Map.entry("mercedes", "Mercedes-Benz"),
-                Map.entry("bmw", "BMW"),
-                Map.entry("vinfast", "VinFast"),
-                Map.entry("mitsubishi", "Mitsubishi"),
-                Map.entry("xpander", "Mitsubishi")
+        Map<String, String> brandKeywords = Map.of(
+                "toyota", "Toyota",
+                "mazda", "Mazda",
+                "honda", "Honda",
+                "hyundai", "Hyundai",
+                "kia", "Kia",
+                "ford", "Ford",
+                "mercedes", "Mercedes-Benz",
+                "bmw", "BMW",
+                "vinfast", "VinFast",
+                "mitsubishi", "Mitsubishi"
         );
 
         for (Map.Entry<String, String> entry : brandKeywords.entrySet()) {
@@ -1120,7 +1220,13 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
     // =========================================================================
 
     private CarSummaryResult findBestMatchingCar(List<CarSummaryResult> cars, String lowerQuery) {
-        // 1. Tìm theo số chỗ
+        // 1. Ưu tiên cao nhất: Tìm theo dòng xe hoặc mã xe cụ thể
+        List<CarSummaryResult> specificMatches = filterBySpecificModelOrId(cars, lowerQuery);
+        if (!specificMatches.isEmpty()) {
+            return specificMatches.get(0);
+        }
+
+        // 2. Tìm theo số chỗ
         Matcher seatsMatcher = SEATS_PATTERN.matcher(lowerQuery);
         if (seatsMatcher.find()) {
             int requestedSeats = Integer.parseInt(seatsMatcher.group(1));
@@ -1129,17 +1235,11 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
             }
         }
 
-        // 2. Tìm theo hãng/model
-        Map<String, String> brandKeywords = Map.ofEntries(
-                Map.entry("toyota", "Toyota"), Map.entry("vios", "Toyota"),
-                Map.entry("camry", "Toyota"), Map.entry("innova", "Toyota"),
-                Map.entry("fortuner", "Toyota"), Map.entry("mazda", "Mazda"),
-                Map.entry("cx5", "Mazda"), Map.entry("cx-5", "Mazda"),
-                Map.entry("honda", "Honda"), Map.entry("civic", "Honda"),
-                Map.entry("crv", "Honda"), Map.entry("hyundai", "Hyundai"),
-                Map.entry("accent", "Hyundai"), Map.entry("kia", "Kia"),
-                Map.entry("vinfast", "VinFast"), Map.entry("xpander", "Mitsubishi"),
-                Map.entry("ford", "Ford"), Map.entry("mercedes", "Mercedes-Benz")
+        // 3. Tìm theo hãng
+        Map<String, String> brandKeywords = Map.of(
+                "toyota", "Toyota", "mazda", "Mazda", "honda", "Honda",
+                "hyundai", "Hyundai", "kia", "Kia", "vinfast", "VinFast",
+                "mitsubishi", "Mitsubishi", "ford", "Ford", "mercedes", "Mercedes-Benz", "bmw", "BMW"
         );
 
         for (Map.Entry<String, String> entry : brandKeywords.entrySet()) {
@@ -1150,14 +1250,14 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
             }
         }
 
-        // 3. Tìm theo xe điện
+        // 4. Tìm theo xe điện
         if (lowerQuery.contains("xe điện") || lowerQuery.contains("electric")) {
             for (CarSummaryResult c : cars) {
                 if (c.getFuelType() == EFuelType.ELECTRIC) return c;
             }
         }
 
-        // 4. Mặc định lấy chiếc xe đầu tiên
+        // 5. Mặc định lấy chiếc xe đầu tiên
         return cars.isEmpty() ? null : cars.get(0);
     }
 
@@ -1356,9 +1456,9 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
 
     private void saveHistory(Long userId, String sessionId, List<ChatMessageDto> history) {
         try {
-            // Giới hạn tối đa 20 tin nhắn gần nhất để tránh phình dữ liệu
-            List<ChatMessageDto> truncated = history.size() > 20
-                    ? history.subList(history.size() - 20, history.size())
+            // Giới hạn bộ nhớ tối đa 100 tin nhắn gần nhất để AI nhớ trọn vẹn toàn bộ ngữ cảnh hội thoại
+            List<ChatMessageDto> truncated = history.size() > 100
+                    ? history.subList(history.size() - 100, history.size())
                     : history;
 
             String json = objectMapper.writeValueAsString(truncated);

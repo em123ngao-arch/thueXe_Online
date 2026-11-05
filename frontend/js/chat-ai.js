@@ -542,19 +542,34 @@ const AiChatWidget = (() => {
           </div>
           ${car.address ? `<div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">📍 ${escapeHtml(car.address)}</div>` : ''}
           ${car.hasDriverService && car.driverFeeFormatted ? `<div style="font-size: 11px; color: #059669; margin-bottom: 8px;">🚘 Phí tài xế: ${escapeHtml(car.driverFeeFormatted)}/ngày</div>` : ''}
-          <button type="button" onclick="AiChatWidget.bookCar(${car.carId})" class="ai-book-btn" style="
-            display: block;
-            width: 100%;
-            text-align: center;
-            background: #2563eb;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-          ">Xem chi tiết & Đặt xe →</button>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
+            <button type="button" onclick="AiChatWidget.viewCarDetail(${car.carId})" style="
+              padding: 6px 4px;
+              background: #f1f5f9;
+              color: #334155;
+              border: 1px solid #cbd5e1;
+              border-radius: 6px;
+              font-size: 11px;
+              font-weight: 600;
+              cursor: pointer;
+              transition: all 0.15s;
+            ">
+              Xem chi tiết xe
+            </button>
+            <button type="button" onclick="AiChatWidget.bookCarNow(${car.carId})" style="
+              padding: 6px 4px;
+              background: #00a550;
+              color: #ffffff;
+              border: none;
+              border-radius: 6px;
+              font-size: 11px;
+              font-weight: 700;
+              cursor: pointer;
+              transition: all 0.15s;
+            ">
+              Đặt xe ngay
+            </button>
+          </div>
         </div>
       `;
 
@@ -784,16 +799,7 @@ const AiChatWidget = (() => {
   }
 
   function bookCar(carId) {
-    if (!carId) return;
-    if (typeof BookingService !== 'undefined' && typeof BookingService.startBookingFlow === 'function') {
-      if (typeof AuthService !== 'undefined' && typeof AuthService.requireLoginThen === 'function') {
-        AuthService.requireLoginThen(() => BookingService.startBookingFlow(carId));
-      } else {
-        BookingService.startBookingFlow(carId);
-      }
-    } else {
-      window.location.href = `index.html?carId=${carId}`;
-    }
+    bookCarNow(carId);
   }
 
   /**
@@ -812,15 +818,19 @@ const AiChatWidget = (() => {
     let cardsHtml = "";
     if (!isUser && Array.isArray(suggestedCars) && suggestedCars.length > 0) {
       cardsHtml = suggestedCars.map(c => {
-        const carId = c.id || c.carId;
+        const carId = c.car_id || c.carId || c.id;
         const carName = c.name || c.model || `${c.brand || ''} ${c.model || ''}`;
-        const carImg = c.image || c.thumb || c.mainImageUrl || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80';
-        const carPrice = c.price || c.pricePerDay || c.price_per_day || 800000;
-        const carRating = c.rating || c.averageRating || '4.9';
+        const carImg = c.thumbnail_url || c.thumbnailUrl || c.image || c.thumb || c.mainImageUrl || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80';
+        const carPrice = c.price_per_day || c.pricePerDay || c.price || 800000;
+        const carRating = c.rating || c.averageRating || '5.0';
         const seats = c.seats || c.seatCapacity || 5;
-        const trans = c.transmission === 'MANUAL' ? 'Số sàn' : (c.transmission || 'Tự động');
-        const fuel = c.fuelType === 'ELECTRIC' ? 'Điện' : (c.fuelType === 'DIESEL' ? 'Dầu' : (c.fuelType || 'Xăng'));
-        const hasDriver = Boolean(c.hasDriver || c.has_driver_service || c.hasDriverService);
+        const trans = (c.transmission === 'MANUAL' || c.transmission === 'Số sàn') ? 'Số sàn' : (c.transmission || 'Tự động');
+        const rawFuel = c.fuel_type || c.fuelType || '';
+        const isElectric = rawFuel === 'ELECTRIC' || rawFuel === 'Điện' || carName.includes('VF') || carName.includes('VinFast');
+        const isDiesel = rawFuel === 'DIESEL' || rawFuel === 'Dầu';
+        const fuel = isElectric ? 'Điện' : (isDiesel ? 'Dầu' : (rawFuel || 'Xăng'));
+        const fuelIcon = isElectric ? '⚡' : '⛽';
+        const hasDriver = Boolean(c.has_driver_service || c.hasDriverService || c.hasDriver);
 
         return `
           <div class="ai-car-card" style="
@@ -849,7 +859,7 @@ const AiChatWidget = (() => {
                 <span>•</span>
                 <span>⚙️ ${trans}</span>
                 <span>•</span>
-                <span>⛽ ${fuel}</span>
+                <span>${fuelIcon} ${fuel}</span>
               </div>
               <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #e2e8f0;">
                 <span style="font-size: 11px; color: #64748b;">Giá thuê:</span>
@@ -1051,7 +1061,11 @@ const AiChatWidget = (() => {
 
   // Phương thức điều hướng khi người dùng nhấn xem hoặc đặt xe từ thẻ xe mini
   function viewCarDetail(carId) {
-    if (typeof App !== 'undefined' && App.openCarDetailModal) {
+    if (!carId) return;
+    if (isOpen) {
+      toggle(); // Thu gọn widget chat để hiển thị trọn vẹn modal chi tiết xe
+    }
+    if (typeof App !== 'undefined' && typeof App.openCarDetailModal === 'function') {
       App.openCarDetailModal(carId);
     } else {
       window.location.href = `index.html?carId=${carId}`;
@@ -1059,10 +1073,18 @@ const AiChatWidget = (() => {
   }
 
   function bookCarNow(carId) {
-    if (typeof AuthService !== 'undefined' && typeof BookingService !== 'undefined') {
-      AuthService.requireLoginThen(() => {
+    if (!carId) return;
+    if (isOpen) {
+      toggle(); // Thu gọn widget chat để hiển thị trọn vẹn modal đặt xe
+    }
+    if (typeof BookingService !== 'undefined' && typeof BookingService.startBookingFlow === 'function') {
+      if (typeof AuthService !== 'undefined' && typeof AuthService.requireLoginThen === 'function') {
+        AuthService.requireLoginThen(() => {
+          BookingService.startBookingFlow(carId);
+        });
+      } else {
         BookingService.startBookingFlow(carId);
-      });
+      }
     } else {
       window.location.href = `index.html?bookCarId=${carId}`;
     }
@@ -1082,11 +1104,4 @@ const AiChatWidget = (() => {
 
 document.addEventListener("DOMContentLoaded", () => {
   AiChatWidget.init();
-  const urlParams = new URLSearchParams(window.location.search);
-  const carId = urlParams.get("carId");
-  if (carId && typeof BookingService !== 'undefined' && typeof BookingService.startBookingFlow === 'function') {
-    setTimeout(() => {
-      AiChatWidget.bookCar(carId);
-    }, 400);
-  }
 });
