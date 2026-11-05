@@ -1,6 +1,7 @@
 package com.driveshare.modules.ai.dto.response;
 
 import com.driveshare.modules.ai.dto.ChatMessageDto;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,4 +16,9 @@ import java.util.List;
 public class ChatHistoryResponse {
     private String sessionId;
     private List<ChatMessageDto> messages;
+
+    @JsonProperty("sessionId")
+    public String getSessionIdCamel() {
+        return sessionId;
+    }
 }

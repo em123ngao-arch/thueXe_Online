@@ -87,6 +87,10 @@ public class ReviewServiceImpl implements ReviewService {
                 .setScale(2, RoundingMode.HALF_UP);
         car.setRating(calculatedRating);
         car.setRatingCount((int) totalReviews);
+        long completedTrips = rentalRepository.findAll().stream()
+                .filter(r -> r.getCarId().equals(rental.getCarId()) && r.getStatus() == ERentalStatus.COMPLETED)
+                .count();
+        car.setTripCount((int) Math.max(completedTrips, totalReviews));
         carRepository.save(car);
 
         log.info("Cập nhật rating thành công cho carId={}: rating={}, ratingCount={}",

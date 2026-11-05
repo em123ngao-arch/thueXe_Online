@@ -1,0 +1,48 @@
+TÀI LIỆU QUY CHẾ HOẠT ĐỘNG, CHÍNH SÁCH ĐẶT CỌC VÀ HƯỚNG DẪN DỊCH VỤ NỀN TẢNG DRIVESHARE
+
+MỤC 1. CHÍNH SÁCH ĐẶT CỌC 30% VÀ THANH TOÁN QUA VIETQR
+1.1. Tỷ lệ đặt cọc: Để xác nhận chuyến đi và khóa lịch xe trên hệ thống, khách hàng thanh toán trước 30% tổng chi phí thuê qua cổng thanh toán tự động mã QR VietQR (hỗ trợ 100% ngân hàng Việt Nam).
+1.2. Xác nhận tức thì: Khi chuyển khoản đúng nội dung và số tiền trên VietQR, hệ thống DriveShare tự động kiểm tra biến động số dư và chuyển trạng thái đơn sang ĐÃ ĐẶT CỌC trong vòng 3 đến 5 giây mà không cần nhân viên duyệt thủ công.
+1.3. Thanh toán 70% còn lại: Số tiền 70% còn lại của hợp đồng được thanh toán trực tiếp cho chủ xe khi hai bên gặp mặt, kiểm tra xe thực tế và ký biên bản bàn giao xe (Check-in).
+1.4. Cam kết bảo vệ tiền cọc 100%: Toàn bộ số tiền cọc 30% được hệ thống DriveShare giữ trung gian an toàn trong suốt thời gian chờ bàn giao xe. Tiền cọc chỉ được giải ngân cho chủ xe sau khi khách hàng đã kiểm tra thực tế và xác nhận nhận xe thành công. Quý khách tuyệt đối không bao giờ lo bị mất tiền cọc hay lừa đảo.
+
+MỤC 2. CHÍNH SÁCH HỦY CHUYẾN VÀ HOÀN TIỀN CỌC
+2.1. Hủy trước 48 giờ: Nếu khách hàng hủy chuyến trước giờ bắt đầu thuê từ 48 tiếng trở lên, hệ thống sẽ hoàn trả 100% số tiền cọc đã thanh toán.
+2.2. Hủy từ 24 đến 48 giờ: Nếu khách hàng hủy chuyến trong khoảng thời gian từ 24 đến 48 tiếng trước giờ nhận xe, hệ thống sẽ hoàn lại 70% số tiền cọc (khấu trừ 30% tiền cọc để hỗ trợ một phần chi phí giữ lịch của chủ xe).
+2.3. Hủy dưới 24 giờ: Nếu khách hàng hủy chuyến dưới 24 tiếng trước giờ nhận xe, tiền cọc sẽ không được hoàn lại nhằm bảo vệ quyền lợi và bù đắp thời gian chờ của chủ xe.
+2.4. Chủ xe hủy chuyến: Trường hợp chủ xe tự ý hủy đơn, khách hàng được hoàn trả ngay lập tức 100% tiền cọc và chủ xe sẽ bị phạt theo quy chế hoạt động của nền tảng DriveShare.
+
+MỤC 3. QUY TRÌNH BÀN GIAO XE (CHECK-IN) VÀ TRẢ XE (CHECK-OUT)
+3.1. Quy trình Check-in (Nhận xe):
+- Bước 1: Khách hàng xuất trình CCCD gắn chip và Giấy phép lái xe (GPLX hạng B1/B2 trở lên) đã được phê duyệt trên hệ thống DriveShare.
+- Bước 2: Hai bên cùng kiểm tra ngoại quan xe, lốp xe, kính chắn gió và nội thất. Chụp tối thiểu 4 góc xe và các vết trầy xước có sẵn (nếu có) tải lên hệ thống.
+- Bước 3: Ghi nhận số km trên đồng hồ ODO và mức nhiên liệu/dung lượng pin thực tế vào Biên bản bàn giao điện tử.
+- Bước 4: Thanh toán 70% số tiền còn lại và ký biên bản bàn giao xe.
+3.2. Quy trình Check-out (Trả xe):
+- Bước 1: Hai bên cùng kiểm tra lại hiện trạng xe, đối chiếu với ảnh chụp lúc Check-in.
+- Bước 2: Ghi nhận số km ODO kết thúc để kiểm tra giới hạn quãng đường (300 km/ngày). Nếu vượt số km, khách thanh toán phụ phí vượt km (3.000 đ - 5.000 đ/km).
+- Bước 3: Kiểm tra mức nhiên liệu/pin. Nếu thiếu so với lúc nhận xe, khách thanh toán tiền bổ sung nhiên liệu.
+- Bước 4: Hoàn trả tài sản thế chấp và hoàn tất đơn thuê trên hệ thống.
+
+MỤC 4. QUY TRÌNH HỖ TRỢ KHẨN CẤP VÀ GIẢI QUYẾT SỰ CỐ BÀN GIAO XE
+4.1. Chủ xe không đến / Bùng kèo / Không liên lạc được:
+- Biên độ thời gian chờ linh hoạt theo quy định thông thường là 15 đến 30 phút. Hai bên cần chủ động gọi điện thông báo nếu có sự cố kẹt xe hoặc bất khả kháng.
+- Nếu quá 30 phút không liên lạc được chủ xe: Khách hàng gọi điện cho chủ xe ít nhất 2 lần; Chụp ảnh hiện trường có định vị/mốc số nhà và quay clip ngắn chứng minh đã có mặt đúng giờ; Vào mục 'Chi tiết chuyến đi' trên web bấm 'Báo cáo sự cố nhận xe' để đóng băng tiền cọc; Gọi ngay Hotline 1900-6868 (Phím 1) để được tổng đài hỗ trợ đổi xe khẩn cấp hoặc hoàn 100% tiền cọc.
+4.2. Khách hàng tự ý đến trễ:
+- Nếu khách hàng tự ý đến trễ từ 1 đến 2 tiếng mà không báo trước, khách hàng phải chịu trách nhiệm về việc trễ hẹn của mình và KHÔNG ĐƯỢC báo chủ xe bùng kèo. Khách cần liên hệ chủ xe để thỏa thuận lùi giờ nhận xe.
+4.3. Chủ xe đòi phụ phí tiền mặt ngoài hợp đồng hoặc ép nhận xe khác:
+- Tuyệt đối không thanh toán bất kỳ khoản phụ phí ngoài hợp đồng trên hệ thống DriveShare. Khách có toàn quyền từ chối nhận xe nếu bị giao sai loại xe.
+- Chụp ảnh bằng chứng và báo cáo sự cố qua web hoặc Hotline 1900-6868 để DriveShare can thiệp phạt chủ xe và hoàn trả 100% tiền cọc.
+4.4. Xe bàn giao bị trầy xước, hư hỏng nặng, mất an toàn:
+- Khách kiểm tra kỹ, ghi chú vào biên bản bàn giao. Nếu xe hỏng phanh, rách lốp hoặc mất an toàn, khách có toàn quyền TỪ CHỐI NHẬN XE và báo cáo sự cố để được đổi xe khác tương đương hoặc hoàn 100% tiền cọc.
+
+MỤC 5. DỊCH VỤ THUÊ KÈM TÀI XẾ (SPRINT 3)
+5.1. Tiện ích: Dịch vụ tài xế chuyên nghiệp, chu đáo, am hiểu cung đường, phù hợp cho gia đình du lịch nghỉ dưỡng hoặc doanh nhân đi công tác.
+5.2. Công thức tính phí: Tổng chi phí thuê = (Giá thuê xe/ngày + Phí tài xế/ngày) x Số ngày thuê.
+5.3. Ưu đãi thủ tục: Khách hàng thuê xe có tài xế ĐƯỢC MIỄN THỦ TỤC THẾ CHẤP tài sản (xe máy hoặc 15 triệu đồng) và không bắt buộc phải có Giấy phép lái xe GPLX.
+
+MỤC 6. HỒ SƠ VÀ THỦ TỤC THUÊ XE TỰ LÁI
+6.1. Giấy tờ cá nhân: Căn cước công dân gắn chip (CCCD) hoặc Hộ chiếu còn thời hạn sử dụng.
+6.2. Giấy phép lái xe: GPLX ô tô hạng B1 hoặc B2 trở lên còn hạn, ảnh chụp rõ nét được tải lên hồ sơ DriveShare.
+6.3. Tài sản thế chấp: Xe máy chính chủ có giá trị từ 15 triệu đồng kèm Cà vẹt xe gốc, hoặc khoản tiền mặt thế chấp theo thỏa thuận với chủ xe (được hoàn trả 100% ngay khi trả xe nguyên vẹn).
+

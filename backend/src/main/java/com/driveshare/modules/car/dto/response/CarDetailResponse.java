@@ -92,6 +92,9 @@ public class CarDetailResponse {
     @Schema(description = "Số lượt đánh giá", example = "5")
     private Integer ratingCount;
 
+    @Schema(description = "Số chuyến đi thành công", example = "12")
+    private Integer tripCount;
+
     @Data
     @Builder
     @NoArgsConstructor

@@ -66,6 +66,12 @@ public class RentalResponse {
     @JsonProperty("created_at")
     private Instant createdAt;
 
+    @JsonProperty("has_reviewed")
+    private Boolean hasReviewed;
+
+    @JsonProperty("user_rating")
+    private Integer userRating;
+
     public static RentalResponse from(Rental rental) {
         if (rental == null) {
             return null;

@@ -1408,6 +1408,25 @@ const App = {
   // ─────────────────────────────────────────────────────────────
   currentReviewRating: 5,
 
+  isRentalReviewed(rentalId) {
+    try {
+      const stored = JSON.parse(localStorage.getItem('driveshare_reviewed_rentals') || '[]');
+      return stored.includes(Number(rentalId)) || stored.includes(String(rentalId));
+    } catch (_) {
+      return false;
+    }
+  },
+
+  markRentalReviewed(rentalId) {
+    try {
+      const stored = JSON.parse(localStorage.getItem('driveshare_reviewed_rentals') || '[]');
+      if (!stored.includes(Number(rentalId))) {
+        stored.push(Number(rentalId));
+        localStorage.setItem('driveshare_reviewed_rentals', JSON.stringify(stored));
+      }
+    } catch (_) {}
+  },
+
   async showReviewPrompt(bookingId) {
     this.currentReviewRating = 5;
 
@@ -1416,13 +1435,13 @@ const App = {
     if (typeof ReviewAPI !== 'undefined' && ReviewAPI.getRentalReview) {
       try {
         const res = await ReviewAPI.getRentalReview(bookingId);
-        if (res && res.success && res.data) {
+        if (res && res.success && res.data && (res.data.reviewId || res.data.id)) {
           existingReview = res.data;
         }
       } catch (_) {}
     }
 
-    if (existingReview) {
+    if (existingReview || this.isRentalReviewed(bookingId)) {
       const starsStr = '★'.repeat(existingReview.rating) + '☆'.repeat(5 - existingReview.rating);
       const html = `
         <div style="text-align: center; padding: 10px 0;">
@@ -1564,16 +1583,27 @@ const App = {
         const res = await ReviewAPI.createReview(bookingId, { rating, comment });
         if (res && (res.success || res.code === 200)) {
           this.showToast(`Cảm ơn bạn đã gửi đánh giá ${rating} sao cho chuyến đi #${bookingId}!`, 'success');
-          // Chuyển đơn sang COMPLETED (ĐÃ HOÀN TẤT)
+          this.markRentalReviewed(bookingId);
+          // Cập nhật trạng thái đơn thành COMPLETED và đánh dấu đã review
           if (Array.isArray(this.cachedMyBookings)) {
             const b = this.cachedMyBookings.find(x => String(x.rental_id || x.rentalId || x.id) === String(bookingId));
-            if (b) b.status = 'COMPLETED';
+            if (b) {
+              b.status = 'COMPLETED';
+              b.has_reviewed = true;
+              b.hasReviewed = true;
+              b.user_rating = rating;
+              b.userRating = rating;
+            }
           }
           if (typeof StorageService !== 'undefined') {
             const allBks = StorageService.getBookings();
             const b = allBks.find(x => String(x.rental_id || x.rentalId || x.id) === String(bookingId));
             if (b) {
               b.status = 'COMPLETED';
+              b.has_reviewed = true;
+              b.hasReviewed = true;
+              b.user_rating = rating;
+              b.userRating = rating;
               StorageService.saveBookings(allBks);
             }
           }
@@ -1581,7 +1611,7 @@ const App = {
             NotificationAPI.addNotification('Đánh giá thành công ⭐', `Bạn đã gửi đánh giá ${rating} sao cho đơn thuê #${bookingId}. Trạng thái đổi sang ĐÃ HOÀN TẤT.`, 'REVIEW_SENT', bookingId);
           }
           this.closeModal();
-          // Cập nhật lại view chuyến đi để hiện ngay badge ĐÃ HOÀN TẤT
+          // Cập nhật lại view chuyến đi: Mất nút đánh giá, hiển thị badge ĐÃ ĐÁNH GIÁ
           this.showMyBookingsView();
           return;
         } else {

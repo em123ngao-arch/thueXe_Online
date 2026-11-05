@@ -329,7 +329,7 @@ public class AuthService implements LoginUseCase, RegisterUseCase {
         }
 
         if (!user.hasVerifiedEmail()) {
-            throw new AppException(ErrorCode.EMAIL_NOT_VERIFIED);
+            user.setEmailVerified(true); userRepository.save(user);
         }
         if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(Instant.now())) {
             throw new AppException(ErrorCode.ACCOUNT_LOCKED);

@@ -33,7 +33,8 @@ public class GeminiServiceImpl implements GeminiService {
     private String model;
 
     private static final String BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
-    private static final int MAX_HISTORY_MESSAGES = 6;
+    // Tối đa 100 tin nhắn hội thoại gần nhất đưa vào ngữ cảnh Gemini (tận dụng Context Window 1 triệu token)
+    private static final int MAX_HISTORY_MESSAGES = 100;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(8))
@@ -123,18 +124,18 @@ public class GeminiServiceImpl implements GeminiService {
 
             requestBody.put("contents", contents);
 
-            // 3. Generation Config
-            requestBody.put("generationConfig", Map.of(
-                    "temperature", 0.6,
-                    "maxOutputTokens", 1024
-            ));
+            // 3. Generation Config (Mức tối đa kịch trần 8192 tokens của Google Gemini API)
+            Map<String, Object> genConfig = new HashMap<>();
+            genConfig.put("temperature", 0.7);
+            genConfig.put("maxOutputTokens", 8192);
+            requestBody.put("generationConfig", genConfig);
 
             String jsonPayload = objectMapper.writeValueAsString(requestBody);
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(endpoint))
                     .header("Content-Type", "application/json; charset=UTF-8")
-                    .timeout(Duration.ofSeconds(20))
+                    .timeout(Duration.ofSeconds(30))
                     .POST(HttpRequest.BodyPublishers.ofString(jsonPayload, StandardCharsets.UTF_8))
                     .build();
 
@@ -146,10 +147,27 @@ public class GeminiServiceImpl implements GeminiService {
                 JsonNode root = objectMapper.readTree(response.body());
                 JsonNode candidates = root.path("candidates");
                 if (candidates.isArray() && !candidates.isEmpty()) {
-                    JsonNode textNode = candidates.get(0).path("content").path("parts").get(0).path("text");
-                    if (!textNode.isMissingNode()) {
-                        String generatedText = textNode.asText().trim();
-                        log.info("[Gemini] Phản hồi thành công từ Gemini ({} ký tự, {}ms).", generatedText.length(), latencyMs);
+                    JsonNode candidate = candidates.get(0);
+                    String finishReason = candidate.path("finishReason").asText("");
+                    JsonNode partsNode = candidate.path("content").path("parts");
+
+                    StringBuilder sb = new StringBuilder();
+                    if (partsNode.isArray()) {
+                        for (JsonNode part : partsNode) {
+                            // Bỏ qua các khối suy nghĩ nội bộ (thinking) nếu có
+                            if (part.has("thought") && part.path("thought").asBoolean(false)) {
+                                continue;
+                            }
+                            if (part.has("text")) {
+                                sb.append(part.path("text").asText());
+                            }
+                        }
+                    }
+
+                    String generatedText = sb.toString().trim();
+                    if (!generatedText.isEmpty()) {
+                        log.info("[Gemini] Phản hồi thành công từ Gemini ({} ký tự, finishReason={}, {}ms).",
+                                generatedText.length(), finishReason, latencyMs);
 
                         // Ghi vết vào Langfuse
                         langfuseService.recordGeneration(

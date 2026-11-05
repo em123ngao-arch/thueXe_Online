@@ -185,6 +185,33 @@ class AiChatServiceImplTest {
     }
 
     @Test
+    @DisplayName("Out-of-scope 'biết code không': Responds politely with AI links instead of robot greeting")
+    void testChatOutOfScopeBietCodeKhong() {
+        ChatRequest request = new ChatRequest("sess-code-2", "biết code không");
+        ChatReplyResponse response = aiChatService.chat(request, 100L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getMessage()).contains("ChatGPT");
+        assertThat(response.getMessage()).contains("Gemini");
+        assertThat(response.getMessage()).contains("Claude");
+        // Must not repeat the greeting prompt
+        assertThat(response.getMessage()).doesNotContain("Bạn đang muốn tìm dòng xe nào hôm nay?");
+        assertThat(response.getSuggestedCars()).isNull();
+    }
+
+    @Test
+    @DisplayName("About Bot: When user asks 'bạn là ai', responds with bot capabilities introduction")
+    void testChatAboutBot() {
+        ChatRequest request = new ChatRequest("sess-about", "bạn là ai");
+        ChatReplyResponse response = aiChatService.chat(request, 100L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getMessage()).contains("Trợ lý AI DriveShare");
+        assertThat(response.getMessage()).contains("Tìm kiếm xe nhanh chóng");
+        assertThat(response.getSuggestedCars()).isNull();
+    }
+
+    @Test
     @DisplayName("Prompt hot reload: Calling reloadSystemPrompt updates the active system prompt")
     void testReloadPrompt() {
         org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> aiChatService.reloadSystemPrompt());
