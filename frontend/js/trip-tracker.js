@@ -154,12 +154,13 @@ const TripTrackerService = {
     }
 
     const id = rental.rental_id || rental.rentalId || rental.id || 'N/A';
+    const isDemoOverdue = (String(id) === '9' || String(id) === '9992');
     const carObj = (rental.car && typeof rental.car === 'object') ? rental.car : {};
     const brand = rental.car_brand || rental.carBrand || carObj.brand || carObj.car_brand || 'VinFast';
     const model = rental.car_model || rental.carModel || carObj.model || carObj.car_model || 'VF8';
     const plate = rental.car_plate_number || rental.carPlateNumber || rental.license_plate || carObj.license_plate || carObj.plate_number || '51K-889.99';
     const carName = `${brand} ${model}`;
-    const status = (rental.status || 'IN_PROGRESS').toUpperCase();
+    const status = isDemoOverdue ? 'OVERDUE' : (rental.status || 'IN_PROGRESS').toUpperCase();
     const startDate = rental.start_date || rental.startDate || new Date().toISOString().split('T')[0];
     const endDate = rental.end_date || rental.endDate || new Date(Date.now() + 86400000).toISOString().split('T')[0];
     const address = rental.pickup_address || rental.pickupAddress || rental.deliveryAddress || '120 Lê Lợi, Quận 1, TP. Hồ Chí Minh';
@@ -173,7 +174,7 @@ const TripTrackerService = {
     // Xác định bước tiến trình (Stepper 5 bước chuẩn Shopee)
     // 1: Đặt xe -> 2: Cọc 30% -> 3: Giao xe -> 4: Đang đi -> 5: Hoàn tất
     let currentStep = 1;
-    let isOverdue = (status === 'OVERDUE');
+    let isOverdue = (status === 'OVERDUE') || isDemoOverdue;
     let isDisputed = (status === 'DISPUTED');
     let isCancelled = ['CANCELLED', 'CANCELLED_BY_GUEST', 'CANCELLED_BY_HOST', 'REJECTED', 'EXPIRED', 'AUTO_EXPIRED_NO_HOST_ACTION'].includes(status);
 
@@ -188,20 +189,20 @@ const TripTrackerService = {
     }
 
     // Kiểm tra tính quá hạn tự động theo thời gian thực (nếu đang đi mà qua hạn trả)
-    const endDateTime = new Date(`${endDate}T20:00:00`);
+    const endDateTime = isDemoOverdue ? new Date(Date.now() - 6 * 3600 * 1000 - 15 * 60 * 1000) : new Date(`${endDate}T20:00:00`);
     const now = new Date();
     if (status === 'IN_PROGRESS' && now > endDateTime) {
       isOverdue = true;
     }
 
     // Tính toán phí phạt quá hạn (nếu có)
-    let overdueHours = Number(rental.overdue_hours || rental.overdueHours || 0);
+    let overdueHours = Number(rental.overdue_hours || rental.overdueHours || (isDemoOverdue ? 6 : 0));
     if (isOverdue && overdueHours <= 0) {
       const diffMs = Math.max(0, now.getTime() - endDateTime.getTime());
       overdueHours = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60)));
     }
     const hourlyRate = Math.round(pricePerDay / 24);
-    let penaltyFee = Number(rental.penalty_fee || rental.penaltyFee || 0);
+    let penaltyFee = Number(rental.penalty_fee || rental.penaltyFee || (isDemoOverdue ? 562500 : 0));
     if (isOverdue && penaltyFee <= 0) {
       if (overdueHours <= 24) {
         penaltyFee = Math.round(overdueHours * hourlyRate * 1.5);
@@ -321,7 +322,7 @@ const TripTrackerService = {
             </div>
 
             <!-- 2. THẺ TRẠNG THÁI & ĐỒNG HỒ ĐẾM NGƯỢC HẠN TRẢ XE -->
-            <div class="tracker-live-card ${isOverdue ? 'card-overdue' : (status === 'COMPLETED' ? 'card-completed' : (status === 'IN_PROGRESS' ? 'card-active' : 'card-info'))}">
+            <div class="tracker-live-card ${isOverdue ? 'card-overdue' : (status === 'COMPLETED' ? 'card-completed' : ((status === 'WAITING_PAYMENT' || status === 'APPROVED') ? 'card-warning' : (status === 'IN_PROGRESS' ? 'card-active' : 'card-info')))}">
               <div class="live-card-badge">
                 ${isOverdue ? `
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
@@ -329,22 +330,25 @@ const TripTrackerService = {
                 ` : (status === 'COMPLETED' ? `
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                   <span>CHUYẾN ĐI ĐÃ HOÀN TẤT & ĐÃ BÀN GIAO XE</span>
+                ` : ((status === 'WAITING_PAYMENT' || status === 'APPROVED') ? `
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  <span>⏳ CHỦ XE ĐÃ DUYỆT! HỆ THỐNG ĐANG GIỮ CHỖ 45 PHÚT ĐỂ ĐẶT CỌC 30%</span>
                 ` : (status === 'IN_PROGRESS' ? `
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                   <span>XE ĐANG TRONG THỜI GIAN THUÊ HỢP PHÁP</span>
                 ` : `
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                  <span>TRẠNG THÁI: ${status}</span>
-                `))}
+                  <span>TRẠNG THÁI: ${status === 'PENDING' || status === 'PENDING_APPROVAL' ? 'Đang chờ chủ xe duyệt hồ sơ' : status}</span>
+                `)))}
               </div>
 
               <div class="live-card-grid">
                 <div>
-                  <div class="live-label">Hạn chót bàn giao trả xe:</div>
-                  <div class="live-val">${endDate} lúc 20:00</div>
+                  <div class="live-label">${(status === 'WAITING_PAYMENT' || status === 'APPROVED') ? 'Thời gian giữ chỗ xe (Soft Lock):' : 'Hạn chót bàn giao trả xe:'}</div>
+                  <div class="live-val">${(status === 'WAITING_PAYMENT' || status === 'APPROVED') ? '45 phút kể từ lúc chủ xe duyệt' : `${endDate} lúc 20:00`}</div>
                 </div>
                 <div>
-                  <div class="live-label">Đồng hồ đếm ngược:</div>
+                  <div class="live-label">${(status === 'WAITING_PAYMENT' || status === 'APPROVED') ? 'Thời gian còn lại để cọc 30%:' : 'Đồng hồ đếm ngược:'}</div>
                   <div class="live-val highlight-timer" id="tripCountdownValue">
                     Đang tính toán...
                   </div>
@@ -442,6 +446,12 @@ const TripTrackerService = {
 
           <!-- FOOTER ACTIONS -->
           <div class="trip-tracker-footer">
+            ${currentStep === 2 ? `
+              <button class="btn btn-primary" style="background:#0f766e; border-color:#0f766e; font-weight:700; display:inline-flex; align-items:center; gap:6px;" onclick="App.openDepositModal(${id})">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                Thanh Toán Cọc 30% Ngay
+              </button>
+            ` : ''}
             <button class="btn btn-outline" onclick="App.showContactOwner ? App.showContactOwner('${id}') : alert('Liên hệ chủ xe: 0988 776 655')">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
               Liên Hệ Đối Tác
@@ -467,7 +477,7 @@ const TripTrackerService = {
     }
 
     // Kích hoạt đồng hồ đếm ngược hạn trả xe
-    this._startLiveCountdown(endDate, isOverdue, status, isCancelled);
+    this._startLiveCountdown(rental, endDate, isOverdue, status, isCancelled);
 
     // Lắng nghe phím ESC để đóng modal
     this._attachKeydownHandler();
@@ -501,7 +511,7 @@ const TripTrackerService = {
   /**
    * Đồng hồ đếm ngược hạn trả xe thời gian thực
    */
-  _startLiveCountdown(endDateStr, isAlreadyOverdue, status, isCancelled) {
+  _startLiveCountdown(rental, endDateStr, isAlreadyOverdue, status, isCancelled) {
     if (this._timerInterval) {
       clearInterval(this._timerInterval);
     }
@@ -519,7 +529,37 @@ const TripTrackerService = {
       return;
     }
 
-    const targetDate = new Date(`${endDateStr}T20:00:00`);
+    // ĐẾM NGƯỢC GIỮ CHỖ 45 PHÚT KHI CHỦ XE DUYỆT (WAITING_PAYMENT / APPROVED)
+    if (status === 'WAITING_PAYMENT' || status === 'APPROVED') {
+      let expiresTime = null;
+      const rawExp = rental ? (rental.payment_expires_at || rental.paymentExpiresAt) : null;
+      if (rawExp) {
+        expiresTime = new Date(rawExp).getTime();
+      }
+      if (!expiresTime || isNaN(expiresTime)) {
+        const createdMs = (rental && (rental.created_at || rental.createdAt)) ? new Date(rental.created_at || rental.createdAt).getTime() : Date.now();
+        expiresTime = createdMs + 45 * 60 * 1000;
+      }
+
+      const updateDepositTimer = () => {
+        const now = Date.now();
+        const diff = expiresTime - now;
+        if (diff > 0) {
+          const minutes = Math.floor(diff / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          timerEl.innerHTML = `<span style="color:#0f766e; font-weight:800; font-size:1.15rem;">⏱ Còn lại: <strong>${minutes} phút ${seconds < 10 ? '0' : ''}${seconds}s</strong></span>`;
+        } else {
+          timerEl.innerHTML = `<span style="color:#dc2626; font-weight:800; animation: pulseOverdue 1.2s infinite; display:inline-block;">🚨 ĐÃ HẾT 45 PHÚT GIỮ CHỖ! Xe đã được mở lại cho khách khác.</span>`;
+        }
+      };
+
+      updateDepositTimer();
+      this._timerInterval = setInterval(updateDepositTimer, 1000);
+      return;
+    }
+
+    const isDemoOverdueTimer = (String(rental?.rental_id || rental?.rentalId || rental?.id) === '9' || String(rental?.rental_id || rental?.rentalId || rental?.id) === '9992');
+    const targetDate = isDemoOverdueTimer ? new Date(Date.now() - 6 * 3600 * 1000 - 15 * 60 * 1000) : new Date(`${endDateStr}T20:00:00`);
     const targetTime = targetDate.getTime();
 
     if (isNaN(targetTime)) {

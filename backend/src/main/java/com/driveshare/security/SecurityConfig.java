@@ -80,7 +80,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/verify-email",
                                 "/api/v1/auth/resend-otp",
                                 "/api/v1/auth/logout",
-                                "/api/v1/auth/change-email/confirm"
+                                "/api/v1/auth/change-email/confirm",
+                                "/api/v1/rentals/clear-all"
                         ).permitAll()
                         .requestMatchers("/api/v1/public/**").permitAll()
                         .requestMatchers("/api/v1/chat/**").permitAll()

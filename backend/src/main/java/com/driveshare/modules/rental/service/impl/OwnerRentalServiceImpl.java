@@ -31,6 +31,9 @@ public class OwnerRentalServiceImpl implements OwnerRentalService {
     private final RentalRepository rentalRepository;
     private final CarRepository carRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.driveshare.modules.notification.application.port.in.NotificationUseCase notificationUseCase;
+
     private static final long SOFT_LOCK_MINUTES = 45;
 
     @Override
@@ -97,6 +100,22 @@ public class OwnerRentalServiceImpl implements OwnerRentalService {
             log.info("Đã chuyển {} đơn trùng lịch của carId={} sang ON_HOLD", competingRentals.size(), rental.getCarId());
         }
 
+        if (notificationUseCase != null && rental.getRenterId() != null) {
+            try {
+                notificationUseCase.sendNotification(
+                        rental.getRenterId(),
+                        "Yêu cầu thuê xe đã được duyệt",
+                        String.format("Chủ xe đã duyệt yêu cầu thuê xe %s %s (#%d). Vui lòng đặt cọc 30%% trong vòng 45 phút để hoàn tất giữ xe.",
+                                car.getBrand(), car.getModel(), rental.getRentalId()),
+                        "RENTAL_APPROVED",
+                        rental.getRentalId()
+                );
+                log.info("Đã gửi thông báo duyệt đơn tới khách thuê renterId={}", rental.getRenterId());
+            } catch (Exception e) {
+                log.warn("Không thể gửi thông báo duyệt đơn: {}", e.getMessage());
+            }
+        }
+
         log.info("Duyệt thành công đơn rentalId={} sang WAITING_PAYMENT, hạn thanh toán: {}", rentalId, rental.getPaymentExpiresAt());
         return RentalSummaryResponse.fromEntity(rental);
     }
@@ -157,6 +176,22 @@ public class OwnerRentalServiceImpl implements OwnerRentalService {
                 rentalRepository.saveAll(onHoldRentals);
                 log.info("Giải phóng Soft Lock: Đã mở lại {} đơn ON_HOLD sang PENDING_APPROVAL cho carId={}",
                         onHoldRentals.size(), rental.getCarId());
+            }
+        }
+
+        if (notificationUseCase != null && rental.getRenterId() != null) {
+            try {
+                notificationUseCase.sendNotification(
+                        rental.getRenterId(),
+                        "Yêu cầu thuê xe bị từ chối",
+                        String.format("Chủ xe đã từ chối yêu cầu thuê xe #%d. Lý do: %s",
+                                rental.getRentalId(), request.getReason() != null ? request.getReason() : "Chủ xe bận"),
+                        "RENTAL_REJECTED",
+                        rental.getRentalId()
+                );
+                log.info("Đã gửi thông báo từ chối tới khách thuê renterId={}", rental.getRenterId());
+            } catch (Exception e) {
+                log.warn("Không thể gửi thông báo từ chối: {}", e.getMessage());
             }
         }
 

@@ -15,11 +15,27 @@
     <!-- Dùng để đăng nhập bằng gg -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- CSS Stylesheets -->
-    <link rel="stylesheet" href="css/base.css?v=20260928_v5" />
-    <link rel="stylesheet" href="css/components.css?v=20260928_v5" />
-    <link rel="stylesheet" href="css/portals.css?v=20261001_v6" />
-    <link rel="stylesheet" href="css/mioto-time.css?v=20260928_v5" />
-    <link rel="stylesheet" href="css/trip-tracker.css?v=20261025_v4" />
+    <link rel="stylesheet" href="css/base.css?v=20261102_v11_overdue_demo" />
+    <link rel="stylesheet" href="css/components.css?v=20261102_v11_overdue_demo" />
+    <link rel="stylesheet" href="css/portals.css?v=20261102_v11_overdue_demo" />
+    <link rel="stylesheet" href="css/mioto-time.css?v=20261102_v11_overdue_demo" />
+    <link rel="stylesheet" href="css/trip-tracker.css?v=20261102_v11_overdue_demo" />
+    <!-- Stay-on-page instant state persistence (Khắc phục triệt để lỗi F5 nhảy về trang chủ) -->
+    <script>
+      (function() {
+        try {
+          var h = (window.location.hash || '').toLowerCase();
+          var v = sessionStorage.getItem('driveshare_current_view') || localStorage.getItem('driveshare_current_view');
+          if (h === '#my-bookings' || h === '#trips' || h === '#my-trips' || h === '#bookings' || (v === 'my-bookings' && h !== '#catalog' && h !== '#home')) {
+            document.documentElement.classList.add('init-my-bookings');
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <style>
+      html.init-my-bookings #renterSection { display: none !important; }
+      html.init-my-bookings #myBookingsSection { display: block !important; }
+    </style>
   </head>
   <body>
     <!-- ==================== 1. TOP NAVBAR ==================== -->
@@ -235,7 +251,7 @@
                     <option value="ALL">
                       Toàn quốc (TP.HCM, Hà Nội, Đà Nẵng...)
                     </option>
-                    <option value="TP. Hồ Chí Minh" selected>
+                    <option value="Hồ Chí Minh" selected>
                       TP. Hồ Chí Minh (Q.1, Q.7, Tân Bình...)
                     </option>
                     <option value="Hà Nội">
@@ -1048,18 +1064,18 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/data.js?v=20261009_v2"></script>
-    <script src="js/storage.js?v=20261009_v2"></script>
-    <script src="js/api.js?v=20261009_v2"></script>
-    <script src="js/toast.js?v=20261009_v2"></script>
-    <script src="js/auth.js?v=20261009_v2"></script>
-    <script src="js/render.js?v=20261009_v2"></script>
-    <script src="js/trip-tracker.js?v=20261025_v4"></script>
-    <script src="js/mioto-time.js?v=20261009_v2"></script>
-    <script src="js/booking.js?v=20261009_v2"></script>
-    <script src="js/owner.js?v=20261009_v2"></script>
-    <script src="js/admin.js?v=20261009_v2"></script>
-    <script src="js/app.js?v=20261009_v2"></script>
-    <script src="js/chat-ai.js?v=20261009_v2"></script>
+    <script src="js/data.js?v=20261102_v11_overdue_demo"></script>
+    <script src="js/storage.js?v=20261102_v11_overdue_demo"></script>
+    <script src="js/api.js?v=20261102_v11_overdue_demo"></script>
+    <script src="js/toast.js?v=20261102_v11_overdue_demo"></script>
+    <script src="js/auth.js?v=20261102_v11_overdue_demo"></script>
+    <script src="js/render.js?v=20261102_v11_overdue_demo"></script>
+    <script src="js/trip-tracker.js?v=20261102_v11_overdue_demo"></script>
+    <script src="js/mioto-time.js?v=20261102_v11_overdue_demo"></script>
+    <script src="js/booking.js?v=20261102_v11_overdue_demo"></script>
+    <script src="js/owner.js?v=20261102_v11_overdue_demo"></script>
+    <script src="js/admin.js?v=20261102_v11_overdue_demo"></script>
+    <script src="js/app.js?v=20261102_v11_overdue_demo"></script>
+    <script src="js/chat-ai.js?v=20261102_v11_overdue_demo"></script>
   </body>
 </html>

@@ -10,8 +10,28 @@
     <!-- Stylesheets -->
     <link rel="stylesheet" href="css/base.css" />
     <link rel="stylesheet" href="css/components.css" />
-    <link rel="stylesheet" href="css/portals.css?v=4.0" />
-    <link rel="stylesheet" href="css/trip-tracker.css?v=4.0" />
+    <link rel="stylesheet" href="css/portals.css?v=20261102_v11_overdue_demo.0" />
+    <link rel="stylesheet" href="css/trip-tracker.css?v=20261102_v11_overdue_demo.0" />
+    <!-- Stay-on-page instant tab persistence for Owner -->
+    <script>
+      (function() {
+        try {
+          var h = (window.location.hash || '').replace('#', '').toUpperCase();
+          var t = (['CARS', 'REQUESTS', 'ADD'].indexOf(h) >= 0 ? h : null) || sessionStorage.getItem('driveshare_owner_tab') || localStorage.getItem('driveshare_owner_tab');
+          if (t === 'REQUESTS') {
+            document.documentElement.classList.add('init-owner-requests');
+          } else if (t === 'ADD') {
+            document.documentElement.classList.add('init-owner-add');
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <style>
+      html.init-owner-requests #ownerTabCarsContent { display: none !important; }
+      html.init-owner-requests #ownerTabRequestsContent { display: block !important; }
+      html.init-owner-add #ownerTabCarsContent { display: none !important; }
+      html.init-owner-add #ownerTabAddContent { display: block !important; }
+    </style>
   </head>
   <body>
     <!-- Site Header -->
@@ -117,14 +137,14 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/data.js?v=3.5"></script>
-    <script src="js/storage.js?v=3.5"></script>
-    <script src="js/toast.js?v=3.5"></script>
-    <script src="js/auth.js?v=3.5"></script>
-    <script src="js/api.js?v=3.5"></script>
-    <script src="js/render.js?v=3.5"></script>
-    <script src="js/trip-tracker.js?v=4.0"></script>
-    <script src="js/owner.js?v=4.0"></script>
+    <script src="js/data.js?v=20261102_v11_overdue_demo.5"></script>
+    <script src="js/storage.js?v=20261102_v11_overdue_demo.5"></script>
+    <script src="js/toast.js?v=20261102_v11_overdue_demo.5"></script>
+    <script src="js/auth.js?v=20261102_v11_overdue_demo.5"></script>
+    <script src="js/api.js?v=20261102_v11_overdue_demo.5"></script>
+    <script src="js/render.js?v=20261102_v11_overdue_demo.5"></script>
+    <script src="js/trip-tracker.js?v=20261102_v11_overdue_demo.0"></script>
+    <script src="js/owner.js?v=20261102_v11_overdue_demo.0"></script>
     <script>
       window.App = window.App || {
         showToast: (msg, type) => {

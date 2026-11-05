@@ -10,5 +10,5 @@ public interface NotificationPersistencePort {
     Optional<NotificationRecord> findById(Long id);
     NotificationRecord save(NotificationRecord record);
     long countUnread(Long userId);
+    void markAllAsRead(Long userId);
 }
-

@@ -68,3 +68,9 @@ uploads/
 .env
 .env.local
 .env.*.local
+
+# Temporary presentation drafts
+docs/*_V4_*.pptx
+docs/*_Moi_Nhat.pptx
+docs/extracted_media/
+docs/verify_*.txt

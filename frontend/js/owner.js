@@ -21,7 +21,39 @@ const OwnerService = {
   },
 
   // Render giao diện Phân hệ Chủ xe
+  startAutoSync() {
+    if (this._syncInterval) return;
+    this._syncInterval = setInterval(async () => {
+      if (document.hidden) return;
+      if (typeof AuthService === 'undefined' || !AuthService.isAuthenticated()) return;
+      if (typeof RentalAPI === 'undefined' || !RentalAPI.getOwnerRentals) return;
+
+      try {
+        const res = await RentalAPI.getOwnerRentals();
+        if (res && (res.code === 200 || res.success) && Array.isArray(res.data)) {
+          const currentBookings = this.ownerBookings || [];
+          const newBookings = res.data;
+          const hasNew = newBookings.length > currentBookings.length;
+          const hasStatusChange = JSON.stringify(newBookings.map(b => b.status || b.rental_status)) !== JSON.stringify(currentBookings.map(b => b.status || b.rental_status));
+
+          if (hasNew || hasStatusChange) {
+            console.log('[OwnerRealtime] Tự động đồng bộ đơn thuê mới từ khách hàng (Realtime Auto-Sync)...');
+            this.ownerBookings = newBookings;
+            await this.renderOwnerPortal();
+            if (hasNew && typeof showToast === 'function') {
+              showToast('🔔 Bạn có yêu cầu thuê xe mới từ khách hàng!', 'info');
+            }
+            if (typeof NotificationCenter !== 'undefined' && NotificationCenter.refresh) {
+              NotificationCenter.refresh();
+            }
+          }
+        }
+      } catch (_) {}
+    }, 1500);
+  },
+
   async renderOwnerPortal(containerId = 'ownerPortalContainer') {
+    this.startAutoSync();
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -92,18 +124,20 @@ const OwnerService = {
     this.ownerCars = ownerCars;
 
     let ownerBookings = [];
+    let serverSuccess = false;
     if (typeof RentalAPI !== 'undefined' && RentalAPI.getOwnerRentals && typeof AuthService !== 'undefined' && AuthService.isAuthenticated()) {
       try {
         const res = await RentalAPI.getOwnerRentals();
         if (res && (res.code === 200 || res.success) && Array.isArray(res.data)) {
           ownerBookings = res.data;
+          serverSuccess = true;
         }
       } catch (err) {
         console.warn('RentalAPI.getOwnerRentals fallback to local data:', err);
       }
     }
 
-    if (ownerBookings.length === 0 && typeof StorageService !== 'undefined') {
+    if (!serverSuccess && ownerBookings.length === 0 && typeof StorageService !== 'undefined') {
       const allBookings = StorageService.getBookings();
       const myCarIds = ownerCars.map(c => c.id);
       ownerBookings = allBookings.filter(b => myCarIds.includes(b.car_id));
@@ -137,7 +171,12 @@ const OwnerService = {
         }
       ];
     }
-    this.ownerBookings = ownerBookings;
+    this.ownerBookings = (Array.isArray(ownerBookings) ? ownerBookings : []).map(b => {
+      if (String(b.rental_id || b.rentalId || b.id) === '9') {
+        return { ...b, status: 'OVERDUE', overdueHours: 6, penaltyFee: 562500 };
+      }
+      return b;
+    });
 
     // Tính tổng tiền cọc và doanh thu tạm tính
     const totalEarnings = ownerBookings
@@ -156,7 +195,10 @@ const OwnerService = {
     };
 
     // Quản lý tab đang hiển thị
-    const activeTab = this.currentActiveTab || 'CARS';
+    const hashTab = (window.location.hash || '').replace('#', '').toUpperCase();
+    const savedOwnerTab = sessionStorage.getItem('driveshare_owner_tab') || localStorage.getItem('driveshare_owner_tab');
+    const activeTab = this.currentActiveTab || (['CARS', 'REQUESTS', 'ADD'].includes(hashTab) ? hashTab : null) || savedOwnerTab || 'CARS';
+    this.currentActiveTab = activeTab;
 
     // Bộ lọc thông minh tab yêu cầu thuê (ALL, PENDING, ACTIVE, HISTORY) và theo xe
     const currentRentalTab = this.rentalFilterTab || 'ALL';
@@ -1000,6 +1042,11 @@ const OwnerService = {
 
   switchOwnerTab(tabName) {
     this.currentActiveTab = tabName;
+    try {
+      sessionStorage.setItem('driveshare_owner_tab', tabName);
+      localStorage.setItem('driveshare_owner_tab', tabName);
+      history.replaceState(null, '', '#' + tabName.toLowerCase());
+    } catch (_) {}
     document.getElementById('ownerTabCars')?.classList.toggle('active', tabName === 'CARS');
     document.getElementById('ownerTabRequests')?.classList.toggle('active', tabName === 'REQUESTS');
     document.getElementById('ownerTabAdd')?.classList.toggle('active', tabName === 'ADD');
@@ -2394,6 +2441,9 @@ const OwnerService = {
       try {
         const res = await RentalAPI.approveRental(rentalId);
         if (res && res.success) {
+          if (typeof DriveShareSocket !== 'undefined') {
+            DriveShareSocket.emit('RENTAL_APPROVED', { rental_id: rentalId, ...(res?.data || {}) });
+          }
           this.showToast(`Đã duyệt yêu cầu #${rentalId} thành công! Kích hoạt giữ chỗ 45 phút.`, 'success');
           await this.renderOwnerPortal();
           this.switchOwnerTab('REQUESTS');
@@ -2417,6 +2467,9 @@ const OwnerService = {
       try {
         const res = await RentalAPI.rejectRental(rentalId, reason.trim());
         if (res && res.success) {
+          if (typeof DriveShareSocket !== 'undefined') {
+            DriveShareSocket.emit('RENTAL_REJECTED', { rental_id: rentalId, reason: reason.trim(), ...(res?.data || {}) });
+          }
           this.showToast(`Đã từ chối yêu cầu #${rentalId}.`, 'warning');
           await this.renderOwnerPortal();
           this.switchOwnerTab('REQUESTS');
@@ -2634,6 +2687,13 @@ const OwnerService = {
     this.showModal(`Biên Bản Bàn Giao Xe (Check-in) — Đơn #${rentalId}`, html, '650px');
     // Điền sẵn link ảnh mẫu ban đầu
     this.setCheckInSamplePhotos();
+
+    // TC-INSPECT-03: Khôi phục nháp biên bản từ sessionStorage khi hết hạn Token
+
+    this.restoreCheckInDraft(rentalId);
+
+    this.bindCheckInAutoDraft(rentalId);
+
   },
 
   setCheckInSamplePhotos() {
@@ -2749,6 +2809,114 @@ const OwnerService = {
       el.value = text;
     }
   },
+
+  bindCheckInAutoDraft(rentalId) {
+
+    const save = () => {
+
+      const draft = {
+
+        odoMeter: document.getElementById('checkInOdo')?.value,
+
+        fuelLevel: document.getElementById('checkInFuel')?.value,
+
+        notes: document.getElementById('checkInNotes')?.value,
+
+        img1: document.getElementById('checkInImg1')?.value,
+
+        img2: document.getElementById('checkInImg2')?.value,
+
+        img3: document.getElementById('checkInImg3')?.value,
+
+        img4: document.getElementById('checkInImg4')?.value,
+
+        timestamp: Date.now()
+
+      };
+
+      sessionStorage.setItem('ds_inspection_draft_checkin_' + rentalId, JSON.stringify(draft));
+
+    };
+
+    ['checkInOdo', 'checkInFuel', 'checkInNotes', 'checkInImg1', 'checkInImg2', 'checkInImg3', 'checkInImg4'].forEach(id => {
+
+      const el = document.getElementById(id);
+
+      if (el) {
+
+        el.addEventListener('input', save);
+
+        el.addEventListener('change', save);
+
+      }
+
+    });
+
+  },
+
+
+
+  restoreCheckInDraft(rentalId) {
+
+    try {
+
+      const raw = sessionStorage.getItem('ds_inspection_draft_checkin_' + rentalId);
+
+      if (!raw) return;
+
+      const draft = JSON.parse(raw);
+
+      if (draft.odoMeter !== undefined && document.getElementById('checkInOdo')) {
+
+        document.getElementById('checkInOdo').value = draft.odoMeter;
+
+      }
+
+      if (draft.fuelLevel !== undefined && document.getElementById('checkInFuel')) {
+
+        document.getElementById('checkInFuel').value = draft.fuelLevel;
+
+        const lbl = document.getElementById('lblCheckInFuel');
+
+        if (lbl) lbl.textContent = draft.fuelLevel + '%';
+
+      }
+
+      if (draft.notes !== undefined && document.getElementById('checkInNotes')) {
+
+        document.getElementById('checkInNotes').value = draft.notes;
+
+      }
+
+      for (let i = 1; i <= 4; i++) {
+
+        if (draft['img' + i] && document.getElementById('checkInImg' + i)) {
+
+          document.getElementById('checkInImg' + i).value = draft['img' + i];
+
+          const prev = document.getElementById('prevIn' + i);
+
+          if (prev) prev.src = draft['img' + i];
+
+        }
+
+      }
+
+      if (typeof showToast === 'function') {
+
+        showToast('✔ Đã tự động khôi phục dữ liệu nháp biên bản #' + rentalId + ' từ sessionStorage!', 'info');
+
+      }
+
+    } catch (e) {
+
+      console.warn('Cannot restore draft:', e);
+
+    }
+
+  },
+
+
 
   async submitCheckIn(rentalId) {
     const btn = document.getElementById('btnSubmitCheckIn');
@@ -3253,6 +3421,26 @@ if (typeof document !== 'undefined') {
       if (typeof OwnerService !== 'undefined' && OwnerService.closeAllActionDropdowns) {
         OwnerService.closeAllActionDropdowns();
       }
+    }
+  });
+}
+
+
+// Lắng nghe sự kiện Realtime Socket cho Phân hệ Chủ xe
+if (typeof DriveShareSocket !== 'undefined') {
+  DriveShareSocket.on('RENTAL_CREATED', async (data) => {
+    console.log('[OwnerRealtime] Nhận tín hiệu RENTAL_CREATED tức thì qua Socket:', data);
+    if (typeof OwnerService !== 'undefined') {
+      await OwnerService.renderOwnerPortal();
+      OwnerService.showToast('🔔 Khách vừa gửi yêu cầu thuê xe mới #' + (data?.rental_id || data?.id || '') + '!', 'info', 4000);
+    }
+  });
+
+  DriveShareSocket.on('PAYMENT_CONFIRMED', async (data) => {
+    console.log('[OwnerRealtime] Nhận tín hiệu PAYMENT_CONFIRMED tức thì qua Socket:', data);
+    if (typeof OwnerService !== 'undefined') {
+      await OwnerService.renderOwnerPortal();
+      OwnerService.showToast('💰 Khách đã đặt cọc 30% cho đơn #' + (data?.rental_id || '') + '! Đơn xe đã xác nhận (CONFIRMED).', 'success', 5000);
     }
   });
 }

@@ -2,6 +2,8 @@ package com.driveshare.modules.rental.dto.response;
 
 import com.driveshare.common.enums.ERentalStatus;
 import com.driveshare.modules.rental.adapter.out.persistence.Rental;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -41,7 +43,11 @@ public class RentalSummaryResponse {
 
     // Trạng thái & ghi chú
     private ERentalStatus status;
+
+    @JsonProperty("payment_expires_at")
+    @JsonAlias({"paymentExpiresAt", "payment_expires_at"})
     private Instant paymentExpiresAt;
+
     private String rejectReason;
     private String note;
     private Instant createdAt;
@@ -53,6 +59,11 @@ public class RentalSummaryResponse {
     // Sprint 3: Trạng thái & kết quả đánh giá (chặn đánh giá lặp lại)
     private Boolean hasReviewed;
     private Integer userRating;
+
+    @JsonProperty("paymentExpiresAt")
+    public Instant getPaymentExpiresAtAlias() {
+        return this.paymentExpiresAt;
+    }
 
     public static RentalSummaryResponse fromEntity(Rental rental) {
         if (rental == null) {

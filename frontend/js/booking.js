@@ -618,6 +618,15 @@ const BookingService = {
         const rental = res.data;
         const rentalId = rental.rental_id || rental.rentalId;
 
+        if (typeof DriveShareSocket !== 'undefined') {
+          DriveShareSocket.emit('RENTAL_CREATED', { rental_id: rentalId, ...rental });
+        }
+
+        // Tự động chuyển ngay sang view Chuyến của tôi
+        if (typeof App !== 'undefined' && App.showMyBookingsView) {
+          App.showMyBookingsView();
+        }
+
         if (typeof App !== 'undefined' && App.closeModal) {
           App.closeModal();
         }

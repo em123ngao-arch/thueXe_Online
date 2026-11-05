@@ -37,6 +37,8 @@ public class RentalController {
     private final RentalQueryService rentalQueryService;
     private final RentalInspectionService rentalInspectionService;
     private final com.driveshare.modules.rental.service.RentalDisputeService rentalDisputeService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     /**
      * CRP-41 & CRP-42: Gửi yêu cầu thuê xe mới (trạng thái ban đầu: PENDING).
@@ -172,6 +174,26 @@ public class RentalController {
         Long userId = userDetails != null ? userDetails.getUserId() : getCurrentUserId();
         com.driveshare.modules.rental.dto.response.RentalDisputeResponse response = rentalDisputeService.getDisputeByRentalId(id, userId);
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin khiếu nại thành công", response));
+    }
+
+    /**
+     * Xóa sạch toàn bộ đơn thuê và chuyến đi (dọn dẹp dữ liệu để test lại từ đầu)
+     */
+    @RequestMapping(value = "/clear-all", method = {RequestMethod.DELETE, RequestMethod.POST, RequestMethod.GET})
+    @Operation(summary = "Xóa sạch toàn bộ đơn thuê và chuyến đi", description = "Dọn sạch bảng rentals, reviews, inspections, payments, disputes")
+    public ResponseEntity<ApiResponse<String>> clearAllRentals() {
+        try {
+            jdbcTemplate.execute("DELETE FROM reviews");
+            jdbcTemplate.execute("DELETE FROM rental_inspections");
+            jdbcTemplate.execute("DELETE FROM payments");
+            jdbcTemplate.execute("DELETE FROM rental_disputes");
+            jdbcTemplate.execute("DELETE FROM car_calendar_blocks");
+            jdbcTemplate.execute("DELETE FROM rentals");
+            jdbcTemplate.execute("DELETE FROM notifications WHERE type IN ('RENTAL_COMPLETED', 'REVIEW_RECEIVED', 'RENTAL_CREATED', 'RENTAL_APPROVED')");
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(RentalController.class).warn("Lỗi khi xóa đơn thuê: {}", e.getMessage());
+        }
+        return ResponseEntity.ok(ApiResponse.success("Đã xóa sạch toàn bộ đơn thuê và chuyến đi"));
     }
 
     private Long getCurrentUserId() {

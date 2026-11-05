@@ -50,6 +50,12 @@ public class NotificationUseCaseImpl implements NotificationUseCase {
     }
 
     @Override
+    public void markAllAsRead(Long userId) {
+        if (userId == null) return;
+        persistencePort.markAllAsRead(userId);
+    }
+
+    @Override
     public void sendNotification(Long userId, String title, String content, String type, Long referenceId) {
         if (userId == null || !NotificationPolicy.isValidNotification(title, content, type)) return;
         NotificationRecord record = NotificationRecord.builder()

@@ -240,6 +240,7 @@ const AuthService = {
   _pendingCallback: null,
 
   getAccessToken,
+    getToken: getAccessToken,
   getRefreshToken,
   getCurrentUser,
   isAuthenticated,

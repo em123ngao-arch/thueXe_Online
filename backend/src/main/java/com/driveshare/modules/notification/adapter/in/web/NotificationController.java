@@ -33,7 +33,7 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.success(list));
     }
 
-    @Operation(summary = "Đánh dấu thông báo đã đọc")
+    @Operation(summary = "Đánh dấu một thông báo đã đọc")
     @PutMapping("/{id}/read")
     public ResponseEntity<ApiResponse<Void>> markAsRead(
             @PathVariable Long id,
@@ -44,5 +44,15 @@ public class NotificationController {
         }
         return ResponseEntity.ok(ApiResponse.success(null));
     }
-}
 
+    @Operation(summary = "Đánh dấu tất cả thông báo đã đọc")
+    @PutMapping("/mark-all-read")
+    public ResponseEntity<ApiResponse<Void>> markAllAsRead(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        if (userDetails != null) {
+            notificationUseCase.markAllAsRead(userDetails.getUserId());
+        }
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+}
