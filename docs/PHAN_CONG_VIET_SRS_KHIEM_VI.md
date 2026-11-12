@@ -45,3 +45,4 @@
    - File: `BAO_CAO_SRS_DRIVESHARE_K4_PRO_V2_2_Ch1_to_Ch12.docx` (đã có sẵn khung chuẩn Doc_ITC, đầy đủ 53 APIs, 15 Bảng DB, 54 REQs và 17 States).
 2. **Script kiểm tra tự động:**  
    - Chạy lệnh: `python scripts/audit_srs_v2_2.py` để kiểm tra độ đầy đủ và nhất quán của tài liệu trước khi nộp.
+

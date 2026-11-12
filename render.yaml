@@ -22,25 +22,21 @@ services:
       - key: PORT
         value: 8080
       - key: DB_HOST
-        fromDatabase:
-          name: driveshare-db
-          property: host
+        value: dpg-dbqt83dckfvc739c03sg-a
       - key: DB_PORT
-        fromDatabase:
-          name: driveshare-db
-          property: port
+        value: "5432"
       - key: DB_NAME
-        fromDatabase:
-          name: driveshare-db
-          property: database
+        value: driveshare_db_w52b
       - key: DB_USERNAME
-        fromDatabase:
-          name: driveshare-db
-          property: user
+        value: driveshare_user
       - key: DB_PASSWORD
-        fromDatabase:
-          name: driveshare-db
-          property: password
+        value: tzC0gfoUdKvJEnspNEKhTNXIEmICoaMV
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:postgresql://dpg-dbqt83dckfvc739c03sg-a:5432/driveshare_db_w52b
+      - key: SPRING_DATASOURCE_USERNAME
+        value: driveshare_user
+      - key: SPRING_DATASOURCE_PASSWORD
+        value: tzC0gfoUdKvJEnspNEKhTNXIEmICoaMV
       - key: JWT_SECRET
         generateValue: true
       - key: MAIL_USER
