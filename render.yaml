@@ -1,7 +1,7 @@
 databases:
   # Dịch vụ 1: Database PostgreSQL miễn phí trên Render
   - name: driveshare-db
-    databaseName: driveshare_db
+    databaseName: driveshare_db_qgbj
     user: driveshare_user
     plan: free
     region: singapore
@@ -22,21 +22,21 @@ services:
       - key: PORT
         value: 8080
       - key: DB_HOST
-        value: dpg-dbqt83dckfvc739c03sg-a.singapore-postgres.render.com
+        value: dpg-dbqt83dckfvc739r03ag-a
       - key: DB_PORT
         value: "5432"
       - key: DB_NAME
-        value: driveshare_db_w52b
+        value: driveshare_db_qgbj
       - key: DB_USERNAME
         value: driveshare_user
       - key: DB_PASSWORD
-        value: tzC0gfoUdKvJEnspNEKhTNXIEmICoaMV
+        value: tzCOgfeUdKvJEnapNEKhTNXIEwICoaWV
       - key: SPRING_DATASOURCE_URL
-        value: jdbc:postgresql://dpg-dbqt83dckfvc739c03sg-a.singapore-postgres.render.com:5432/driveshare_db_w52b
+        value: jdbc:postgresql://dpg-dbqt83dckfvc739r03ag-a:5432/driveshare_db_qgbj
       - key: SPRING_DATASOURCE_USERNAME
         value: driveshare_user
       - key: SPRING_DATASOURCE_PASSWORD
-        value: tzC0gfoUdKvJEnspNEKhTNXIEmICoaMV
+        value: tzCOgfeUdKvJEnapNEKhTNXIEwICoaWV
       - key: JWT_SECRET
         generateValue: true
       - key: MAIL_USER
