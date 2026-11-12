@@ -22,7 +22,7 @@ services:
       - key: PORT
         value: 8080
       - key: DB_HOST
-        value: dpg-dbqt83dckfvc739c03sg-a
+        value: dpg-dbqt83dckfvc739c03sg-a.singapore-postgres.render.com
       - key: DB_PORT
         value: "5432"
       - key: DB_NAME
@@ -32,7 +32,7 @@ services:
       - key: DB_PASSWORD
         value: tzC0gfoUdKvJEnspNEKhTNXIEmICoaMV
       - key: SPRING_DATASOURCE_URL
-        value: jdbc:postgresql://dpg-dbqt83dckfvc739c03sg-a:5432/driveshare_db_w52b
+        value: jdbc:postgresql://dpg-dbqt83dckfvc739c03sg-a.singapore-postgres.render.com:5432/driveshare_db_w52b
       - key: SPRING_DATASOURCE_USERNAME
         value: driveshare_user
       - key: SPRING_DATASOURCE_PASSWORD
