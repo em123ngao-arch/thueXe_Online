@@ -51,6 +51,19 @@ const AiChatWidget = (() => {
       tags: ["vinfast", "vf8", "dien", "thong minh", "5 cho"]
     },
     {
+      id: 13,
+      name: "VinFast VF9 Plus 6 chỗ",
+      brand: "VinFast",
+      seats: 6,
+      transmission: "Tự động",
+      fuelType: "Điện",
+      price: 2300000,
+      rating: 5.0,
+      hasDriver: true,
+      image: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=600&q=80",
+      tags: ["vinfast", "vf9", "dien", "chu tich", "6 cho", "vip"]
+    },
+    {
       id: 2,
       name: "Toyota Fortuner Legender 2023",
       brand: "Toyota",
@@ -147,8 +160,12 @@ const AiChatWidget = (() => {
     if (q.includes("7 cho") || q.includes("da lat") || q.includes("gia dinh")) {
       return uniquePool.filter(c => c.seats >= 7).slice(0, 2);
     }
-    if (q.includes("vinfast") || q.includes("dien") || q.includes("noi thanh")) {
-      return uniquePool.filter(c => c.fuelType === 'Điện' || (c.brand && c.brand.toLowerCase().includes('vinfast'))).slice(0, 2);
+    if (q.includes("vf3") || q.includes("vf-3") || q.includes("vf 3")) {
+      const vf3 = uniquePool.filter(c => (c.name || '').toLowerCase().includes("vf3") || (c.tags || []).includes("vf3"));
+      if (vf3.length > 0) return vf3.slice(0, 1);
+    }
+    if (q.includes("vinfast") || q.includes("dien") || q.includes("noi thanh") || q.includes("vf")) {
+      return uniquePool.filter(c => c.fuelType === 'Điện' || (c.brand && c.brand.toLowerCase().includes('vinfast'))).slice(0, 5);
     }
     if (q.includes("re") || q.includes("800") || q.includes("tiet kiem")) {
       return uniquePool.filter(c => c.price <= 850000).slice(0, 2);
@@ -471,9 +488,18 @@ const AiChatWidget = (() => {
             appendMessage("assistant", replyText, suggestedCars);
 
             // 2. Render khung tính cọc 30% VietQR nếu có
-            if (reply.depositCalculation) {
-              renderDepositBox(reply.depositCalculation);
+            const deposit = reply.depositCalculation || reply.deposit_calculation;
+            if (deposit) {
+              renderDepositBox(deposit);
             }
+
+            // 3. Phát sự kiện realtime thông báo phiên chat mới/cập nhật cho trang Admin
+            try {
+              if (typeof DriveShareSocket !== 'undefined' && DriveShareSocket.emit) {
+                DriveShareSocket.emit('AI_CHAT_UPDATED', { sessionId });
+              }
+              localStorage.setItem('driveshare_chat_last_active', String(Date.now()));
+            } catch (_) {}
           } else {
             appendMessage("assistant", "Xin lỗi, hiện tại tôi chưa phản hồi được. Vui lòng thử lại sau giây lát!");
           }
@@ -541,19 +567,34 @@ const AiChatWidget = (() => {
           </div>
           ${car.address ? `<div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">📍 ${escapeHtml(car.address)}</div>` : ''}
           ${car.hasDriverService && car.driverFeeFormatted ? `<div style="font-size: 11px; color: #059669; margin-bottom: 8px;">🚘 Phí tài xế: ${escapeHtml(car.driverFeeFormatted)}/ngày</div>` : ''}
-          <button type="button" onclick="AiChatWidget.bookCar(${car.carId})" class="ai-book-btn" style="
-            display: block;
-            width: 100%;
-            text-align: center;
-            background: #2563eb;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-          ">Xem chi tiết & Đặt xe →</button>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
+            <button type="button" onclick="AiChatWidget.viewCarDetail(${car.carId})" style="
+              padding: 6px 4px;
+              background: #f1f5f9;
+              color: #334155;
+              border: 1px solid #cbd5e1;
+              border-radius: 6px;
+              font-size: 11px;
+              font-weight: 600;
+              cursor: pointer;
+              transition: all 0.15s;
+            ">
+              Xem chi tiết xe
+            </button>
+            <button type="button" onclick="AiChatWidget.bookCarNow(${car.carId})" style="
+              padding: 6px 4px;
+              background: #00a550;
+              color: #ffffff;
+              border: none;
+              border-radius: 6px;
+              font-size: 11px;
+              font-weight: 700;
+              cursor: pointer;
+              transition: all 0.15s;
+            ">
+              Đặt xe ngay
+            </button>
+          </div>
         </div>
       `;
 
@@ -569,17 +610,28 @@ const AiChatWidget = (() => {
   // =========================================================================
 
   function renderDepositBox(deposit) {
+    if (!deposit) return;
     const box = document.getElementById("ai-messages-box");
+    if (!box) return;
+
+    const carName = deposit.carName || deposit.car_name || '';
+    const rentalDays = deposit.rentalDays || deposit.rental_days || 0;
+    const totalRentalFee = deposit.totalRentalFee || deposit.total_rental_fee || 0;
+    const withDriver = Boolean(deposit.withDriver || deposit.with_driver);
+    const totalDriverFee = deposit.totalDriverFee || deposit.total_driver_fee || 0;
+    const grandTotalFormatted = deposit.grandTotalFormatted || deposit.grand_total_formatted || (deposit.grandTotal ? formatVND(deposit.grandTotal) : '');
+    const depositFormatted = deposit.depositFormatted || deposit.deposit_formatted || (deposit.depositAmount ? formatVND(deposit.depositAmount) : '');
+    const remainingFormatted = deposit.remainingFormatted || deposit.remaining_formatted || (deposit.remainingAmount ? formatVND(deposit.remainingAmount) : '');
+
     const depositDiv = document.createElement("div");
-    depositDiv.className = "ai-deposit-box";
-    depositDiv.style.cssText = "padding-left: 36px;";
+    depositDiv.style.cssText = "display: flex; gap: 8px; align-items: flex-start;";
 
     let driverRow = "";
-    if (deposit.withDriver && deposit.totalDriverFee > 0) {
+    if (withDriver) {
       driverRow = `
         <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; color: #475569;">
-          <span>👨‍✈️ Phí tài xế (${deposit.rentalDays} ngày)</span>
-          <span>${escapeHtml(formatVND(deposit.totalDriverFee))}</span>
+          <span>👨‍✈️ Phí tài xế (${rentalDays} ngày)</span>
+          <span>${escapeHtml(formatVND(totalDriverFee))}</span>
         </div>
       `;
     }
@@ -596,22 +648,22 @@ const AiChatWidget = (() => {
           💳 Bảng tính chi phí
         </div>
         <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; color: #475569;">
-          <span>🚗 ${escapeHtml(deposit.carName || '')} × ${deposit.rentalDays || 0} ngày</span>
-          <span>${escapeHtml(formatVND(deposit.totalRentalFee))}</span>
+          <span>🚗 ${escapeHtml(carName)} × ${rentalDays} ngày</span>
+          <span>${escapeHtml(formatVND(totalRentalFee))}</span>
         </div>
         ${driverRow}
         <div style="border-top: 1px dashed #d1d5db; margin: 6px 0;"></div>
         <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; font-weight: 700; color: #1e293b;">
           <span>Tổng cộng</span>
-          <span>${escapeHtml(deposit.grandTotalFormatted || '')}</span>
+          <span>${escapeHtml(grandTotalFormatted)}</span>
         </div>
         <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; font-weight: 700; color: #2563eb;">
           <span>💳 Đặt cọc 30% VietQR</span>
-          <span>${escapeHtml(deposit.depositFormatted || '')}</span>
+          <span>${escapeHtml(depositFormatted)}</span>
         </div>
         <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; color: #64748b;">
           <span>Còn lại khi nhận xe</span>
-          <span>${escapeHtml(deposit.remainingFormatted || '')}</span>
+          <span>${escapeHtml(remainingFormatted)}</span>
         </div>
       </div>
     `;
@@ -688,33 +740,37 @@ const AiChatWidget = (() => {
         data.data.forEach(item => {
           const itemEl = document.createElement("div");
           itemEl.className = "ai-session-item";
-          const isActive = item.sessionId === sessionId;
+          const sid = item.session_id || item.sessionId;
+          const isActive = Boolean(sid && sessionId && sid === sessionId);
           if (isActive) {
             itemEl.style.borderColor = "#2563eb";
             itemEl.style.background = "#eff6ff";
           }
-          const timeStr = item.updatedAt ? new Date(item.updatedAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" }) : "";
-          const preview = item.lastMessage || item.firstMessage || "(Trống)";
+          const updatedRaw = item.updated_at || item.updatedAt;
+          const timeStr = item.updated_at_formatted || item.updatedAtFormatted || (updatedRaw ? new Date(updatedRaw).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" }) : "");
+          const preview = item.last_message || item.lastMessage || item.first_message || item.firstMessage || "(Trống)";
+          const msgCount = (item.message_count != null) ? item.message_count : ((item.messageCount != null) ? item.messageCount : 0);
+
           itemEl.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
               <span style="font-weight: 700; font-size: 12px; color: #1e293b;">${isActive ? '👉 Đang mở' : 'Phiên tư vấn'}</span>
               <span style="font-size: 10px; color: #94a3b8;">${timeStr}</span>
             </div>
-            <div style="font-size: 12px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 4px;">
+            <div style="font-size: 12px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 4px;" title="${escapeHtml(preview)}">
               ${escapeHtml(preview)}
             </div>
             <div style="font-size: 10px; color: #64748b; display: flex; justify-content: space-between; align-items: center;">
-              <span>💬 ${item.messageCount || 0} tin nhắn</span>
+              <span>💬 ${msgCount} tin nhắn</span>
               <div style="display: flex; gap: 8px; align-items: center;">
                 <button type="button" class="ai-del-session-btn" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; padding: 2px 4px;" title="Xóa phiên này">🗑️</button>
-                <span style="color: #2563eb; font-weight: 600;">Mở lại &raquo;</span>
+                <span style="color: #2563eb; font-weight: 600; cursor: pointer;">Mở lại &raquo;</span>
               </div>
             </div>
           `;
-          itemEl.addEventListener("click", () => switchSession(item.sessionId));
+          itemEl.addEventListener("click", () => switchSession(sid));
           const delBtn = itemEl.querySelector(".ai-del-session-btn");
           if (delBtn) {
-            delBtn.addEventListener("click", (e) => deleteSession(e, item.sessionId));
+            delBtn.addEventListener("click", (e) => deleteSession(e, sid));
           }
           listEl.appendChild(itemEl);
         });
@@ -768,16 +824,7 @@ const AiChatWidget = (() => {
   }
 
   function bookCar(carId) {
-    if (!carId) return;
-    if (typeof BookingService !== 'undefined' && typeof BookingService.startBookingFlow === 'function') {
-      if (typeof AuthService !== 'undefined' && typeof AuthService.requireLoginThen === 'function') {
-        AuthService.requireLoginThen(() => BookingService.startBookingFlow(carId));
-      } else {
-        BookingService.startBookingFlow(carId);
-      }
-    } else {
-      window.location.href = `index.html?carId=${carId}`;
-    }
+    bookCarNow(carId);
   }
 
   /**
@@ -796,15 +843,19 @@ const AiChatWidget = (() => {
     let cardsHtml = "";
     if (!isUser && Array.isArray(suggestedCars) && suggestedCars.length > 0) {
       cardsHtml = suggestedCars.map(c => {
-        const carId = c.id || c.carId;
+        const carId = c.car_id || c.carId || c.id;
         const carName = c.name || c.model || `${c.brand || ''} ${c.model || ''}`;
-        const carImg = c.image || c.thumb || c.mainImageUrl || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80';
-        const carPrice = c.price || c.pricePerDay || c.price_per_day || 800000;
-        const carRating = c.rating || c.averageRating || '4.9';
+        const carImg = c.thumbnail_url || c.thumbnailUrl || c.image || c.thumb || c.mainImageUrl || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80';
+        const carPrice = c.price_per_day || c.pricePerDay || c.price || 800000;
+        const carRating = c.rating || c.averageRating || '5.0';
         const seats = c.seats || c.seatCapacity || 5;
-        const trans = c.transmission === 'MANUAL' ? 'Số sàn' : (c.transmission || 'Tự động');
-        const fuel = c.fuelType === 'ELECTRIC' ? 'Điện' : (c.fuelType === 'DIESEL' ? 'Dầu' : (c.fuelType || 'Xăng'));
-        const hasDriver = Boolean(c.hasDriver || c.has_driver_service || c.hasDriverService);
+        const trans = (c.transmission === 'MANUAL' || c.transmission === 'Số sàn') ? 'Số sàn' : (c.transmission || 'Tự động');
+        const rawFuel = c.fuel_type || c.fuelType || '';
+        const isElectric = rawFuel === 'ELECTRIC' || rawFuel === 'Điện' || carName.includes('VF') || carName.includes('VinFast');
+        const isDiesel = rawFuel === 'DIESEL' || rawFuel === 'Dầu';
+        const fuel = isElectric ? 'Điện' : (isDiesel ? 'Dầu' : (rawFuel || 'Xăng'));
+        const fuelIcon = isElectric ? '⚡' : '⛽';
+        const hasDriver = Boolean(c.has_driver_service || c.hasDriverService || c.hasDriver);
 
         return `
           <div class="ai-car-card" style="
@@ -833,7 +884,7 @@ const AiChatWidget = (() => {
                 <span>•</span>
                 <span>⚙️ ${trans}</span>
                 <span>•</span>
-                <span>⛽ ${fuel}</span>
+                <span>${fuelIcon} ${fuel}</span>
               </div>
               <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #e2e8f0;">
                 <span style="font-size: 11px; color: #64748b;">Giá thuê:</span>
@@ -955,11 +1006,19 @@ const AiChatWidget = (() => {
         headers
       });
       const data = await res.json();
-      if (data.success && data.data && Array.isArray(data.data.messages) && data.data.messages.length > 0) {
+      const rawMessages = (data && data.success && data.data)
+        ? (Array.isArray(data.data.messages) ? data.data.messages : (Array.isArray(data.data) ? data.data : []))
+        : [];
+      if (rawMessages.length > 0) {
         const box = document.getElementById("ai-messages-box");
         if (box) {
           box.innerHTML = "";
-          data.data.messages.forEach(m => appendMessage(m.role, m.content || m.text, m.cars || m.suggested_cars));
+          rawMessages.forEach(m => {
+            const role = m.role || "assistant";
+            const text = m.content || m.text || "";
+            const cars = m.cars || m.suggested_cars || m.suggestedCars || [];
+            appendMessage(role, text, cars);
+          });
           box.scrollTop = box.scrollHeight;
         }
       } else {
@@ -1027,7 +1086,11 @@ const AiChatWidget = (() => {
 
   // Phương thức điều hướng khi người dùng nhấn xem hoặc đặt xe từ thẻ xe mini
   function viewCarDetail(carId) {
-    if (typeof App !== 'undefined' && App.openCarDetailModal) {
+    if (!carId) return;
+    if (isOpen) {
+      toggle(); // Thu gọn widget chat để hiển thị trọn vẹn modal chi tiết xe
+    }
+    if (typeof App !== 'undefined' && typeof App.openCarDetailModal === 'function') {
       App.openCarDetailModal(carId);
     } else {
       window.location.href = `index.html?carId=${carId}`;
@@ -1035,10 +1098,18 @@ const AiChatWidget = (() => {
   }
 
   function bookCarNow(carId) {
-    if (typeof AuthService !== 'undefined' && typeof BookingService !== 'undefined') {
-      AuthService.requireLoginThen(() => {
+    if (!carId) return;
+    if (isOpen) {
+      toggle(); // Thu gọn widget chat để hiển thị trọn vẹn modal đặt xe
+    }
+    if (typeof BookingService !== 'undefined' && typeof BookingService.startBookingFlow === 'function') {
+      if (typeof AuthService !== 'undefined' && typeof AuthService.requireLoginThen === 'function') {
+        AuthService.requireLoginThen(() => {
+          BookingService.startBookingFlow(carId);
+        });
+      } else {
         BookingService.startBookingFlow(carId);
-      });
+      }
     } else {
       window.location.href = `index.html?bookCarId=${carId}`;
     }
@@ -1058,11 +1129,4 @@ const AiChatWidget = (() => {
 
 document.addEventListener("DOMContentLoaded", () => {
   AiChatWidget.init();
-  const urlParams = new URLSearchParams(window.location.search);
-  const carId = urlParams.get("carId");
-  if (carId && typeof BookingService !== 'undefined' && typeof BookingService.startBookingFlow === 'function') {
-    setTimeout(() => {
-      AiChatWidget.bookCar(carId);
-    }, 400);
-  }
 });

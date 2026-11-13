@@ -349,6 +349,7 @@ public class CarServiceImpl implements CarService {
                 .driverFeePerDay(car.getDriverFeePerDay())
                 .rating(car.getRating())
                 .ratingCount(car.getRatingCount())
+                .tripCount(car.getTripCount() != null ? car.getTripCount() : 0)
                 .build();
     }
 

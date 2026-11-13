@@ -30,6 +30,7 @@ public class CarSummaryResult {
     private String features;
     private BigDecimal rating;
     private Integer ratingCount;
+    private Integer tripCount;
     private String thumbnailUrl;
     private String address;
     private String province;

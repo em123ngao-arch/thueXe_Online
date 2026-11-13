@@ -97,6 +97,33 @@ class AiChatServiceImplTest {
     }
 
     @Test
+    @DisplayName("VinFast VF search: When user asks about VF cars, only returns VinFast cars without other brands")
+    void testChatVinFastVfFilterExcludesOtherBrands() {
+        when(geminiService.isEnabled()).thenReturn(false);
+        when(chatMemoryRepository.findByUserIdAndSessionId(any(), any())).thenReturn(Optional.empty());
+
+        Car vf3 = Car.builder().carId(19L).brand("VinFast").model("VF3").status(ECarStatus.ACTIVE)
+                .pricePerDay(BigDecimal.valueOf(450_000)).fuelType(EFuelType.ELECTRIC).transmission(ETransmission.AUTOMATIC).seats(4).build();
+        Car vf9 = Car.builder().carId(13L).brand("VinFast").model("VF9 Plus 6 chỗ").status(ECarStatus.ACTIVE)
+                .pricePerDay(BigDecimal.valueOf(2_300_000)).fuelType(EFuelType.ELECTRIC).transmission(ETransmission.AUTOMATIC).seats(6).build();
+        Car mazda = Car.builder().carId(17L).brand("Mazda").model("Mazda 3").status(ECarStatus.ACTIVE)
+                .pricePerDay(BigDecimal.valueOf(750_000)).fuelType(EFuelType.GASOLINE).transmission(ETransmission.AUTOMATIC).seats(5).build();
+
+        when(carRepository.findByStatusAndDeletedAtIsNull(eq(ECarStatus.ACTIVE), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(vf3, vf9, mazda)));
+
+        ChatRequest request = new ChatRequest("sess-vf", "Bên bạn có các dòng xe vf nào?");
+        ChatReplyResponse response = aiChatService.chat(request, 100L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getSuggestedCars()).isNotEmpty();
+        // Phải chứa xe VinFast
+        assertThat(response.getSuggestedCars()).allMatch(c -> c.getBrand().equalsIgnoreCase("VinFast"));
+        // Tuyệt đối không chứa Mazda
+        assertThat(response.getSuggestedCars()).noneMatch(c -> c.getBrand().equalsIgnoreCase("Mazda"));
+    }
+
+    @Test
     @DisplayName("Tool calling: User asks to calculate deposit for 3 days -> returns 30% deposit calculation")
     void testChatWithDepositCalculation() {
         when(geminiService.isEnabled()).thenReturn(false);
@@ -181,6 +208,33 @@ class AiChatServiceImplTest {
         assertThat(response.getMessage()).contains("https://gemini.google.com");
         assertThat(response.getMessage()).contains("Claude");
         assertThat(response.getMessage()).contains("https://claude.ai");
+        assertThat(response.getSuggestedCars()).isNull();
+    }
+
+    @Test
+    @DisplayName("Out-of-scope 'biết code không': Responds politely with AI links instead of robot greeting")
+    void testChatOutOfScopeBietCodeKhong() {
+        ChatRequest request = new ChatRequest("sess-code-2", "biết code không");
+        ChatReplyResponse response = aiChatService.chat(request, 100L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getMessage()).contains("ChatGPT");
+        assertThat(response.getMessage()).contains("Gemini");
+        assertThat(response.getMessage()).contains("Claude");
+        // Must not repeat the greeting prompt
+        assertThat(response.getMessage()).doesNotContain("Bạn đang muốn tìm dòng xe nào hôm nay?");
+        assertThat(response.getSuggestedCars()).isNull();
+    }
+
+    @Test
+    @DisplayName("About Bot: When user asks 'bạn là ai', responds with bot capabilities introduction")
+    void testChatAboutBot() {
+        ChatRequest request = new ChatRequest("sess-about", "bạn là ai");
+        ChatReplyResponse response = aiChatService.chat(request, 100L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getMessage()).contains("Trợ lý AI DriveShare");
+        assertThat(response.getMessage()).contains("Tìm kiếm xe nhanh chóng");
         assertThat(response.getSuggestedCars()).isNull();
     }
 

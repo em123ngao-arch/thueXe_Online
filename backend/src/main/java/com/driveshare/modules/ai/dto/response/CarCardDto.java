@@ -62,6 +62,9 @@ public class CarCardDto {
     /** Số lượt đánh giá */
     private Integer ratingCount;
 
+    /** Số chuyến đi thành công */
+    private Integer tripCount;
+
     /** Có dịch vụ tài xế không (Sprint 3) */
     private Boolean hasDriverService;
 

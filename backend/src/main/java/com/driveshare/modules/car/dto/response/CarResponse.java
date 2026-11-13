@@ -54,6 +54,7 @@ public class CarResponse {
     private BigDecimal driverFeePerDay;
     private BigDecimal rating;
     private Integer ratingCount;
+    private Integer tripCount;
 
     // Audit
     private Instant createdAt;
@@ -85,6 +86,7 @@ public class CarResponse {
                 .driverFeePerDay(car.getDriverFeePerDay())
                 .rating(car.getRating())
                 .ratingCount(car.getRatingCount())
+                .tripCount(car.getTripCount() != null ? car.getTripCount() : 0)
                 .status(car.getStatus())
                 .rejectionReason(car.getRejectionReason())
                 .createdAt(car.getCreatedAt())

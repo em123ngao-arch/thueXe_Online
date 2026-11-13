@@ -48,23 +48,24 @@ public class CarDataQueryLegacyAdapter implements CarDataQueryPort {
     }
 
     private CarSummaryResult toResult(Car c) {
-        return new CarSummaryResult(
-                c.getCarId(),
-                c.getBrand(),
-                c.getModel(),
-                c.getYear(),
-                c.getPricePerDay(),
-                c.getSeats(),
-                c.getTransmission(),
-                c.getFuelType(),
-                c.getFeatures(),
-                c.getRating(),
-                c.getRatingCount(),
-                c.getThumbnailUrl(),
-                c.getAddress(),
-                c.getProvince(),
-                c.getHasDriverService(),
-                c.getDriverFeePerDay()
-        );
+        return CarSummaryResult.builder()
+                .carId(c.getCarId())
+                .brand(c.getBrand())
+                .model(c.getModel())
+                .year(c.getYear())
+                .pricePerDay(c.getPricePerDay())
+                .seats(c.getSeats())
+                .transmission(c.getTransmission())
+                .fuelType(c.getFuelType())
+                .features(c.getFeatures())
+                .rating(c.getRating())
+                .ratingCount(c.getRatingCount())
+                .tripCount(c.getTripCount() != null ? c.getTripCount() : 0)
+                .thumbnailUrl(c.getThumbnailUrl())
+                .address(c.getAddress())
+                .province(c.getProvince())
+                .hasDriverService(c.getHasDriverService())
+                .driverFeePerDay(c.getDriverFeePerDay())
+                .build();
     }
 }

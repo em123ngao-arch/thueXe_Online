@@ -4,11 +4,17 @@ import com.driveshare.common.exception.AppException;
 import com.driveshare.common.exception.ErrorCode;
 import com.driveshare.modules.ai.service.GeminiService;
 import com.driveshare.modules.rag.dto.*;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -21,6 +27,50 @@ public class DocumentRagServiceImpl implements DocumentRagService {
     private final GeminiEmbeddingService geminiEmbeddingService;
     private final RamVectorStore ramVectorStore;
     private final GeminiService geminiService;
+
+    @PostConstruct
+    public void initDefaultKnowledge() {
+        if (ramVectorStore.getTotalChunks() == 0) {
+            try {
+                String knowledge = loadDefaultKnowledgeText();
+                if (knowledge != null && !knowledge.isBlank()) {
+                    DocumentParserService.ParsedDocumentResult parsed =
+                            documentParserService.parseAndChunkText(knowledge, "QuyChe_DriveShare_Chuan.txt");
+                    for (DocumentChunk chunk : parsed.chunks()) {
+                        float[] embedding = geminiEmbeddingService.embedText(chunk.getContent());
+                        chunk.setEmbedding(embedding);
+                    }
+                    RagDocumentDto docDto = RagDocumentDto.builder()
+                            .id(parsed.documentId())
+                            .fileName(parsed.fileName())
+                            .fileType("SYSTEM_KNOWLEDGE")
+                            .fileSize((long) knowledge.length())
+                            .chunkCount(parsed.chunks().size())
+                            .pageCount(1)
+                            .uploadedAt(LocalDateTime.now())
+                            .build();
+                    ramVectorStore.addDocument(docDto, parsed.chunks());
+                    log.info("[RAG Init] Đã tự động nạp thành công {} chunks quy chuẩn vào RAM Vector Store.", parsed.chunks().size());
+                }
+            } catch (Exception e) {
+                log.warn("[RAG Init] Không thể tự động nạp kiến thức mặc định: {}", e.getMessage());
+            }
+        }
+    }
+
+    private String loadDefaultKnowledgeText() {
+        try {
+            ClassPathResource res = new ClassPathResource("docs/driveshare_knowledge_base.txt");
+            if (res.exists()) {
+                return new String(res.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            }
+            Path p = Paths.get("backend/src/main/resources/docs/driveshare_knowledge_base.txt");
+            if (Files.exists(p)) {
+                return Files.readString(p, StandardCharsets.UTF_8);
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
 
     @Override
     public RagDocumentDto uploadAndIndex(MultipartFile file) {
