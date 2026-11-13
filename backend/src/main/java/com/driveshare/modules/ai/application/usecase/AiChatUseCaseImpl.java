@@ -86,6 +86,11 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
             "(\\d+)\\s*(?:chỗ|cho|seats?)", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
     );
 
+    /** Regex bắt các dòng xe VinFast VF: "vf3", "vf 3", "vf-3", "vf5", "vf8", "vf9", "vf e34", "dòng vf", "xe vf" */
+    private static final Pattern VF_SERIES_PATTERN = Pattern.compile(
+            "(?:\\bvf[-\\s]?\\d+|\\bvf[-\\s]?e34|\\bvf\\b|\\bxe\\s+vf\\b|\\bdòng\\s+vf\\b)", Pattern.CASE_INSENSITIVE
+    );
+
     @Override
     @Transactional
     public ChatReplyResponse chat(ChatRequest request, Long userId) {
@@ -581,9 +586,12 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
     }
 
     private boolean containsBrand(String lower) {
+        if (VF_SERIES_PATTERN.matcher(lower).find()) {
+            return true;
+        }
         List<String> brands = List.of("toyota", "vios", "camry", "innova", "fortuner",
                 "mazda", "cx5", "cx-5", "honda", "civic", "crv", "cr-v", "city", "hyundai", "accent", "tucson", "santafe", "santa fe",
-                "kia", "morning", "seltos", "carnival", "k3", "k5", "vinfast", "vf5", "vf8", "vf9", "vfe34", "vf e34", "mitsubishi", "xpander",
+                "kia", "morning", "seltos", "carnival", "k3", "k5", "vinfast", "vf3", "vf 3", "vf5", "vf8", "vf9", "vfe34", "vf e34", "mitsubishi", "xpander",
                 "ford", "ranger", "everest", "mercedes", "bmw", "audi", "lexus", "nissan", "suzuki");
         for (String b : brands) {
             if (lower.contains(b)) return true;
@@ -1021,6 +1029,11 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
                 Map.entry("crv", "cr-v"),
                 Map.entry("carnival signature", "carnival"),
                 Map.entry("carnival", "carnival"),
+                Map.entry("vf3 plus", "vf3"),
+                Map.entry("vf 3 plus", "vf3"),
+                Map.entry("vf-3", "vf3"),
+                Map.entry("vf3", "vf3"),
+                Map.entry("vf 3", "vf3"),
                 Map.entry("vf8 plus", "vf8"),
                 Map.entry("vf 8 plus", "vf8"),
                 Map.entry("vf-8", "vf8"),
@@ -1069,6 +1082,17 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
                         .collect(Collectors.toList());
                 if (!modelMatches.isEmpty()) {
                     return modelMatches;
+                }
+            }
+        }
+
+        // 3. So khớp động với Model của xe thực tế trong Database
+        String normalizedQuery = lowerQuery.replace("-", "").replace(" ", "");
+        for (CarSummaryResult c : cars) {
+            if (c.getModel() != null && !c.getModel().isBlank()) {
+                String cleanModel = c.getModel().toLowerCase().replace("-", "").replace(" ", "");
+                if (cleanModel.length() >= 3 && normalizedQuery.contains(cleanModel)) {
+                    return List.of(c);
                 }
             }
         }
@@ -1122,8 +1146,12 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
             if (!manualFiltered.isEmpty()) results = manualFiltered;
         }
 
-        // 5. Lọc theo xe điện tổng quát
-        if (lowerQuery.contains("xe điện") || lowerQuery.contains("electric") || lowerQuery.contains("vinfast")) {
+        // 5. Lọc theo xe điện tổng quát hoặc dòng xe VinFast VF (VF3, VF5, VF8, VF9, VF e34...)
+        boolean mentionsVinfastOrVf = lowerQuery.contains("xe điện") || lowerQuery.contains("electric")
+                || lowerQuery.contains("vinfast") || lowerQuery.contains("dien")
+                || VF_SERIES_PATTERN.matcher(lowerQuery).find();
+
+        if (mentionsVinfastOrVf) {
             List<CarSummaryResult> electricFiltered = results.stream()
                     .filter(c -> c.getFuelType() == EFuelType.ELECTRIC
                             || "VinFast".equalsIgnoreCase(c.getBrand()))
@@ -1156,6 +1184,13 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
     }
 
     private List<CarSummaryResult> filterByBrand(List<CarSummaryResult> cars, String lowerQuery) {
+        if (VF_SERIES_PATTERN.matcher(lowerQuery).find()) {
+            List<CarSummaryResult> filtered = cars.stream()
+                    .filter(c -> "VinFast".equalsIgnoreCase(c.getBrand()))
+                    .collect(Collectors.toList());
+            if (!filtered.isEmpty()) return filtered;
+        }
+
         Map<String, String> brandKeywords = Map.of(
                 "toyota", "Toyota",
                 "mazda", "Mazda",
@@ -1236,6 +1271,12 @@ public class AiChatUseCaseImpl implements com.driveshare.modules.ai.application.
         }
 
         // 3. Tìm theo hãng
+        if (VF_SERIES_PATTERN.matcher(lowerQuery).find()) {
+            for (CarSummaryResult c : cars) {
+                if ("VinFast".equalsIgnoreCase(c.getBrand())) return c;
+            }
+        }
+
         Map<String, String> brandKeywords = Map.of(
                 "toyota", "Toyota", "mazda", "Mazda", "honda", "Honda",
                 "hyundai", "Hyundai", "kia", "Kia", "vinfast", "VinFast",
