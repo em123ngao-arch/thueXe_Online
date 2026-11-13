@@ -156,6 +156,16 @@ const AdminService = {
               <div class="stat-label">Tổng cọc VietQR 30% đã thu</div>
             </div>
           </div>
+
+          <div class="stat-card" style="border-left: 4px solid #4f46e5; cursor: pointer; transition: all 0.2s ease;" onclick="AdminService.switchTab('CHAT')" title="Bấm để xem lịch sử trò chuyện AI">
+            <div class="stat-icon" style="background: #e0e7ff; color: #4338ca;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value" id="statChatSessions" style="color: #4338ca; font-size: 1.4rem;">...</div>
+              <div class="stat-label">Hội thoại Tư Vấn AI 🤖</div>
+            </div>
+          </div>
         </div>
 
         <!-- Tab Content 1: Duyệt xe mới đăng -->
@@ -669,7 +679,9 @@ const AdminService = {
     if (badgeTotalBookings) badgeTotalBookings.innerText = stats.totalBookings;
 
     const badgeChatHistory = document.getElementById('badgeChatHistory');
-    if (badgeChatHistory) {
+    const headerBadgeChat = document.getElementById('headerBadgeChat');
+    const statChatSessions = document.getElementById('statChatSessions');
+    if (badgeChatHistory || headerBadgeChat || statChatSessions) {
       try {
         const baseUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL) ? API_CONFIG.BASE_URL : 'http://localhost:8080/api/v1';
         const token = (typeof getAccessToken === 'function' ? getAccessToken() : null) ||
@@ -680,7 +692,10 @@ const AdminService = {
           headers: { 'Authorization': token ? `Bearer ${token}` : '' }
         }).then(r => r.json()).then(data => {
           if (data && data.success && Array.isArray(data.data)) {
-            badgeChatHistory.innerText = data.data.length;
+            const count = data.data.length;
+            if (badgeChatHistory) badgeChatHistory.innerText = count;
+            if (headerBadgeChat) headerBadgeChat.innerText = count;
+            if (statChatSessions) statChatSessions.innerText = count;
           }
         }).catch(() => {});
       } catch (_) {}
@@ -3037,3 +3052,17 @@ const AdminService = {
     }
   }
 };
+
+// Lắng nghe sự kiện Realtime cập nhật hội thoại AI trên các Tab để Admin thấy ngay phiên chat mới
+try {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'driveshare_chat_last_active' || e.key === 'driveshare_socket_event') {
+      if (typeof AdminService !== 'undefined' && typeof AdminService.loadAdminStats === 'function') {
+        AdminService.loadAdminStats();
+        if (sessionStorage.getItem('admin_active_tab') === 'CHAT' && typeof AdminService.renderChatHistoryTable === 'function') {
+          AdminService.renderChatHistoryTable();
+        }
+      }
+    }
+  });
+} catch (_) {}

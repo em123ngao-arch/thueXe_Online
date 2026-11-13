@@ -51,6 +51,19 @@ const AiChatWidget = (() => {
       tags: ["vinfast", "vf8", "dien", "thong minh", "5 cho"]
     },
     {
+      id: 13,
+      name: "VinFast VF9 Plus 6 chỗ",
+      brand: "VinFast",
+      seats: 6,
+      transmission: "Tự động",
+      fuelType: "Điện",
+      price: 2300000,
+      rating: 5.0,
+      hasDriver: true,
+      image: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=600&q=80",
+      tags: ["vinfast", "vf9", "dien", "chu tich", "6 cho", "vip"]
+    },
+    {
       id: 2,
       name: "Toyota Fortuner Legender 2023",
       brand: "Toyota",
@@ -147,8 +160,12 @@ const AiChatWidget = (() => {
     if (q.includes("7 cho") || q.includes("da lat") || q.includes("gia dinh")) {
       return uniquePool.filter(c => c.seats >= 7).slice(0, 2);
     }
-    if (q.includes("vinfast") || q.includes("dien") || q.includes("noi thanh")) {
-      return uniquePool.filter(c => c.fuelType === 'Điện' || (c.brand && c.brand.toLowerCase().includes('vinfast'))).slice(0, 2);
+    if (q.includes("vf3") || q.includes("vf-3") || q.includes("vf 3")) {
+      const vf3 = uniquePool.filter(c => (c.name || '').toLowerCase().includes("vf3") || (c.tags || []).includes("vf3"));
+      if (vf3.length > 0) return vf3.slice(0, 1);
+    }
+    if (q.includes("vinfast") || q.includes("dien") || q.includes("noi thanh") || q.includes("vf")) {
+      return uniquePool.filter(c => c.fuelType === 'Điện' || (c.brand && c.brand.toLowerCase().includes('vinfast'))).slice(0, 5);
     }
     if (q.includes("re") || q.includes("800") || q.includes("tiet kiem")) {
       return uniquePool.filter(c => c.price <= 850000).slice(0, 2);
@@ -475,6 +492,14 @@ const AiChatWidget = (() => {
             if (deposit) {
               renderDepositBox(deposit);
             }
+
+            // 3. Phát sự kiện realtime thông báo phiên chat mới/cập nhật cho trang Admin
+            try {
+              if (typeof DriveShareSocket !== 'undefined' && DriveShareSocket.emit) {
+                DriveShareSocket.emit('AI_CHAT_UPDATED', { sessionId });
+              }
+              localStorage.setItem('driveshare_chat_last_active', String(Date.now()));
+            } catch (_) {}
           } else {
             appendMessage("assistant", "Xin lỗi, hiện tại tôi chưa phản hồi được. Vui lòng thử lại sau giây lát!");
           }

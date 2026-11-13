@@ -80,6 +80,8 @@ public class DataInitializer implements CommandLineRunner {
             log.info("Successfully updated cars_status_check constraint for PostgreSQL");
             jdbcTemplate.execute("UPDATE users SET email_verified = true WHERE email_verified IS NULL OR email_verified = false");
             jdbcTemplate.execute("ALTER TABLE email_otps DROP COLUMN IF EXISTS code_hash;");
+            jdbcTemplate.execute("ALTER TABLE chat_memory DROP CONSTRAINT IF EXISTS fk_chat_memory_user;");
+            jdbcTemplate.execute("ALTER TABLE chat_memory DROP CONSTRAINT IF EXISTS chat_memory_user_id_fkey;");
         } catch (Exception e) {
             log.warn("Could not update database constraints: {}", e.getMessage());
         }
