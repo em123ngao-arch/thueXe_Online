@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ Đồ ERD Tương Tác & Bí Kíp Viết JOIN CSDL DriveShare</title>
+    <!-- Mermaid CDN with fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --panel-border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --code-bg: #0b1120;
+            --bao-color: #38bdf8;
+            --khiem-color: #4ade80;
+            --vi-color: #fb923c;
+            --phat-color: #c084fc;
+            --quan-color: #f87171;
+            --tin-color: #818cf8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--panel-border);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-title h1 {
+            font-size: 18px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-title p {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .badge-lead {
+            background: #0369a1;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .quick-nav {
+            display: flex;
+            gap: 8px;
+        }
+        .nav-btn {
+            background: var(--code-bg);
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .nav-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        /* Left Panel: Table list & Quick Search */
+        .left-panel {
+            width: 280px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--panel-border);
+            display: flex;
+            flex-direction: column;
+        }
+        .search-box {
+            padding: 12px;
+            border-bottom: 1px solid var(--panel-border);
+        }
+        .search-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--code-bg);
+            border: 1px solid var(--panel-border);
+            color: white;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .table-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        .table-group-header {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            padding: 8px 8px 4px 8px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        .table-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+            transition: background 0.15s;
+        }
+        .table-item:hover {
+            background: rgba(56, 189, 248, 0.1);
+        }
+        .table-item.active {
+            background: rgba(56, 189, 248, 0.2);
+            border-left: 3px solid var(--accent);
+            color: var(--accent);
+            font-weight: bold;
+        }
+        .table-tag {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .tag-bao { background: rgba(56, 189, 248, 0.2); color: var(--bao-color); }
+        .tag-khiem { background: rgba(74, 222, 128, 0.2); color: var(--khiem-color); }
+        .tag-vi { background: rgba(251, 146, 60, 0.2); color: var(--vi-color); }
+        .tag-phat { background: rgba(192, 132, 252, 0.2); color: var(--phat-color); }
+        .tag-quan { background: rgba(248, 113, 113, 0.2); color: var(--quan-color); }
+        .tag-tin { background: rgba(129, 140, 248, 0.2); color: var(--tin-color); }
+
+        /* Center: Mermaid Visual Diagram */
+        .diagram-panel {
+            flex: 1;
+            background: #090d16;
+            overflow: auto;
+            padding: 20px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .diagram-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 6px;
+            z-index: 10;
+        }
+        .ctrl-btn {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .ctrl-btn:hover { background: #334155; }
+
+        /* Right Panel: Instant JOIN Formula & Helper */
+        .right-panel {
+            width: 380px;
+            background-color: var(--panel-bg);
+            border-left: 1px solid var(--panel-border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        .detail-header {
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        .detail-header h2 {
+            font-size: 18px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .detail-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .section-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #cbd5e1;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 14px 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .relation-card {
+            background: var(--code-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .relation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .relation-type {
+            font-size: 11px;
+            padding: 2px 6px;
+            background: #334155;
+            border-radius: 4px;
+            color: #38bdf8;
+        }
+        .join-code {
+            background: #020617;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 12.5px;
+            color: #4ade80;
+            overflow-x: auto;
+            margin: 6px 0;
+            border-left: 3px solid #22c55e;
+            position: relative;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #1e293b;
+            color: #94a3b8;
+            border: none;
+            padding: 2px 6px;
+            font-size: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .copy-btn:hover { color: white; background: #334155; }
+        .hint-text {
+            font-size: 12px;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
+        .field-list {
+            font-size: 12px;
+            background: var(--code-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 8px;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+        .field-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .field-name { color: #f1f5f9; font-family: monospace; }
+        .field-type { color: #64748b; font-size: 11px; }
+        .pk-badge { color: #f59e0b; font-weight: bold; }
+        .fk-badge { color: #38bdf8; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <h1>🚗 BẢNG ĐỒ QUAN HỆ CSDL DRIVESHARE (21 BẢNG) <span class="badge-lead">LEADER BẢO</span></h1>
+            <p>Tra cứu tức thì khóa ngoại & công thức lệnh JOIN khi Thầy Bình / Chị Thư yêu cầu viết query</p>
+        </div>
+        <div class="quick-nav">
+            <button class="nav-btn" onclick="filterByMember('ALL')">🌐 Tất cả (21 bảng)</button>
+            <button class="nav-btn" style="color: var(--bao-color); border-color: var(--bao-color);" onclick="filterByMember('BAO')">👑 6 Bảng của Bảo</button>
+            <button class="nav-btn" onclick="window.open('https://driveshare-adminer.onrender.com/?pgsql=dpg-dbqt83dckfvc739r03ag-a&username=driveshare_user&db=driveshare_db_qgbj', '_blank')">⚡ Mở Adminer Live</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- LEFT: Table Search & List -->
+        <div class="left-panel">
+            <div class="search-box">
+                <input type="text" class="search-input" id="searchTable" placeholder="🔍 Tìm nhanh bảng (gõ cars, rentals...)" oninput="filterTableList()">
+            </div>
+            <div class="table-list" id="tableListContainer">
+                <!-- Dynamically populated via JS -->
+            </div>
+        </div>
+
+        <!-- CENTER: Visual Diagram -->
+        <div class="diagram-panel" id="diagramWrapper">
+            <div class="diagram-controls">
+                <button class="ctrl-btn" onclick="zoomIn()">🔍+</button>
+                <button class="ctrl-btn" onclick="zoomOut()">🔍-</button>
+                <button class="ctrl-btn" onclick="resetZoom()">↺ Reset</button>
+            </div>
+            <div id="mermaidTarget" class="mermaid" style="transform-origin: top center; transition: transform 0.2s;">
+flowchart LR
+    classDef bao fill:#082f49,stroke:#38bdf8,stroke-width:2px,color:#fff;
+    classDef khiem fill:#052e16,stroke:#4ade80,stroke-width:2px,color:#fff;
+    classDef vi fill:#431407,stroke:#fb923c,stroke-width:2px,color:#fff;
+    classDef phat fill:#3b0764,stroke:#c084fc,stroke-width:2px,color:#fff;
+    classDef quan fill:#450a0a,stroke:#f87171,stroke-width:2px,color:#fff;
+    classDef tin fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#fff;
+
+    subgraph SG_USERS["👤 PHÂN HỆ NGƯỜI DÙNG & BẢO MẬT (VĨ)"]
+        users["users (User ID)"]:::vi
+        auth_sessions["auth_sessions"]:::vi
+        email_otps["email_otps"]:::vi
+    end
+
+    subgraph SG_ROLES["🛡️ PHÂN HỆ QUYỀN RBAC (BẢO)"]
+        roles["roles (Role ID)"]:::bao
+        user_roles["user_roles (user_id + role_id)"]:::bao
+    end
+
+    subgraph SG_CARS["🚗 PHÂN HỆ KHO XE (BẢO)"]
+        cars["cars (car_id, owner_id)"]:::bao
+        car_images["car_images (image_id, car_id)"]:::bao
+        car_documents["car_documents (doc_id, car_id)"]:::bao
+    end
+
+    subgraph SG_RENTALS["📋 PHÂN HỆ ĐƠN THUÊ & LỊCH (KHIÊM)"]
+        rentals["rentals (rental_id, car_id, renter_id)"]:::khiem
+        car_calendar_blocks["car_calendar_blocks (block_id, car_id)"]:::khiem
+    end
+
+    subgraph SG_FINANCE["💳 PHÂN HỆ THANH TOÁN (TÍN)"]
+        payments["payments (payment_id, rental_id)"]:::tin
+        owner_profiles["owner_profiles (user_id)"]:::tin
+        notifications["notifications (user_id)"]:::tin
+    end
+
+    subgraph SG_LEGAL["⚖️ PHÂN HỆ PHÁP LÝ & BÀN GIAO (QUÂN)"]
+        renter_profiles["renter_profiles (user_id)"]:::quan
+        rental_inspections["rental_inspections (inspection_id, rental_id)"]:::quan
+        rental_disputes["rental_disputes (id, rental_id)"]:::quan
+    end
+
+    subgraph SG_AI["🤖 PHÂN HỆ AI & ĐÁNH GIÁ (PHÁT)"]
+        reviews["reviews (review_id, car_id, rental_id)"]:::phat
+        chat_memory["chat_memory (session_id)"]:::phat
+    end
+
+    %% CÁC ĐƯỜNG NỐI KHÓA NGOẠI CHÍNH XÁC 100% CSDL POSTGRESQL
+    users -->|"1 - n (owner_id)"| cars
+    users -->|"1 - n (user_id)"| user_roles
+    roles -->|"1 - n (role_id)"| user_roles
+    users -->|"1 - 1 (user_id)"| renter_profiles
+    users -->|"1 - 1 (user_id)"| owner_profiles
+    users -->|"1 - n (user_id)"| notifications
+
+    cars -->|"1 - n (car_id)"| car_images
+    cars -->|"1 - n (car_id)"| car_documents
+    cars -->|"1 - n (car_id)"| car_calendar_blocks
+    cars -->|"1 - n (car_id)"| rentals
+    cars -->|"1 - n (car_id)"| reviews
+
+    users -->|"1 - n (renter_id)"| rentals
+    rentals -->|"1 - n (rental_id)"| payments
+    rentals -->|"1 - n (rental_id)"| rental_inspections
+    rentals -->|"1 - n (rental_id)"| rental_disputes
+    rentals -->|"1 - 1 (rental_id)"| reviews
+            </div>
+        </div>
+
+        <!-- RIGHT: Table detail & JOIN formula -->
+        <div class="right-panel" id="detailPanel">
+            <div class="detail-header">
+                <h2 id="detailTableName">cars</h2>
+                <p class="detail-desc" id="detailTableDesc">Kho xe trung tâm của toàn sàn DriveShare (33 cột). Chứa thông tin xe, giá thuê, chủ sở hữu, trạng thái kiểm duyệt.</p>
+            </div>
+
+            <div class="section-title">🔗 Công Thức JOIN Với Các Bảng Khác</div>
+            <div id="joinFormulaContainer">
+                <!-- Dynamically populated -->
+            </div>
+
+            <div class="section-title">📋 Cấu Trúc Các Cột Quan Trọng</div>
+            <div class="field-list" id="fieldListContainer">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            securityLevel: 'loose'
+        });
+
+        // 21 Tables metadata with verified PostgreSQL relationships
+        const TABLES_DATA = {
+            cars: {
+                name: "cars",
+                owner: "BẢO",
+                tagClass: "tag-bao",
+                desc: "Trái tim của toàn sàn. Lưu thông tin xe, biển số, đơn giá/ngày, trạng thái ACTIVE/PENDING, và ID chủ xe.",
+                pk: "car_id",
+                joins: [
+                    {
+                        target: "rentals",
+                        on: "cars.car_id = rentals.car_id",
+                        desc: "Nối xe với đơn thuê để tính số lần booking hoặc tổng doanh thu của xe",
+                        code: "FROM cars c\nLEFT JOIN rentals r ON c.car_id = r.car_id"
+                    },
+                    {
+                        target: "users (Chủ xe)",
+                        on: "cars.owner_id = users.user_id",
+                        desc: "Nối xe với chủ sở hữu để lấy họ tên, SĐT của chủ xe",
+                        code: "FROM cars c\nJOIN users u ON c.owner_id = u.user_id"
+                    },
+                    {
+                        target: "car_images",
+                        on: "cars.car_id = car_images.car_id",
+                        desc: "Lấy album ảnh hoặc ảnh bìa (is_thumbnail = TRUE)",
+                        code: "FROM cars c\nLEFT JOIN car_images ci ON c.car_id = ci.car_id"
+                    },
+                    {
+                        target: "car_documents",
+                        on: "cars.car_id = car_documents.car_id",
+                        desc: "Kiểm tra giấy tờ xe (đăng kiểm, cavet, bảo hiểm) khi Admin duyệt xe",
+                        code: "FROM cars c\nLEFT JOIN car_documents cd ON c.car_id = cd.car_id"
+                    },
+                    {
+                        target: "reviews",
+                        on: "cars.car_id = reviews.car_id",
+                        desc: "Lấy điểm đánh giá và nhận xét khách hàng để làm RAG AI",
+                        code: "FROM cars c\nJOIN reviews rw ON c.car_id = rw.car_id"
+                    }
+                ],
+                fields: [
+                    { name: "car_id", type: "BIGINT", pk: true },
+                    { name: "owner_id", type: "BIGINT", fk: true },
+                    { name: "plate_number", type: "VARCHAR(20) UNIQUE" },
+                    { name: "brand", type: "VARCHAR(100)" },
+                    { name: "model", type: "VARCHAR(100)" },
+                    { name: "seats", type: "INT" },
+                    { name: "fuel_type", type: "VARCHAR (ELECTRIC, GASOLINE)" },
+                    { name: "price_per_day", type: "NUMERIC(15,2)" },
+                    { name: "status", type: "VARCHAR (ACTIVE, PENDING_REVIEW)" },
+                    { name: "deleted_at", type: "TIMESTAMP (Soft-delete)" }
+                ]
+            },
+            rentals: {
+                name: "rentals",
+                owner: "KHIÊM",
+                tagClass: "tag-khiem",
+                desc: "Quản lý vòng đời đơn thuê xe (State Machine): PENDING -> CONFIRMED -> IN_PROGRESS -> COMPLETED / CANCELLED.",
+                pk: "rental_id",
+                joins: [
+                    {
+                        target: "cars",
+                        on: "rentals.car_id = cars.car_id",
+                        desc: "Biết đơn thuê này đang thuê chiếc xe nào",
+                        code: "FROM rentals r\nJOIN cars c ON r.car_id = c.car_id"
+                    },
+                    {
+                        target: "users (Khách thuê)",
+                        on: "rentals.renter_id = users.user_id",
+                        desc: "Lấy thông tin cá nhân khách thuê",
+                        code: "FROM rentals r\nJOIN users u ON r.renter_id = u.user_id"
+                    },
+                    {
+                        target: "payments",
+                        on: "rentals.rental_id = payments.rental_id",
+                        desc: "Kiểm tra hóa đơn đặt cọc 30% VietQR của đơn thuê",
+                        code: "FROM rentals r\nJOIN payments p ON r.rental_id = p.rental_id"
+                    },
+                    {
+                        target: "rental_inspections",
+                        on: "rentals.rental_id = rental_inspections.rental_id",
+                        desc: "Xem biên bản kiểm tra xe 2 chiều lúc giao và lúc trả xe",
+                        code: "FROM rentals r\nJOIN rental_inspections ri ON r.rental_id = ri.rental_id"
+                    }
+                ],
+                fields: [
+                    { name: "rental_id", type: "BIGINT", pk: true },
+                    { name: "car_id", type: "BIGINT", fk: true },
+                    { name: "renter_id", type: "BIGINT", fk: true },
+                    { name: "total_price", type: "NUMERIC(15,2)" },
+                    { name: "deposit_amount", type: "NUMERIC(15,2)" },
+                    { name: "status", type: "VARCHAR(20)" },
+                    { name: "payment_expires_at", type: "TIMESTAMP (Soft-lock 45p)" },
+                    { name: "overdue_hours", type: "INT" },
+                    { name: "penalty_fee", type: "NUMERIC(15,2)" }
+                ]
+            },
+            payments: {
+                name: "payments",
+                owner: "TÍN",
+                tagClass: "tag-tin",
+                desc: "Lưu vết giao dịch VietQR NAPAS247, cọc 30%, cơ chế tài khoản trung gian Escrow 90/10.",
+                pk: "payment_id",
+                joins: [
+                    {
+                        target: "rentals",
+                        on: "payments.rental_id = rentals.rental_id",
+                        desc: "Giao dịch cọc này thuộc về hợp đồng thuê nào",
+                        code: "FROM payments p\nJOIN rentals r ON p.rental_id = r.rental_id"
+                    }
+                ],
+                fields: [
+                    { name: "payment_id", type: "BIGINT", pk: true },
+                    { name: "rental_id", type: "BIGINT", fk: true },
+                    { name: "amount", type: "NUMERIC(15,2)" },
+                    { name: "payment_type", type: "VARCHAR (DEPOSIT, REMAINING)" },
+                    { name: "status", type: "VARCHAR (PENDING, SUCCESS)" },
+                    { name: "transaction_code", type: "VARCHAR(100)" }
+                ]
+            },
+            users: {
+                name: "users",
+                owner: "VĨ",
+                tagClass: "tag-vi",
+                desc: "Thông tin tài khoản trung tâm, email, mật khẩu BCrypt, token_version để thu hồi JWT tức thì.",
+                pk: "user_id",
+                joins: [
+                    {
+                        target: "user_roles",
+                        on: "users.user_id = user_roles.user_id",
+                        desc: "Nối để tra cứu danh sách quyền RBAC của người dùng",
+                        code: "FROM users u\nJOIN user_roles ur ON u.user_id = ur.user_id\nJOIN roles r ON ur.role_id = r.role_id"
+                    },
+                    {
+                        target: "cars",
+                        on: "users.user_id = cars.owner_id",
+                        desc: "Xem tất cả các xe do chủ xe này sở hữu",
+                        code: "FROM users u\nJOIN cars c ON u.user_id = c.owner_id"
+                    },
+                    {
+                        target: "rentals",
+                        on: "users.user_id = rentals.renter_id",
+                        desc: "Xem tất cả lịch sử chuyến đi của khách thuê này",
+                        code: "FROM users u\nJOIN rentals r ON u.user_id = r.renter_id"
+                    }
+                ],
+                fields: [
+                    { name: "user_id", type: "BIGINT", pk: true },
+                    { name: "email", type: "VARCHAR(150) UNIQUE" },
+                    { name: "full_name", type: "VARCHAR(150)" },
+                    { name: "phone", type: "VARCHAR(20)" },
+                    { name: "status", type: "VARCHAR (ACTIVE, LOCKED)" },
+                    { name: "token_version", type: "BIGINT" }
+                ]
+            },
+            roles: {
+                name: "roles",
+                owner: "BẢO",
+                tagClass: "tag-bao",
+                desc: "Danh mục vai trò RBAC: ROLE_RENTER, ROLE_OWNER, ROLE_STAFF, ROLE_ADMIN.",
+                pk: "role_id",
+                joins: [
+                    {
+                        target: "user_roles",
+                        on: "roles.role_id = user_roles.role_id",
+                        desc: "Tìm danh sách người dùng nắm giữ vai trò này",
+                        code: "FROM roles r\nJOIN user_roles ur ON r.role_id = ur.role_id\nJOIN users u ON ur.user_id = u.user_id"
+                    }
+                ],
+                fields: [
+                    { name: "role_id", type: "BIGINT", pk: true },
+                    { name: "role_name", type: "VARCHAR(30) UNIQUE" }
+                ]
+            },
+            user_roles: {
+                name: "user_roles",
+                owner: "BẢO",
+                tagClass: "tag-bao",
+                desc: "Bảng trung gian N - N giữa users và roles. Composite PK (user_id, role_id).",
+                pk: "(user_id, role_id)",
+                joins: [
+                    {
+                        target: "users & roles",
+                        on: "ur.user_id = u.user_id AND ur.role_id = r.role_id",
+                        desc: "Cú pháp chuẩn kết nối cả 3 bảng phân quyền",
+                        code: "FROM user_roles ur\nJOIN users u ON ur.user_id = u.user_id\nJOIN roles r ON ur.role_id = r.role_id"
+                    }
+                ],
+                fields: [
+                    { name: "user_id", type: "BIGINT", pk: true, fk: true },
+                    { name: "role_id", type: "BIGINT", pk: true, fk: true }
+                ]
+            },
+            car_images: {
+                name: "car_images",
+                owner: "BẢO",
+                tagClass: "tag-bao",
+                desc: "Thư viện album ảnh xe Cloudinary CDN. Cờ is_thumbnail đánh dấu ảnh bìa.",
+                pk: "image_id",
+                joins: [
+                    {
+                        target: "cars",
+                        on: "car_images.car_id = cars.car_id",
+                        desc: "Ảnh này thuộc về chiếc xe nào",
+                        code: "FROM car_images ci\nJOIN cars c ON ci.car_id = c.car_id"
+                    }
+                ],
+                fields: [
+                    { name: "image_id", type: "BIGINT", pk: true },
+                    { name: "car_id", type: "BIGINT", fk: true },
+                    { name: "image_url", type: "VARCHAR(500)" },
+                    { name: "is_thumbnail", type: "BOOLEAN" }
+                ]
+            },
+            car_documents: {
+                name: "car_documents",
+                owner: "BẢO",
+                tagClass: "tag-bao",
+                desc: "Hồ sơ pháp lý xe: Cà-vẹt (REGISTRATION), Đăng kiểm (INSPECTION), Bảo hiểm (INSURANCE).",
+                pk: "document_id",
+                joins: [
+                    {
+                        target: "cars",
+                        on: "car_documents.car_id = cars.car_id",
+                        desc: "Giấy tờ của chiếc xe nào",
+                        code: "FROM car_documents cd\nJOIN cars c ON cd.car_id = c.car_id"
+                    }
+                ],
+                fields: [
+                    { name: "document_id", type: "BIGINT", pk: true },
+                    { name: "car_id", type: "BIGINT", fk: true },
+                    { name: "document_type", type: "VARCHAR (REGISTRATION, INSPECTION...)" },
+                    { name: "verification_status", type: "VARCHAR (PENDING, APPROVED)" }
+                ]
+            },
+            audit_logs: {
+                name: "audit_logs",
+                owner: "BẢO",
+                tagClass: "tag-bao",
+                desc: "Camera an ninh của Admin: Ghi nhận vết hành vi APPROVE_CAR, REJECT_CAR, LOCK_USER.",
+                pk: "log_id",
+                joins: [
+                    {
+                        target: "users (Admin thực hiện)",
+                        on: "audit_logs.actor_id = users.user_id",
+                        desc: "Truy vấn thông tin chi tiết Admin đã thực hiện can thiệp",
+                        code: "FROM audit_logs al\nLEFT JOIN users u ON al.actor_id = u.user_id"
+                    }
+                ],
+                fields: [
+                    { name: "log_id", type: "BIGINT", pk: true },
+                    { name: "action", type: "VARCHAR(100)" },
+                    { name: "actor_id", type: "BIGINT", fk: true },
+                    { name: "actor_username", type: "VARCHAR(100)" },
+                    { name: "target_type", type: "VARCHAR(50)" },
+                    { name: "target_id", type: "BIGINT" },
+                    { name: "details", type: "VARCHAR(1000)" }
+                ]
+            },
+            rental_inspections: {
+                name: "rental_inspections",
+                owner: "QUÂN",
+                tagClass: "tag-quan",
+                desc: "Biên bản bàn giao xe Check-in và Check-out (ODO, mức xăng, ảnh vết xước 2 chiều).",
+                pk: "inspection_id",
+                joins: [
+                    {
+                        target: "rentals",
+                        on: "rental_inspections.rental_id = rentals.rental_id",
+                        desc: "Biên bản này thuộc về cuốc thuê nào",
+                        code: "FROM rental_inspections ri\nJOIN rentals r ON ri.rental_id = r.rental_id"
+                    }
+                ],
+                fields: [
+                    { name: "inspection_id", type: "BIGINT", pk: true },
+                    { name: "rental_id", type: "BIGINT", fk: true },
+                    { name: "inspection_type", type: "VARCHAR (CHECK_IN, CHECK_OUT)" },
+                    { name: "odo_meter", type: "INT" },
+                    { name: "fuel_level", type: "VARCHAR" }
+                ]
+            },
+            rental_disputes: {
+                name: "rental_disputes",
+                owner: "QUÂN",
+                tagClass: "tag-quan",
+                desc: "Hồ sơ tranh chấp bùng cọc hoặc quá hạn 24h phục vụ khởi tố Điều 175 BLHS.",
+                pk: "id",
+                joins: [
+                    {
+                        target: "rentals",
+                        on: "rental_disputes.rental_id = rentals.rental_id",
+                        desc: "Tranh chấp của đơn thuê nào",
+                        code: "FROM rental_disputes rd\nJOIN rentals r ON rd.rental_id = r.rental_id"
+                    }
+                ],
+                fields: [
+                    { name: "id", type: "BIGINT", pk: true },
+                    { name: "rental_id", type: "BIGINT", fk: true },
+                    { name: "reason", type: "VARCHAR" },
+                    { name: "status", type: "VARCHAR (PENDING, RESOLVED)" }
+                ]
+            },
+            reviews: {
+                name: "reviews",
+                owner: "PHÁT",
+                tagClass: "tag-phat",
+                desc: "Đánh giá sao (1-5) và bình luận trải nghiệm của khách thuê để làm dữ liệu ngữ cảnh RAG cho AI.",
+                pk: "review_id",
+                joins: [
+                    {
+                        target: "cars",
+                        on: "reviews.car_id = cars.car_id",
+                        desc: "Đánh giá này dành cho chiếc xe nào",
+                        code: "FROM reviews rw\nJOIN cars c ON rw.car_id = c.car_id"
+                    }
+                ],
+                fields: [
+                    { name: "review_id", type: "BIGINT", pk: true },
+                    { name: "car_id", type: "BIGINT", fk: true },
+                    { name: "rental_id", type: "BIGINT", fk: true },
+                    { name: "rating", type: "INT" },
+                    { name: "comment", type: "TEXT" }
+                ]
+            }
+        };
+
+        // Render left table list
+        function renderTableList(filter = '') {
+            const container = document.getElementById('tableListContainer');
+            container.innerHTML = '';
+
+            const groups = {
+                "CÁC BẢNG CỦA BẢO (LEAD & XE)": ['cars', 'car_images', 'car_documents', 'roles', 'user_roles', 'audit_logs'],
+                "ĐƠN THUÊ & GIAO DỊCH (KHIÊM & TÍN)": ['rentals', 'payments'],
+                "PHÁP LÝ & ĐÁNH GIÁ (QUÂN & PHÁT)": ['rental_inspections', 'rental_disputes', 'reviews'],
+                "TÀI KHOẢN & NGƯỜI DÙNG (VĨ)": ['users']
+            };
+
+            for (const [groupName, tableKeys] of Object.entries(groups)) {
+                let hasItem = false;
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'table-group-header';
+                groupDiv.innerText = groupName;
+
+                const itemsDiv = document.createElement('div');
+
+                tableKeys.forEach(tKey => {
+                    const t = TABLES_DATA[tKey];
+                    if (!t) return;
+                    if (filter && !t.name.toLowerCase().includes(filter.toLowerCase())) return;
+
+                    hasItem = true;
+                    const item = document.createElement('div');
+                    item.className = 'table-item' + (tKey === 'cars' ? ' active' : '');
+                    item.id = 'item_' + tKey;
+                    item.onclick = () => selectTable(tKey);
+                    item.innerHTML = `
+                        <span>📁 ${t.name}</span>
+                        <span class="table-tag ${t.tagClass}">${t.owner}</span>
+                    `;
+                    itemsDiv.appendChild(item);
+                });
+
+                if (hasItem) {
+                    container.appendChild(groupDiv);
+                    container.appendChild(itemsDiv);
+                }
+            }
+        }
+
+        function selectTable(key) {
+            document.querySelectorAll('.table-item').forEach(el => el.classList.remove('active'));
+            const activeEl = document.getElementById('item_' + key);
+            if (activeEl) activeEl.classList.add('active');
+
+            const t = TABLES_DATA[key];
+            if (!t) return;
+
+            document.getElementById('detailTableName').innerHTML = `📁 ${t.name} <span class="table-tag ${t.tagClass}">${t.owner}</span>`;
+            document.getElementById('detailTableDesc').innerText = t.desc;
+
+            // Render JOIN Formulas
+            const joinContainer = document.getElementById('joinFormulaContainer');
+            joinContainer.innerHTML = '';
+            if (t.joins && t.joins.length > 0) {
+                t.joins.forEach(j => {
+                    const card = document.createElement('div');
+                    card.className = 'relation-card';
+                    card.innerHTML = `
+                        <div class="relation-header">
+                            <span>➡️ Nối với <strong>${j.target}</strong></span>
+                            <span class="relation-type">${j.on}</span>
+                        </div>
+                        <p class="hint-text">${j.desc}</p>
+                        <div class="join-code">
+                            ${j.code.replace(/\\n/g, '<br/>')}
+                            <button class="copy-btn" onclick="navigator.clipboard.writeText('${j.code.replace(/\\n/g, ' ')}')">Copy</button>
+                        </div>
+                    `;
+                    joinContainer.appendChild(card);
+                });
+            } else {
+                joinContainer.innerHTML = '<p class="hint-text">Bảng này không có khóa ngoại trực tiếp.</p>';
+            }
+
+            // Render Fields
+            const fieldContainer = document.getElementById('fieldListContainer');
+            fieldContainer.innerHTML = '';
+            t.fields.forEach(f => {
+                const row = document.createElement('div');
+                row.className = 'field-row';
+                let badge = '';
+                if (f.pk) badge += '<span class="pk-badge">[PK] </span>';
+                if (f.fk) badge += '<span class="fk-badge">[FK] </span>';
+                row.innerHTML = `
+                    <span class="field-name">${badge}${f.name}</span>
+                    <span class="field-type">${f.type}</span>
+                `;
+                fieldContainer.appendChild(row);
+            });
+        }
+
+        function filterTableList() {
+            const query = document.getElementById('searchTable').value;
+            renderTableList(query);
+        }
+
+        function filterByMember(mem) {
+            if (mem === 'BAO') {
+                document.getElementById('searchTable').value = '';
+                selectTable('cars');
+            } else {
+                document.getElementById('searchTable').value = '';
+                renderTableList('');
+            }
+        }
+
+        let currentZoom = 1;
+        function zoomIn() {
+            currentZoom += 0.15;
+            document.getElementById('mermaidTarget').style.transform = `scale(${currentZoom})`;
+        }
+        function zoomOut() {
+            if (currentZoom > 0.5) currentZoom -= 0.15;
+            document.getElementById('mermaidTarget').style.transform = `scale(${currentZoom})`;
+        }
+        function resetZoom() {
+            currentZoom = 1;
+            document.getElementById('mermaidTarget').style.transform = 'scale(1)';
+        }
+
+        // Initialize
+        renderTableList();
+        selectTable('cars');
+    </script>
+</body>
+</html>
