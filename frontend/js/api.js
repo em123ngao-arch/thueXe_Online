@@ -1828,7 +1828,7 @@ const NotificationCenter = {
     await this.refresh();
 
     if (!this._interval) {
-      this._interval = setInterval(() => this.refresh(), 2000);
+      this._interval = setInterval(() => this.refresh(), 12000);
     }
 
     if (!this._hasClickOutsideListener) {

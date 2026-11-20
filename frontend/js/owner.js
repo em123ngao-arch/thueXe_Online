@@ -28,16 +28,22 @@ const OwnerService = {
       if (typeof AuthService === 'undefined' || !AuthService.isAuthenticated()) return;
       if (typeof RentalAPI === 'undefined' || !RentalAPI.getOwnerRentals) return;
 
+      // Tuyệt đối không re-render khi người dùng đang ở tab Đăng xe (ADD) hoặc đang gõ phím / chọn file
+      if (this.currentActiveTab === 'ADD' || (window.location.hash || '').toLowerCase().includes('add')) return;
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) return;
+
       try {
         const res = await RentalAPI.getOwnerRentals();
         if (res && (res.code === 200 || res.success) && Array.isArray(res.data)) {
-          const currentBookings = this.ownerBookings || [];
+          const currentBookings = this._rawOwnerBookings || [];
           const newBookings = res.data;
-          const hasNew = newBookings.length > currentBookings.length;
+          const hasNew = newBookings.length !== currentBookings.length;
           const hasStatusChange = JSON.stringify(newBookings.map(b => b.status || b.rental_status)) !== JSON.stringify(currentBookings.map(b => b.status || b.rental_status));
 
           if (hasNew || hasStatusChange) {
             console.log('[OwnerRealtime] Tự động đồng bộ đơn thuê mới từ khách hàng (Realtime Auto-Sync)...');
+            this._rawOwnerBookings = newBookings;
             this.ownerBookings = newBookings;
             await this.renderOwnerPortal();
             if (hasNew && typeof showToast === 'function') {
@@ -49,7 +55,7 @@ const OwnerService = {
           }
         }
       } catch (_) {}
-    }, 1500);
+    }, 10000);
   },
 
   async renderOwnerPortal(containerId = 'ownerPortalContainer') {
