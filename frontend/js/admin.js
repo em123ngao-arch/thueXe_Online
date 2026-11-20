@@ -753,7 +753,7 @@ const AdminService = {
             </tr>
           ` : cars.map(c => {
             const carId = c.car_id || c.id;
-            const thumb = c.thumbnail_url || c.thumbnailUrl || c.image_url || c.imageUrl || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80';
+            const thumb = c.thumbnail_url || c.thumbnailUrl || c.image_url || c.imageUrl || (Array.isArray(c.images) && c.images[0]?.imageUrl) || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80';
             const brand = c.brand || 'Xe';
             const model = c.model || '';
             const year = c.year || '';
@@ -842,7 +842,7 @@ const AdminService = {
 
     const modalBody = document.getElementById('generalModalBody');
     if (modalBody) {
-      const thumb = car.thumbnail_url || car.thumbnailUrl || car.image_url || car.imageUrl || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80';
+      const thumb = car.thumbnail_url || car.thumbnailUrl || car.image_url || car.imageUrl || (Array.isArray(car.images) && car.images[0]?.imageUrl) || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80';
       const brand = car.brand || 'Xe';
       const model = car.model || '';
       const year = car.year || '';
