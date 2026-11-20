@@ -31,6 +31,7 @@ public class AdminCarDetailResponse {
     private BigDecimal latitude;
     private BigDecimal longitude;
     private BigDecimal basePricePerDay;
+    private String thumbnailUrl;
     private ECarStatus status;
     private String rejectionReason;
     private Long approvedBy;

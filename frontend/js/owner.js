@@ -981,6 +981,8 @@ const OwnerService = {
       EV: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=900&q=80'
     };
     const url = images[type] || images.SEDAN;
+    const fileInput = document.getElementById('newCarPhotoFile');
+    if (fileInput) fileInput.value = '';
     const el = document.getElementById('newCarImageUrl');
     if (el) el.value = url;
     const img = document.getElementById('newCarPhotoPreview');
@@ -1091,9 +1093,10 @@ const OwnerService = {
       const address = document.getElementById('newCarAddress').value.trim();
       let imageUrl = document.getElementById('newCarImageUrl') ? document.getElementById('newCarImageUrl').value.trim() : '';
       const desc = document.getElementById('newCarDesc') ? document.getElementById('newCarDesc').value.trim() : '';
+      const photoFile = document.getElementById('newCarPhotoFile')?.files?.[0];
 
-      // Tự động gán ảnh mặc định nếu để trống
-      if (!imageUrl || !imageUrl.startsWith('http')) {
+      // Tự động gán ảnh mặc định nếu không chọn file từ máy và không có URL nào được chọn
+      if (!photoFile && (!imageUrl || !imageUrl.startsWith('http'))) {
         imageUrl = 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=900&q=80';
       }
 
@@ -1160,17 +1163,25 @@ const OwnerService = {
       }
 
       // 1.1 Upload ảnh xe thực tế nếu có chọn file (POST /api/v1/cars/{carId}/photos)
-      const photoFile = document.getElementById('newCarPhotoFile')?.files?.[0];
       if (createdCarId && photoFile && typeof CarAPI !== 'undefined' && CarAPI.uploadCarPhoto) {
         try {
           btnSubmit.innerHTML = 'Đang tải ảnh xe lên...';
           const uploadRes = await CarAPI.uploadCarPhoto(createdCarId, photoFile);
           if (uploadRes?.data?.imageUrl) {
             imageUrl = uploadRes.data.imageUrl;
+            // Cập nhật ngay thumbnailUrl cho xe trên Backend để Admin thấy tức thì
+            if (CarAPI.updateCar) {
+              try {
+                await CarAPI.updateCar(createdCarId, { thumbnailUrl: imageUrl });
+              } catch (patchErr) {
+                console.warn('Lỗi đồng bộ thumbnailUrl:', patchErr);
+              }
+            }
           }
         } catch (uploadErr) {
           console.warn('Lỗi khi upload ảnh xe:', uploadErr);
-          this.showToast('Tạo xe thành công nhưng ảnh xe chưa upload được. Bạn có thể thêm ảnh trong phần Quản lý ảnh xe.', 'warning', 3000);
+          const errDetail = uploadErr?.message || uploadErr?.error || 'Lỗi mạng hoặc định dạng không hỗ trợ';
+          this.showToast('Tạo xe thành công nhưng tải ảnh xe chưa hoàn tất: ' + errDetail, 'warning', 4000);
         }
       }
 
@@ -1236,6 +1247,10 @@ const OwnerService = {
       return;
     }
 
+    // Xóa URL ảnh mẫu khi người dùng chủ động chọn tải ảnh thực tế từ máy
+    const elUrl = document.getElementById('newCarImageUrl');
+    if (elUrl) elUrl.value = '';
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = document.getElementById('newCarPhotoPreview');
@@ -1251,6 +1266,8 @@ const OwnerService = {
   clearCarPhotoPreview() {
     const input = document.getElementById('newCarPhotoFile');
     if (input) input.value = '';
+    const elUrl = document.getElementById('newCarImageUrl');
+    if (elUrl) elUrl.value = '';
     const container = document.getElementById('newCarPhotoPreviewContainer');
     if (container) container.style.display = 'none';
     const placeholder = document.getElementById('newCarPhotoPlaceholder');

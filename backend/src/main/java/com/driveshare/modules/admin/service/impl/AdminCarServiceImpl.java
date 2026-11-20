@@ -210,13 +210,13 @@ public class AdminCarServiceImpl implements AdminCarService {
     }
 
     private AdminCarItemResponse mapToAdminCarItemResponse(Car car) {
-        String thumbnailUrl = null;
+        String thumbnailUrl = car.getThumbnailUrl();
         if (car.getImages() != null && !car.getImages().isEmpty()) {
             thumbnailUrl = car.getImages().stream()
                     .filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
                     .map(CarImage::getImageUrl)
                     .findFirst()
-                    .orElse(car.getImages().get(0).getImageUrl());
+                    .orElse(thumbnailUrl != null ? thumbnailUrl : car.getImages().get(0).getImageUrl());
         }
 
         User owner = car.getOwner();
@@ -254,6 +254,15 @@ public class AdminCarServiceImpl implements AdminCarService {
                 ? car.getDocuments().stream().map(this::mapToCarDocumentResponse).collect(Collectors.toList())
                 : Collections.emptyList();
 
+        String thumbnailUrl = car.getThumbnailUrl();
+        if (car.getImages() != null && !car.getImages().isEmpty()) {
+            thumbnailUrl = car.getImages().stream()
+                    .filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
+                    .map(CarImage::getImageUrl)
+                    .findFirst()
+                    .orElse(thumbnailUrl != null ? thumbnailUrl : car.getImages().get(0).getImageUrl());
+        }
+
         return AdminCarDetailResponse.builder()
                 .carId(car.getCarId())
                 .brand(car.getBrand())
@@ -269,6 +278,7 @@ public class AdminCarServiceImpl implements AdminCarService {
                 .latitude(car.getLatitude())
                 .longitude(car.getLongitude())
                 .basePricePerDay(car.getPricePerDay())
+                .thumbnailUrl(thumbnailUrl)
                 .status(car.getStatus())
                 .rejectionReason(car.getRejectionReason())
                 .approvedBy(car.getApprovedBy())
